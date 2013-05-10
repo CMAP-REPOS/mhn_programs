@@ -2,10 +2,10 @@
 '''
     import_highway_projects.py
     Author: npeterson
-    Revised: 5/8/2013
+    Revised: 5/9/2013
     ---------------------------------------------------------------------------
     Import highway project coding from an Excel spreadsheet. SAS can currently
-    only handle .XLS and not .XLSX.
+    only handle .xls and not .xlsx.
 
 '''
 import os
