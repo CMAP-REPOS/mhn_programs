@@ -42,7 +42,7 @@ MHN.delete_if_exists(projects_csv)
 #  Use SAS program to validate coding before import.
 # -----------------------------------------------------------------------------
 mhn_links_attr = ['ANODE', 'BNODE', 'BASELINK']
-mhn_links_query = "\"BASELINK\" IN ('0', '1')"  # Ignore BASELINK > 1
+mhn_links_query = '''"BASELINK" IN ('0', '1')'''  # Ignore BASELINK > 1
 mhn_links_view = MHN.make_skinny_table_view(MHN.arc, 'mhn_links_view', mhn_links_attr, mhn_links_query)
 MHN.write_attribute_csv(mhn_links_view, mhn_links_txt, mhn_links_attr)
 
@@ -55,3 +55,9 @@ elif os.path.exists(sas1_lst):
     MHN.die('Problems with project coding. Please see {0}.'.format(sas2_lst))
 else:
     arcpy.Delete_management(sas1_log)
+
+
+# -----------------------------------------------------------------------------
+#  Read SAS output and update hwyproj features/itinerary.
+# -----------------------------------------------------------------------------
+
