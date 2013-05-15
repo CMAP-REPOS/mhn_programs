@@ -46,17 +46,13 @@ data coding; set coding(where=(tipid>0));
   ** OUTPUT DATA (COLUMNS WITH NO VALUES WERE READ AS TEXT DURING IMPORT) **;
 data out; set coding;
  file out1 dsd;
-    put tipid anode bnode action type1 type2 sigic
-         feet1 lanes1 speed1 rep_anode rep_bnode
-         feet2 lanes2 speed2 tolldollars directions parklanes1 parklanes2
-         cltl ampm1 ampm2 modes rr_grade_sep tod abnode;
+    put tipid anode bnode action rep_anode rep_bnode type1 type2 feet1 feet2 lanes1 lanes2 speed1 speed2
+        ampm1 ampm2 modes tolldollars directions parklanes1 parklanes2 sigic cltl rr_grade_sep tod abnode;
 
   ** READ DATA BACK IN TO REPLACE BLANKS WITH ZEROES **;
 data coding; infile out1 missover dsd;
-    input tipid anode bnode action type1 type2 sigic
-         feet1 lanes1 speed1 rep_anode rep_bnode
-         feet2 lanes2 speed2 tolldollars directions parklanes1 parklanes2
-         cltl ampm1 ampm2 modes rr_grade_sep tod abnode;
+    input tipid anode bnode action rep_anode rep_bnode type1 type2 feet1 feet2 lanes1 lanes2 speed1 speed2
+          ampm1 ampm2 modes tolldollars directions parklanes1 parklanes2 sigic cltl rr_grade_sep tod abnode;
 
 
 data coding1; set coding;
@@ -119,20 +115,42 @@ data check; set coding(where=(action=2));
 
 data check; set coding(where=(action=2));
   if max(type1,type2,sigic,feet1,lanes1,speed1,feet2,lanes2,speed2,tolldollars,directions,parklanes1,parklanes2,cltl,ampm1,ampm2,modes,tod)>0;
-   proc print; var tipid anode bnode action type1 type2 sigic feet1 lanes1 speed1
-     feet2 lanes2 speed2 tolldollars directions parklanes1 parklanes2 cltl ampm1 ampm2 modes tod ;
-      title 'NON-USABLE VALUES CODED ON THESE LINKS';
+   proc print;
+     var tipid anode bnode action type1 type2 feet1 feet2 lanes1 lanes2 speed1 speed2
+         ampm1 ampm2 modes tolldollars directions parklanes1 parklanes2 sigic cltl tod;
+     title 'NON-USABLE VALUES CODED ON THESE LINKS';
 
 proc sort data=coding1; by anode bnode;
 data coding1; merge coding1(in=hit) mhn; by anode bnode; if hit;
- ab=anode*1000000+bnode*10+baselink;
+  abb=catx('-', anode, bnode, baselink);
 
-
-data out; set coding1;
- file out1 dsd;
-    put tipid anode bnode action type1 type2 sigic
-         feet1 lanes1 speed1 rep_anode rep_bnode
-         feet2 lanes2 speed2 tolldollars directions parklanes1 parklanes2
-         cltl ampm1 ampm2 modes rr_grade_sep tod observ ab;
+data out;
+  set coding1 (keep=tipid abb action rep_anode rep_bnode type1 type2 feet1 feet2 lanes1 lanes2 speed1 speed2
+                    ampm1 ampm2 modes tolldollars directions parklanes1 parklanes2 sigic cltl rr_grade_sep tod);
+  label tipid='TIPID'
+        abb='ABB'
+        action='ACTION_CODE'
+        rep_anode='REP_ANODE'
+        rep_bnode='REP_BNODE'
+        type1='NEW_TYPE1'
+        type2='NEW_TYPE2'
+        feet1='NEW_THRULANEWIDTH1'
+        feet2='NEW_THRULANEWIDTH2'
+        lanes1='NEW_THRULANES1'
+        lanes2='NEW_THRULANES2'
+        speed1='NEW_POSTEDSPEED1'
+        speed2='NEW_POSTEDSPEED2'
+        ampm1='NEW_AMPM1'
+        ampm2='NEW_AMPM2'
+        modes='NEW_MODES'
+        tolldollars='NEW_TOLLDOLLARS'
+        directions='NEW_DIRECTIONS'
+        parklanes1='ADD_PARKLANES1'
+        parklanes2='ADD_PARKLANES2'
+        sigic='ADD_SIGIC'
+        cltl='ADD_CLTL'
+        rr_grade_sep='ADD_RRGRADECROSS'
+        tod='TOD';
+proc export data=out outfile=out1 dbms=csv label replace;
 
 run;
