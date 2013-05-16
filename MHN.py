@@ -28,8 +28,7 @@ default_gdb = 'C:/MHN/mhn.gdb'
 #root_dir = 'V:/Secure/Master_Highway'
 root_dir = 'C:/MHN'
 out_dir = root_dir + '/Output'
-#prog_dir = root_dir + '/Programs'
-prog_dir = 'C:/Users/npeterson/Documents/GitHub/cmap.mhn'
+prog_dir = root_dir + '/Programs'
 temp_dir = root_dir + '/Temp'
 #gdb = root_dir + '/mhn.gdb'
 gdb = root_dir + '/mhn_test.gdb'
@@ -93,6 +92,9 @@ scenario_years = {'100': 2010,
                   '400': 2025,
                   '500': 2030,
                   '600': 2040}
+
+min_year = min((year for scen, year in scenario_years.iteritems()))
+max_year = max((year for scen, year in scenario_years.iteritems()))
 
 tod_periods = {'1':  ('8PM-6AM',                                   # 1: overnight
                       '"STARTHOUR" >= 20 OR "STARTHOUR" <= 5'),
@@ -183,6 +185,19 @@ def ensure_dir(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
     return directory
+
+
+def get_yearless_hwyproj():
+    ''' Check hwyproj completion years and return list of invalid projects'
+        TIPIDs. '''
+    common_id_field = route_systems[hwyproj][1]
+    invalid_year_query = '"{0}" = 0 OR "{0}" IS NULL'.format('COMPLETION_YEAR')
+    invalid_year_lyr = make_skinny_table_view(hwyproj, 'invalid_year_lyr', ['COMPLETION_YEAR', common_id_field], invalid_year_query)
+    invalid_year_count = int(arcpy.GetCount_management(existing_project_lyr).getOutput(0))
+    if invalid_year_count > 0:
+        return [row[0] for row in arcpy.da.SearchCursor(invalid_year_lyr, [common_id_field])]
+    else:
+        return []
 
 
 def make_attribute_dict(fc, key_field, attr_list=['*']):
