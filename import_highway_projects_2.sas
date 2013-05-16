@@ -1,7 +1,7 @@
 /*
    import_highway_projects_2.sas
    authors: cheither & npeterson
-   revised: 5/8/13
+   revised: 5/16/13
    ----------------------------------------------------------------------------
    This program reads highway project coding and assigns an observation number
    to each line of coding, dependent upon the number of times a link (anode-
@@ -151,6 +151,7 @@ data out;
         cltl='ADD_CLTL'
         rr_grade_sep='ADD_RRGRADECROSS'
         tod='TOD';
-proc export data=out outfile=out1 dbms=csv label replace;
+   proc sort; by tipid action;
+   proc export outfile=out1 dbms=csv label replace;
 
 run;
