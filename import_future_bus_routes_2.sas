@@ -9,21 +9,21 @@
 */
 
 %let xls=%scan(&sysparm,1,$);
-%let tempdir=%scan(&sysparm,2,$);
-%let progdir=%scan(&sysparm,3,$);
-%let maxzn=%scan(&sysparm,4,$);
+%let dir=%scan(&sysparm,2,$);
+%let maxzn=%scan(&sysparm,3,$);
+%let lst=%scan(&sysparm,4,$);
 
 
 /*-------------------------------------------------------------*/
                    * INPUT FILES *;
 filename inbus "&xls";
-filename in1 "&tempdir./network.csv";
-filename in2 "&tempdir./transact.csv";
-filename in3 "&tempdir./year.csv";
+filename in1 "&dir./network.csv";
+filename in2 "&dir./transact.csv";
+filename in3 "&dir./year.csv";
                    * OUTPUT FILES *;
-filename out1 "&progdir./Import/itin.txt";
-filename out2 "&progdir./Import/route.txt";
-/*filename out3 "&progdir./Import/path.txt";*/
+filename out1 "&dir./future_itin.csv";
+filename out2 "&dir./future_route.csv";
+/*filename out3 "&dir./future_path.csv";*/
 /*-------------------------------------------------------------*/
 
 %macro getdata;
@@ -33,7 +33,7 @@ filename out2 "&progdir./Import/route.txt";
           proc sort data=section; by tr_line order;
   %end;
   %else %do;
-   data null; file "import_future_bus2.lst";
+   data null; file "&lst";
      put "File not found: &xls";
   %end;
 %mend getdata;
@@ -72,9 +72,19 @@ data chk; set rte(where=(scenario in (.,0))); proc print; title "Scenario Values
 
 
     ** Replace File for ARC **;
-data rte; set rte;
-   file out2 dlm=',';
-     put tr_line des mode veh_type headway speed scenario replace tod nt;
+data rte; set rte (keep=tr_line des mode veh_type headway speed scenario replace tod nt);
+  label tr_line='TRANSIT_LINE'
+        des='DESCRIPTION'
+        mode=''
+        veh_type=''
+        headway='HEADWAY'
+        speed='SPEED'
+        scenario=''
+        replace='REPLACE'
+        tod=''
+        nt='';
+   proc sort; by tr_line;
+   proc export outfile=out2 dbms=csv label replace;
 
  *** VERIFY ITINERARIES HAVE HEADERS AND VICE-VERSA ***;
 data r(drop=tr_line); set rte; length trln $6.; trln=tr_line; rte=1; proc sort nodupkey; by trln;
@@ -168,9 +178,21 @@ data section; merge section (in=hit) arcs; by itin_a itin_b baselink;
      *---------------------------------*;
         ** WRITE ITINERARY FILE **
      *---------------------------------*;
-data writeout; set section;
-  file out1 dlm=',';
-    put tr_line itin_a itin_b layover dw_code zn_fare trv_time ttf ordnew route place abnode;
+data writeout; set section (keep=tr_line itin_a itin_b layover dw_code zn_fare trv_time ttf ordnew route place abb);
+  label tr_line='TRANSIT_LINE'
+        itin_a='ITIN_A'
+        itin_b='ITIN_B'
+        layover='LAYOVER'
+        dw_code=''
+        zn_fare=''
+        trv_time=''
+        ttf=''
+        ordnew='ITIN_ORDER'
+        route=''
+        place=''
+        abb='ABB';
+   proc sort; by tr_line ordnew;
+   proc export outfile=out1 dbms=csv label replace;
 
        * - - - - - - - - - - - - - - - - - *;
             **REPORT ITINERARY GAPS**;

@@ -13,6 +13,14 @@ import sys
 import arcpy
 import MHN
 
+# Try to check out Network Analyst license.
+if arcpy.CheckExtension('Network') == 'Available':
+    arcpy.CheckOutExtension('Network')
+else:
+    MHN.die('Cannot check out Network Analyst Extension. Please ensure that '
+            'you are connected to the CMAPMOD02 license server and that nobody '
+            'else is using the license.')
+
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
@@ -87,16 +95,14 @@ arcpy.Delete_management(network_view)
 arcpy.AddMessage('{0}Validating coding in {1}...'.format('\n', xls))
 
 sas1_sas = ''.join((MHN.prog_dir + '/', sas1_name,'.sas'))
-sas1_args = [xls, MHN.temp_dir, MHN.prog_dir, MHN.max_poe]
+sas1_args = [xls, MHN.temp_dir, MHN.max_poe, sas1_lst]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
     MHN.die('{0} did not run!'.format(sas1_sas))
-elif not os.path.exists(projects_csv):
-    MHN.die('{0} did not finish successfully! Please see {1}'.format(sas1_sas, sas1_log))
 elif os.path.exists(sas1_lst):
-    MHN.die('Problems with project coding. Please see {0}.'.format(sas1_lst))
+    MHN.die('Problems with future bus route coding. Please see {0}.'.format(sas1_lst))
 else:
     os.remove(sas1_log)
-    arcpy.Delete_management(year_csv)
-    arcpy.Delete_management(transact_csv)
-    arcpy.Delete_management(network_csv)
+    os.remove(year_csv)
+    os.remove(transact_csv)
+    os.remove(network_csv)
