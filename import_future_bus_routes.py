@@ -95,7 +95,7 @@ arcpy.Delete_management(network_view)
 arcpy.AddMessage('{0}Validating coding in {1}...'.format('\n', xls))
 
 sas1_sas = ''.join((MHN.prog_dir + '/', sas1_name,'.sas'))
-sas1_args = [xls, MHN.temp_dir, MHN.max_poe, sas1_lst]
+sas1_args = [xls, MHN.temp_dir, str(MHN.max_poe), sas1_lst]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
     MHN.die('{0} did not run!'.format(sas1_sas))

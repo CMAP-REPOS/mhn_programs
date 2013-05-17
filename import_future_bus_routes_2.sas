@@ -75,21 +75,21 @@ data chk; set rte(where=(scenario in (.,0))); proc print; title "Scenario Values
 data rte; set rte (keep=tr_line des mode veh_type headway speed scenario replace tod nt);
   label tr_line='TRANSIT_LINE'
         des='DESCRIPTION'
-        mode=''
-        veh_type=''
+        mode='MODE'
+        veh_type='VEHICLE_TYPE'
         headway='HEADWAY'
         speed='SPEED'
-        scenario=''
+        scenario='SCENARIO'
         replace='REPLACE'
-        tod=''
-        nt='';
+        tod='TOD'
+        nt='NOTES';
    proc sort; by tr_line;
    proc export outfile=out2 dbms=csv label replace;
 
  *** VERIFY ITINERARIES HAVE HEADERS AND VICE-VERSA ***;
 data r(drop=tr_line); set rte; length trln $6.; trln=tr_line; rte=1; proc sort nodupkey; by trln;
 data s; set section; length trln $6.; trln=tr_line; itn=1; proc sort nodupkey; by trln;
-data s(drop=description d group); merge s r; by trln;
+data s; merge s r; by trln;
 data check; set s; if rte=1 & itn=.; proc print; title "Route with no Itinerary";
 data check; set s; if itn=1 & rte=.; proc print; title "Itinerary with no Header";
 
@@ -110,9 +110,12 @@ data temp; infile in2 dlm=',' firstobs=2;
    input tipid abb action directn;
     if directn=0 then directn=.;
      proc sort; by tipid;
+
 data year; infile in3 dlm=',' firstobs=2;
    input tipid compyear; proc sort; by tipid;
+
 data temp; merge temp year; by tipid; proc sort; by abb compyear;
+
 data delete; set temp(where=(action=3));
 data other; set temp(where=(action in (1,2,4)));
 data network; update network other; by abb;
@@ -127,7 +130,7 @@ data mhn(rename=(anode=itin_a bnode=itin_b));
     c=anode;
     anode=bnode;
     bnode=c;
-    abb=catx('-', anode, bnode, baselink);
+    abb=catx('-', bnode, anode, baselink);
     output;
   end;
   drop c;
@@ -135,7 +138,7 @@ data mhn(rename=(anode=itin_a bnode=itin_b));
 
 data check; merge verify (in=hit) mhn; by itin_a itin_b; if hit;
   if match=1 then delete;
-   proc print; var itin_a itin_b tr_line order;
+   proc print; var abb itin_a itin_b directn tr_line order;
     title "MIS-CODED ANODE-BNODE OR DIRECTIONAL PROBLEM ON THESE LINKS";
 
 ** Ensure Transit Not Coded on Centroid Links **;
@@ -163,14 +166,16 @@ data section; set section;
    place=_n_;
      proc sort; by itin_a itin_b;
 
-data arcs(drop=link); infile in1 missover dlm=',' firstobs=2;
+data arcs; infile in1 missover dlm=',' firstobs=2;
+   length abb $ 13;
    input itin_a itin_b baselink abb;
      true=1;
       proc sort; by itin_a itin_b baselink;
 
   ** Find True Arc Direction in MHN **;
-data section; merge section (in=hit) arcs; by itin_a itin_b baselink;
+data section; merge section (in=hit) arcs; by itin_a itin_b;
    if hit;
+    if baselink=. then baselink=0;
     if true=1 then abb=catx('-', itin_a, itin_b, baselink);
     else abb=catx('-', itin_b, itin_a, baselink);
       proc sort; by tr_line ordnew;
@@ -178,19 +183,19 @@ data section; merge section (in=hit) arcs; by itin_a itin_b baselink;
      *---------------------------------*;
         ** WRITE ITINERARY FILE **
      *---------------------------------*;
-data writeout; set section (keep=tr_line itin_a itin_b layover dw_code zn_fare trv_time ttf ordnew route place abb);
+data writeout; set section (keep=tr_line itin_a itin_b abb ordnew layover dw_code zn_fare trv_time ttf); /*route place);*/
   label tr_line='TRANSIT_LINE'
         itin_a='ITIN_A'
         itin_b='ITIN_B'
-        layover='LAYOVER'
-        dw_code=''
-        zn_fare=''
-        trv_time=''
-        ttf=''
+        abb='ABB'
         ordnew='ITIN_ORDER'
-        route=''
-        place=''
-        abb='ABB';
+        layover='LAYOVER'
+        dw_code='DWELL_CODE'
+        zn_fare='ZONE_FARE'
+        trv_time='LINE_SERV_TIME'
+        ttf='TTF';
+        /*route='ROUTE'
+        place='PLACE';*/
    proc sort; by tr_line ordnew;
    proc export outfile=out1 dbms=csv label replace;
 
