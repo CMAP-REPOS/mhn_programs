@@ -65,7 +65,7 @@ else:
 # -----------------------------------------------------------------------------
 #  Generate temp feature class/coding table from SAS output.
 # -----------------------------------------------------------------------------
-arcpy.AddMessage('{0}Building updated coding table & feature class in memory...'.format('\n', xls))
+arcpy.AddMessage('{0}Building updated coding table & feature class in memory...'.format('\n'))
 
 temp_projects_name = 'temp_routes_fc'
 temp_projects_fc = '/'.join((MHN.mem, temp_projects_name))

@@ -36,6 +36,8 @@ sas1_lst = ''.join((MHN.temp_dir, '/', sas1_name, '.lst'))
 year_csv = '/'.join((MHN.temp_dir, 'year.csv'))
 transact_csv = '/'.join((MHN.temp_dir, 'transact.csv'))
 network_csv = '/'.join((MHN.temp_dir, 'network.csv'))
+future_itin_csv = '/'.join((MHN.temp_dir, 'future_itin.csv'))
+future_route_csv = '/'.join((MHN.temp_dir, 'future_route.csv'))
 
 
 # -----------------------------------------------------------------------------
@@ -46,6 +48,8 @@ MHN.delete_if_exists(sas1_lst)
 MHN.delete_if_exists(year_csv)
 MHN.delete_if_exists(transact_csv)
 MHN.delete_if_exists(network_csv)
+MHN.delete_if_exists(future_itin_csv)
+MHN.delete_if_exists(future_route_csv)
 
 
 # -----------------------------------------------------------------------------
@@ -95,7 +99,7 @@ arcpy.Delete_management(network_view)
 arcpy.AddMessage('{0}Validating coding in {1}...'.format('\n', xls))
 
 sas1_sas = ''.join((MHN.prog_dir + '/', sas1_name,'.sas'))
-sas1_args = [xls, MHN.temp_dir, str(MHN.max_poe), sas1_lst]
+sas1_args = [xls, MHN.temp_dir, future_itin_csv, future_route_csv, str(MHN.max_poe), sas1_lst]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
     MHN.die('{0} did not run!'.format(sas1_sas))
@@ -106,3 +110,62 @@ else:
     os.remove(year_csv)
     os.remove(transact_csv)
     os.remove(network_csv)
+
+# -----------------------------------------------------------------------------
+#  Generate temp route fc/itin table from SAS output.
+# -----------------------------------------------------------------------------
+arcpy.AddMessage('{0}Building updated route & itin table in memory...'.format('\n'))
+
+temp_route_name = 'temp_routes_fc'
+temp_route_fc = '/'.join((MHN.mem, temp_route_name))
+arcpy.CreateFeatureclass_management(MHN.mem, temp_route_name, 'POLYLINE', MHN.bus_future)
+
+temp_itin_name = 'temp_itin_table'
+temp_itin_table = '/'.join((MHN.mem, temp_itin_name))
+arcpy.CreateTable_management(MHN.mem, temp_itin_name, MHN.route_systems[MHN.bus_future][0])
+
+# Update itin table directly from CSV, while determining coded arcs' IDs.
+common_id_field = MHN.route_systems[MHN.bus_future][1]  # 'TRANSIT_LINE'
+order_field = MHN.route_systems[MHN.bus_future][2]      # 'ITIN_ORDER'
+route_arcs = {}
+
+itin_fields = (
+    common_id_field, 'ITIN_A', 'ITIN_B' 'ABB', order_field, 'LAYOVER',
+    'DWELL_CODE', 'ZONE_FARE', 'LINE_SERV_TIME', 'TTF'
+)
+
+with arcpy.da.InsertCursor(temp_itin_table, itin_fields) as cursor:
+    raw_itin = open(future_itin_csv, 'r')
+    itin = csv.DictReader(raw_itin)
+    for arc_attr_dict in itin:
+        route_id = arc_attr_dict[common_id_field]
+        arc_id = arc_attr_dict['ABB']
+        if route_id not in route_arcs.keys():
+            route_arcs[route_id] = [arc_id]
+        else:
+            route_arcs[route_id].append(arc_id)
+        arc_attr = [arc_attr_dict[field] for field in itin_fields]
+        cursor.insertRow(arc_attr)
+    raw_itin.close()
+    #os.remove(future_itin_csv)
+
+# Generate route features one at a time.
+for route_id in route_arcs.keys():
+
+    # Dissolve route arcs into a single route feature, and append to temp FC.
+    route_arc_ids = route_arcs[route_id]
+    route_arcs_lyr = 'route_arcs_lyr'
+    route_arcs_query = '"ABB" IN (\'' + "','".join(route_arc_ids) + "')"
+    arcpy.MakeFeatureLayer_management(MHN.arc, route_arcs_lyr, route_arcs_query)
+    route_dissolved = '/'.join((MHN.mem, 'route_dissolved'))
+    arcpy.Dissolve_management(route_arcs_lyr, route_dissolved)
+    arcpy.AddField_management(route_dissolved, common_id_field, 'TEXT', field_length=10)
+    with arcpy.da.UpdateCursor(route_dissolved, [common_id_field]) as cursor:
+        for row in cursor:
+            row[0] = route_id
+            if completion_year:
+                row[1] = completion_year
+            cursor.updateRow(row)
+    arcpy.Append_management(route_dissolved, temp_projects_fc, 'NO_TEST')
+    
+    # Still needs all other fields. AddField to dissolved, or cursor on temp route fc?

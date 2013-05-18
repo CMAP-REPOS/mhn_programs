@@ -10,8 +10,10 @@
 
 %let xls=%scan(&sysparm,1,$);
 %let dir=%scan(&sysparm,2,$);
-%let maxzn=%scan(&sysparm,3,$);
-%let lst=%scan(&sysparm,4,$);
+%let itincsv=%scan(&sysparm,3,$);
+%let routecsv=%scan(&sysparm,4,$);
+%let maxzn=%scan(&sysparm,5,$);
+%let lst=%scan(&sysparm,6,$);
 
 
 /*-------------------------------------------------------------*/
@@ -21,8 +23,8 @@ filename in1 "&dir./network.csv";
 filename in2 "&dir./transact.csv";
 filename in3 "&dir./year.csv";
                    * OUTPUT FILES *;
-filename out1 "&dir./future_itin.csv";
-filename out2 "&dir./future_route.csv";
+filename out1 "&itincsv";
+filename out2 "&routecsv";
 /*filename out3 "&dir./future_path.csv";*/
 /*-------------------------------------------------------------*/
 
