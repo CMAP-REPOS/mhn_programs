@@ -2,7 +2,7 @@
 '''
     import_highway_projects.py
     Author: npeterson
-    Revised: 5/16/2013
+    Revised: 5/20/2013
     ---------------------------------------------------------------------------
     Import highway project coding from an Excel spreadsheet. SAS can currently
     only handle .xls and not .xlsx.
@@ -132,23 +132,23 @@ for project_id in project_arcs.keys():
 
 
 # -----------------------------------------------------------------------------
-#  Merge updated projects with unaffected projects.
+#  Merge updated projects with unaltered projects.
 # -----------------------------------------------------------------------------
-# Copy features and coding of unaffected projects in MHN.
-unaffected_projects_query = '"{0}" NOT IN (\''.format(common_id_field) + "','".join(project_arcs.keys()) + "')"
+# Copy features and coding of unaltered projects in MHN.
+unaltered_projects_query = '"{0}" NOT IN (\''.format(common_id_field) + "','".join(project_arcs.keys()) + "')"
 
-unaffected_projects_lyr = 'unaffected_projects_lyr'
-arcpy.MakeFeatureLayer_management(MHN.hwyproj, unaffected_projects_lyr, unaffected_projects_query)
+unaltered_projects_lyr = 'unaltered_projects_lyr'
+arcpy.MakeFeatureLayer_management(MHN.hwyproj, unaltered_projects_lyr, unaltered_projects_query)
 
-unaffected_coding_view = 'unaffected_coding_view'
-arcpy.MakeTableView_management(MHN.route_systems[MHN.hwyproj][0], unaffected_coding_view, unaffected_projects_query)
+unaltered_coding_view = 'unaltered_coding_view'
+arcpy.MakeTableView_management(MHN.route_systems[MHN.hwyproj][0], unaltered_coding_view, unaltered_projects_query)
 
 # Append features/coding from temp FC/table.
 updated_projects_fc = '/'.join((MHN.mem, 'updated_projects_fc'))
-arcpy.Merge_management((unaffected_projects_lyr, temp_projects_fc), updated_projects_fc)
+arcpy.Merge_management((unaltered_projects_lyr, temp_projects_fc), updated_projects_fc)
 
 updated_coding_table = '/'.join((MHN.mem, 'updated_coding_table'))
-arcpy.Merge_management((unaffected_coding_view, temp_coding_table), updated_coding_table)
+arcpy.Merge_management((unaltered_coding_view, temp_coding_table), updated_coding_table)
 
 
 # -----------------------------------------------------------------------------

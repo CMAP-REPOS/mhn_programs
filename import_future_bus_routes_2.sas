@@ -1,7 +1,7 @@
 /*
    import_future_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 5/16/13
+   revised: 5/20/13
    ----------------------------------------------------------------------------
    Program is called by import_future_bus_routes.py and formats bus itineraries
    to build with arcpy.
@@ -23,9 +23,8 @@ filename in1 "&dir./network.csv";
 filename in2 "&dir./transact.csv";
 filename in3 "&dir./year.csv";
                    * OUTPUT FILES *;
-filename out1 "&itincsv";
-filename out2 "&routecsv";
-/*filename out3 "&dir./future_path.csv";*/
+filename out1 "&routecsv";
+filename out2 "&itincsv";
 /*-------------------------------------------------------------*/
 
 %macro getdata;
@@ -41,6 +40,7 @@ filename out2 "&routecsv";
 %mend getdata;
 %getdata
   /* end macro */
+
 
 data section; set section(where=(tr_line is not null));
   tr_line=lowcase(tr_line);
@@ -65,8 +65,8 @@ data rte; set rte(where=(tr_line is not null));
   description=upcase(description);
   d=compress(description,"'");
   d=substr(d,1,20);
-  des="'"||trim(d)||"'";
-  nt="'"||trim(notes)||"'";
+  des='"'||trim(d)||'"';
+  nt='"'||trim(notes)||'"';
 
       proc sort nodupkey; by tr_line;
 
@@ -86,7 +86,7 @@ data rte; set rte (keep=tr_line des mode veh_type headway speed scenario replace
         tod='TOD'
         nt='NOTES';
    proc sort; by tr_line;
-   proc export outfile=out2 dbms=csv label replace;
+   proc export outfile=out1 dbms=csv label replace;
 
  *** VERIFY ITINERARIES HAVE HEADERS AND VICE-VERSA ***;
 data r(drop=tr_line); set rte; length trln $6.; trln=tr_line; rte=1; proc sort nodupkey; by trln;
@@ -132,7 +132,6 @@ data mhn(rename=(anode=itin_a bnode=itin_b));
     c=anode;
     anode=bnode;
     bnode=c;
-    abb=catx('-', bnode, anode, baselink);
     output;
   end;
   drop c;
@@ -185,7 +184,7 @@ data section; merge section (in=hit) arcs; by itin_a itin_b;
      *---------------------------------*;
         ** WRITE ITINERARY FILE **
      *---------------------------------*;
-data writeout; set section (keep=tr_line itin_a itin_b abb ordnew layover dw_code zn_fare trv_time ttf); /*route place);*/
+data writeout; set section (keep=tr_line itin_a itin_b abb ordnew layover dw_code zn_fare trv_time ttf);
   label tr_line='TRANSIT_LINE'
         itin_a='ITIN_A'
         itin_b='ITIN_B'
@@ -196,10 +195,8 @@ data writeout; set section (keep=tr_line itin_a itin_b abb ordnew layover dw_cod
         zn_fare='ZONE_FARE'
         trv_time='LINE_SERV_TIME'
         ttf='TTF';
-        /*route='ROUTE'
-        place='PLACE';*/
    proc sort; by tr_line ordnew;
-   proc export outfile=out1 dbms=csv label replace;
+   proc export outfile=out2 dbms=csv label replace;
 
        * - - - - - - - - - - - - - - - - - *;
             **REPORT ITINERARY GAPS**;
@@ -222,23 +219,5 @@ data writeout; set section (keep=tr_line itin_a itin_b abb ordnew layover dw_cod
             title 'Too Many Layovers Coded';
        * - - - - - - - - - - - - - - - - - *;
 
-/*
-     *---------------------------------------*;
-      ** FORMAT PATH-BUILDING FILE FOR ARC **
-     *---------------------------------------*;
-data path(keep=node route); set section; by tr_line ordnew;
-   node=itin_a; output;
-   if last.tr_line then do;
-     node=itin_b; output;
-   end;
-
-data path; set path;
- rank=_n_;
-
-data write2; set path;
-  file out3 dlm=',';
-    put node rank route;
-
-*/
 
 run;

@@ -2,24 +2,17 @@
 '''
     import_future_bus_routes.py
     Author: npeterson
-    Revised: 5/16/2013
+    Revised: 5/20/2013
     ---------------------------------------------------------------------------
     Import future bus route coding from an Excel spreadsheet, with "header" and
     "itinerary" worksheets. SAS can currently only handle .xls and not .xlsx.
 
 '''
+import csv
 import os
 import sys
 import arcpy
 import MHN
-
-# Try to check out Network Analyst license.
-if arcpy.CheckExtension('Network') == 'Available':
-    arcpy.CheckOutExtension('Network')
-else:
-    MHN.die('Cannot check out Network Analyst Extension. Please ensure that '
-            'you are connected to the CMAPMOD02 license server and that nobody '
-            'else is using the license.')
 
 # -----------------------------------------------------------------------------
 #  Set parameters.
@@ -78,6 +71,7 @@ transact_attr = (hwyproj_id_field, 'ABB', 'ACTION_CODE', 'NEW_DIRECTIONS')
 transact_query = '"{0}" IN (\'{1}\')'.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in projects)))
 transact_view = MHN.make_skinny_table_view(MHN.route_systems[MHN.hwyproj][0], 'transact_view', transact_attr, transact_query)
 MHN.write_attribute_csv(transact_view, transact_csv, transact_attr)
+project_arcs = MHN.make_attribute_dict(transact_view, 'ABB', attr_list=[])
 arcpy.Delete_management(transact_view)
 
 # Export base year arc attributes.
@@ -87,7 +81,7 @@ network_attr = (
     'THRULANEWIDTH1', 'THRULANEWIDTH2', 'PARKLANES1', 'PARKLANES2',
     'SIGIC', 'CLTL', 'RRGRADECROSS', 'TOLLDOLLARS', 'MODES', 'MILES'
 )
-network_query = '"BASELINK" = \'1\''
+network_query = '"BASELINK" = \'1\' OR "ABB" IN (\'{0}\')'.format("','".join((arc_id for arc_id in project_arcs)))
 network_view = MHN.make_skinny_table_view(MHN.arc, 'network_view', network_attr, network_query)
 MHN.write_attribute_csv(network_view, network_csv, network_attr)
 arcpy.Delete_management(network_view)
@@ -116,13 +110,13 @@ else:
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('{0}Building updated route & itin table in memory...'.format('\n'))
 
-temp_route_name = 'temp_routes_fc'
-temp_route_fc = '/'.join((MHN.mem, temp_route_name))
-arcpy.CreateFeatureclass_management(MHN.mem, temp_route_name, 'POLYLINE', MHN.bus_future)
+temp_routes_name = 'temp_routes_fc'
+temp_routes_fc = '/'.join((MHN.gdb, temp_routes_name))
+arcpy.CreateFeatureclass_management(MHN.gdb, temp_routes_name, 'POLYLINE', MHN.bus_future)
 
 temp_itin_name = 'temp_itin_table'
-temp_itin_table = '/'.join((MHN.mem, temp_itin_name))
-arcpy.CreateTable_management(MHN.mem, temp_itin_name, MHN.route_systems[MHN.bus_future][0])
+temp_itin_table = '/'.join((MHN.gdb, temp_itin_name))
+arcpy.CreateTable_management(MHN.gdb, temp_itin_name, MHN.route_systems[MHN.bus_future][0])
 
 # Update itin table directly from CSV, while determining coded arcs' IDs.
 common_id_field = MHN.route_systems[MHN.bus_future][1]  # 'TRANSIT_LINE'
@@ -130,7 +124,7 @@ order_field = MHN.route_systems[MHN.bus_future][2]      # 'ITIN_ORDER'
 route_arcs = {}
 
 itin_fields = (
-    common_id_field, 'ITIN_A', 'ITIN_B' 'ABB', order_field, 'LAYOVER',
+    common_id_field, 'ITIN_A', 'ITIN_B', 'ABB', order_field, 'LAYOVER',
     'DWELL_CODE', 'ZONE_FARE', 'LINE_SERV_TIME', 'TTF'
 )
 
@@ -147,10 +141,13 @@ with arcpy.da.InsertCursor(temp_itin_table, itin_fields) as cursor:
         arc_attr = [arc_attr_dict[field] for field in itin_fields]
         cursor.insertRow(arc_attr)
     raw_itin.close()
-    #os.remove(future_itin_csv)
+    os.remove(future_itin_csv)
+
+# Update itinerary F_MEAS & T_MEAS.
+### TO DO ###
 
 # Generate route features one at a time.
-for route_id in route_arcs.keys():
+for route_id in sorted(route_arcs.keys()):
 
     # Dissolve route arcs into a single route feature, and append to temp FC.
     route_arc_ids = route_arcs[route_id]
@@ -163,9 +160,40 @@ for route_id in route_arcs.keys():
     with arcpy.da.UpdateCursor(route_dissolved, [common_id_field]) as cursor:
         for row in cursor:
             row[0] = route_id
-            if completion_year:
-                row[1] = completion_year
             cursor.updateRow(row)
-    arcpy.Append_management(route_dissolved, temp_projects_fc, 'NO_TEST')
-    
-    # Still needs all other fields. AddField to dissolved, or cursor on temp route fc?
+    arcpy.Append_management(route_dissolved, temp_routes_fc, 'NO_TEST')
+
+    # Fill other fields with data in future_route_csv.
+    ### TO DO ###
+
+
+# -----------------------------------------------------------------------------
+#  Merge updated routes with unaltered ones.
+# -----------------------------------------------------------------------------
+# Copy features and coding of unaltered projects in MHN.
+unaltered_routes_query = '"{0}" NOT IN (\''.format(common_id_field) + "','".join(route_arcs.keys()) + "')"
+
+unaltered_routes_lyr = 'unaltered_routes_lyr'
+arcpy.MakeFeatureLayer_management(MHN.bus_future, unaltered_routes_lyr, unaltered_routes_query)
+
+unaltered_itin_view = 'unaltered_itin_view'
+arcpy.MakeTableView_management(MHN.route_systems[MHN.bus_future][0], unaltered_itin_view, unaltered_routes_query)
+
+# Append routes/itin from temp FC/table.
+updated_routes_fc = '/'.join((MHN.mem, 'updated_routes_fc'))
+arcpy.Merge_management((unaltered_routes_lyr, temp_routes_fc), updated_routes_fc)
+
+updated_itin_table = '/'.join((MHN.mem, 'updated_itin_table'))
+arcpy.Merge_management((unaltered_itin_view, temp_itin_table), updated_itin_table)
+
+
+# -----------------------------------------------------------------------------
+#  Commit the changes only after everything else has run successfully.
+# -----------------------------------------------------------------------------
+backup_gdb = MHN.gdb[:-4] + '_' + MHN.timestamp() + '.gdb'
+arcpy.Copy_management(MHN.gdb, backup_gdb)
+arcpy.AddMessage('{0}Geodatabase temporarily backed up to {1}. (If import fails for any reason, replace {2} with this.)'.format('\n',backup_gdb, MHN.gdb))
+
+arcpy.AddMessage('{0}Saving changes to disk...'.format('\n'))
+
+### TO DO ###
