@@ -105,6 +105,7 @@ else:
     os.remove(transact_csv)
     os.remove(network_csv)
 
+
 # -----------------------------------------------------------------------------
 #  Generate temp route fc/itin table from SAS output.
 # -----------------------------------------------------------------------------
@@ -124,7 +125,7 @@ order_field = MHN.route_systems[MHN.bus_future][2]      # 'ITIN_ORDER'
 route_arcs = {}
 
 itin_fields = (
-    common_id_field, 'ITIN_A', 'ITIN_B', 'ABB', order_field, 'LAYOVER',
+    common_id_field, order_field, 'ITIN_A', 'ITIN_B', 'ABB', 'LAYOVER',
     'DWELL_CODE', 'ZONE_FARE', 'LINE_SERV_TIME', 'TTF'
 )
 
@@ -163,26 +164,40 @@ for route_id in sorted(route_arcs.keys()):
             cursor.updateRow(row)
     arcpy.Append_management(route_dissolved, temp_routes_fc, 'NO_TEST')
 
-    # Fill other fields with data in future_route_csv.
-    ### TO DO ###
+# Fill other fields with data from future_route_csv.
+route_fields = (
+    common_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'HEADWAY', 'SPEED',
+    'SCENARIO', 'REPLACE', 'TOD', 'NOTES'
+)
+
+header_attr = {}
+with open(future_route_csv, 'r') as raw_routes:
+    routes = csv.DictReader(raw_routes)
+    for route in routes:
+        attr_list = [route[field] for field in route_fields]
+        header_attr[route[common_id_field]] = attr_list
+os.remove(future_route_csv)
+
+with arcpy.da.UpdateCursor(temp_routes_fc, route_fields) as cursor:
+    for row in cursor:
+        common_id = row[0]
+        attr_list = header_attr[common_id]
+        row[1:] = attr_list[1:]
+        cursor.updateRow(row)
 
 
 # -----------------------------------------------------------------------------
-#  Merge updated routes with unaltered ones.
+#  Merge temp routes with unaltered ones.
 # -----------------------------------------------------------------------------
-# Copy features and coding of unaltered projects in MHN.
-unaltered_routes_query = '"{0}" NOT IN (\''.format(common_id_field) + "','".join(route_arcs.keys()) + "')"
+unaltered_routes_query = '"{0}" NOT IN (\'{1}\')'.format(common_id_field, "','".join(route_arcs.keys()))
 
 unaltered_routes_lyr = 'unaltered_routes_lyr'
 arcpy.MakeFeatureLayer_management(MHN.bus_future, unaltered_routes_lyr, unaltered_routes_query)
-
-unaltered_itin_view = 'unaltered_itin_view'
-arcpy.MakeTableView_management(MHN.route_systems[MHN.bus_future][0], unaltered_itin_view, unaltered_routes_query)
-
-# Append routes/itin from temp FC/table.
 updated_routes_fc = '/'.join((MHN.mem, 'updated_routes_fc'))
 arcpy.Merge_management((unaltered_routes_lyr, temp_routes_fc), updated_routes_fc)
 
+unaltered_itin_view = 'unaltered_itin_view'
+arcpy.MakeTableView_management(MHN.route_systems[MHN.bus_future][0], unaltered_itin_view, unaltered_routes_query)
 updated_itin_table = '/'.join((MHN.mem, 'updated_itin_table'))
 arcpy.Merge_management((unaltered_itin_view, temp_itin_table), updated_itin_table)
 
@@ -194,6 +209,36 @@ backup_gdb = MHN.gdb[:-4] + '_' + MHN.timestamp() + '.gdb'
 arcpy.Copy_management(MHN.gdb, backup_gdb)
 arcpy.AddMessage('{0}Geodatabase temporarily backed up to {1}. (If import fails for any reason, replace {2} with this.)'.format('\n',backup_gdb, MHN.gdb))
 
-arcpy.AddMessage('{0}Saving changes to disk...'.format('\n'))
+arcpy.AddMessage('\nSaving changes to disk...')
+''' # Change temp fc/table dir to mem
+# Replace header feature class.
+arcpy.AddMessage('-- ' + MHN.bus_future + '...')
+arcpy.TruncateTable_management(MHN.bus_future)
+arcpy.Delete_management(MHN.bus_future)
+arcpy.CopyFeatures_management(updated_routes_fc, MHN.bus_future)
+arcpy.Delete_management(updated_routes_fc)
 
-### TO DO ###
+# Replace itinerary table.
+itin_table = MHN.route_systems[MHN.bus_future][0]
+arcpy.AddMessage('-- ' + itin_table + '...')
+arcpy.TruncateTable_management(itin_table)
+arcpy.Delete_management(itin_table)
+itin_path = MHN.break_path(itin_table)
+arcpy.CreateTable_management(itin_path['dir'], itin_path['name'], itin_updated)
+arcpy.Append_management(updated_itin_table, itin_table, 'TEST')
+arcpy.Delete_management(updated_itin_table)
+
+# Rebuild relationship class.
+arcpy.AddMessage('{0}Rebuilding relationship classes...'.format('\n'))
+bus_future_name = MHN.break_path(MHN.bus_future)['name']
+itin_table_name = MHN.break_path(itin_table)['name']
+rel_arcs = MHN.gdb + '/rel_arcs_to_' + itin_table_name
+rel_sys = MHN.gdb + '/rel_' + itin_table_name.rsplit('_',1)[0] + '_to_' + itin_table_name.rsplit('_',1)[1]
+arcpy.CreateRelationshipClass_management(MHN.arc, itin_table, rel_arcs, 'SIMPLE', itin_table_name, MHN.arc_name, 'NONE', 'ONE_TO_MANY', 'NONE', 'ABB', 'ABB')
+arcpy.CreateRelationshipClass_management(MHN.bus_future, itin_table, rel_sys, 'COMPOSITE', itin_table_name, bus_future_name, 'FORWARD', 'ONE_TO_MANY', 'NONE', common_id_field, common_id_field)
+'''
+# Clean up.
+arcpy.Compact_management(MHN.gdb)
+arcpy.Delete_management(MHN.mem)
+arcpy.Delete_management(backup_gdb)
+arcpy.AddMessage('\nChanges successfully applied!\n')
