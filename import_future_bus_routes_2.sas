@@ -1,7 +1,7 @@
 /*
    import_future_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 5/20/13
+   revised: 5/21/13
    ----------------------------------------------------------------------------
    Program is called by import_future_bus_routes.py and formats bus itineraries
    to build with arcpy.

@@ -2,7 +2,7 @@
 '''
     import_future_bus_routes.py
     Author: npeterson
-    Revised: 5/20/2013
+    Revised: 5/21/2013
     ---------------------------------------------------------------------------
     Import future bus route coding from an Excel spreadsheet, with "header" and
     "itinerary" worksheets. SAS can currently only handle .xls and not .xlsx.
@@ -17,7 +17,7 @@ import MHN
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
-xls = arcpy.GetParameterAsText(0)  # Spreadsheet containing project coding
+xls = arcpy.GetParameterAsText(0)  # Spreadsheet containing future bus coding
 sas1_name = 'import_future_bus_routes_2'
 
 

@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 5/8/13
+    Revised: 5/21/13
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -13,8 +13,6 @@
       3. Methods
 
 '''
-
-# Import common modules and set common ArcGIS settings when imported:
 import os
 import sys
 import arcpy
@@ -141,18 +139,20 @@ def calculate_itin_measures(itin_table):
         based on the MILES values of the corresponding MHN arc. '''
     abb_miles_dict = make_attribute_dict(arc, 'ABB', attr_list=['MILES'])
     route_miles_dict = {}
-    with arcpy.da.SearchCursor(itin_table, ['TRANSIT_LINE', 'ABB']) as length_cursor:
-        for row in length_cursor:
+    # 1st loop to determine total route lengths.
+    with arcpy.da.SearchCursor(itin_table, ['TRANSIT_LINE', 'ABB']) as cursor:
+        for row in cursor:
             route = row[0]
             abb = row[1]
             if route in route_miles_dict:
                  route_miles_dict[route] += abb_miles_dict[abb]['MILES']
             else:
                  route_miles_dict[route] = abb_miles_dict[abb]['MILES']
-    with arcpy.da.UpdateCursor(itin_table, ['TRANSIT_LINE', 'ITIN_ORDER', 'ABB', 'F_MEAS', 'T_MEAS']) as meas_cursor:
+    # 2nd loop to calculate F_MEAS and T_MEAS for each row.
+    with arcpy.da.UpdateCursor(itin_table, ['TRANSIT_LINE', 'ITIN_ORDER', 'ABB', 'F_MEAS', 'T_MEAS']) as cursor:
         order_tracker = 0
         cumulative_percent = 0
-        for row in meas_cursor:
+        for row in cursor:
             route = row[0]
             row_order = row[1]
             abb = row[2]
@@ -163,7 +163,7 @@ def calculate_itin_measures(itin_table):
             row[3] = cumulative_percent
             new_cumulative_percent = cumulative_percent + segment_percent
             row[4] = new_cumulative_percent
-            meas_cursor.updateRow(row)
+            cursor.updateRow(row)
             order_tracker = row_order
             cumulative_percent = new_cumulative_percent
     return itin_table
