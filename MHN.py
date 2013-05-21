@@ -136,6 +136,39 @@ def break_path(fullpath):
     return {'dir': directory, 'name': filename, 'ext': extension, 'name_ext': filename_extension}
 
 
+def calculate_itin_measures(itin_table):
+    ''' Calculates the F_MEAS and T_MEAS values for each row in an itin table,
+        based on the MILES values of the corresponding MHN arc. '''
+    abb_miles_dict = make_attribute_dict(arc, 'ABB', attr_list=['MILES'])
+    route_miles_dict = {}
+    with arcpy.da.SearchCursor(itin_table, ['TRANSIT_LINE', 'ABB']) as length_cursor:
+        for row in length_cursor:
+            route = row[0]
+            abb = row[1]
+            if route in route_miles_dict:
+                 route_miles_dict[route] += abb_miles_dict[abb]['MILES']
+            else:
+                 route_miles_dict[route] = abb_miles_dict[abb]['MILES']
+    with arcpy.da.UpdateCursor(itin_table, ['TRANSIT_LINE', 'ITIN_ORDER', 'ABB', 'F_MEAS', 'T_MEAS']) as meas_cursor:
+        order_tracker = 0
+        cumulative_percent = 0
+        for row in meas_cursor:
+            route = row[0]
+            row_order = row[1]
+            abb = row[2]
+            if row_order < order_tracker:
+                cumulative_percent = 0
+            segment_length = abb_miles_dict[abb]['MILES']
+            segment_percent = segment_length / route_miles_dict[route] * 100
+            row[3] = cumulative_percent
+            new_cumulative_percent = cumulative_percent + segment_percent
+            row[4] = new_cumulative_percent
+            meas_cursor.updateRow(row)
+            order_tracker = row_order
+            cumulative_percent = new_cumulative_percent
+    return itin_table
+
+
 def delete_if_exists(filepath):
     ''' Check if a file exists, and delete it if so. '''
     if arcpy.Exists(filepath):

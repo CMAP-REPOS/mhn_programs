@@ -65,8 +65,8 @@ data rte; set rte(where=(tr_line is not null));
   description=upcase(description);
   d=compress(description,"'");
   d=substr(d,1,20);
-  des='"'||trim(d)||'"';
-  nt='"'||trim(notes)||'"';
+  des=trim(d);
+  nt=trim(notes);
 
       proc sort nodupkey; by tr_line;
 
@@ -157,28 +157,11 @@ data section(drop=order); set section;
       ordnew+1;
       if tr_line ne group then ordnew=1;
      output;
-
-data section; set section;
-   retain route 0;
-     if tr_line ne group then route+1;
-     output;
-
-data section; set section;
-   place=_n_;
-     proc sort; by itin_a itin_b;
-
-data arcs; infile in1 missover dlm=',' firstobs=2;
-   length abb $ 13;
-   input itin_a itin_b baselink abb;
-     true=1;
-      proc sort; by itin_a itin_b baselink;
+  proc sort; by itin_a itin_b;
 
   ** Find True Arc Direction in MHN **;
-data section; merge section (in=hit) arcs; by itin_a itin_b;
+data section; merge section (in=hit) mhn; by itin_a itin_b;
    if hit;
-    if baselink=. then baselink=0;
-    if true=1 then abb=catx('-', itin_a, itin_b, baselink);
-    else abb=catx('-', itin_b, itin_a, baselink);
       proc sort; by tr_line ordnew;
 
      *---------------------------------*;
