@@ -45,17 +45,19 @@
 */
 options noxwait;
 
-%let maxzn=1961;     ** highest zone09 POE;
 %let peakst=25200;   ** 7:00 AM in seconds;
 %let peakend=32400;  ** 9:00 AM in seconds;
 %let search=5280;    ** search distance for shortest path file;
 
 ** -- FIXED VARIABLES -- **;
-%let inpath=%scan(&sysparm,1,$);
-%let dir=%scan(&sysparm,2,$);
-%let hdr=%scan(&sysparm,3,$);
-%let itn=%scan(&sysparm,4,$);
-%let counter=%scan(&sysparm,5,$);
+%let rawhead=%scan(&sysparm,1,$);
+%let rawitin=%scan(&sysparm,2,$);
+%let tempdir=%scan(&sysparm,3,$);
+%let head=%scan(&sysparm,4,$);
+%let itin=%scan(&sysparm,5,$);
+%let counter=%scan(&sysparm,6,$);
+%let maxzn=%scan(&sysparm,7,$);
+%let lst=%scan(&sysparm,8,$);
 %let count=1;
 %let tothold=0;
 %let samenode=0;
@@ -64,23 +66,23 @@ options noxwait;
 %let xmin=0; %let xmax=0; %let ymin=0; %let ymax=0;
 %let pnd=0;
 %let patherr=0;
-%let flag32=0;      *** flag for Python3.2;
+*%let flag32=0;      *** flag for Python3.2;
 %let timefix=0;
 
 /*_____________________________________________________________*/
                    * INPUT FILES *;
-filename in1 "&inpath.&hdr..csv";
-filename in2 "&inpath.&itn..csv";
-filename in3 "&dir.output\mhnlinks.txt";
+filename in1 "&rawhead";
+filename in2 "&rawitin";
+filename in3 "&tempdir./network.csv";
 filename in4 "&dir.import\short_path.txt";
-filename in5 "&dir.output\mhnnodes.txt";
-filename in6 "&dir.output\mhnsec.txt";
+filename in5 "&tempdir./nodes.csv";
+filename in6 "&tempdir./transact.csv";
 
                    * OUTPUT FILES *;
-filename out1 "&dir.import\itin.txt";
-filename out2 "&dir.import\path.txt";
-filename out3 "&dir.import\route.txt";
-filename out4 "&dir.import\link_dictionary.txt";
+filename out1 "&itin";
+*filename out2 "&dir.import\path.txt";
+filename out3 "&head";
+*filename out4 "&dir.import\link_dictionary.txt";
 filename out5 "&dir.import\ab.txt";
 /*_____________________________________________________________*/
 
@@ -159,13 +161,13 @@ data pacezf; infile datalines missover dsd;
        data route(drop=route_id); set route; length temp_id $8.; temp_id=route_id;
        data route(rename=(temp_id=route_id)); set route; proc sort; by line;
   %end;
-  %else %do; data null; file "google_buspath2.lst"; put "File not found: &inpath.&hdr..csv"; %end;
+  %else %do; data null; file "&lst"; put "File not found: &inpath.&hdr..csv"; %end;
 
   %if %sysfunc(fexist(in2)) %then %do;
        proc import out=sec1 datafile="&inpath.&itn..csv" dbms=csv replace; getnames=yes; guessingrows=10000;
        proc sort data=sec1; by line;
   %end;
-  %else %do; data null; file "google_buspath2.lst" mod; put "File not found: &inpath.&itn..csv"; %end;
+  %else %do; data null; file "&lst" mod; put "File not found: &inpath.&itn..csv"; %end;
 %mend getdata;
 %getdata
 run;
@@ -759,7 +761,7 @@ data writeout; set section;
     put newline itinerary_a itinerary_b layover dwcode zfare ltime ttf
              order route place abnode batch dep_time arr_time link_stops imputed;
 
-
+/*
      *---------------------------------------*;
       ** FORMAT PATH-BUILDING FILE FOR ARC **
      *---------------------------------------*;
@@ -778,7 +780,7 @@ data path; set path;
 data write2; set path;
   file out2 dsd;
     put node rank route batch;
-
+*/
 
      *---------------------------------*;
       ** WRITE FILE OF ALLOWABLE LINKS **
