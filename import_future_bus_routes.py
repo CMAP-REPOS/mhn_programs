@@ -81,7 +81,7 @@ network_attr = (
     'THRULANEWIDTH1', 'THRULANEWIDTH2', 'PARKLANES1', 'PARKLANES2',
     'SIGIC', 'CLTL', 'RRGRADECROSS', 'TOLLDOLLARS', 'MODES', 'MILES'
 )
-network_query = '"BASELINK" = \'1\' OR "ABB" IN (\'{0}\')'.format("','".join((arc_id for arc_id in project_arcs)))
+network_query = '"BASELINK" = \'1\' OR "ABB" IN (\'{0}\')'.format("','".join((arc_id for arc_id in project_arcs if arc_id[-1] != '1')))
 network_view = MHN.make_skinny_table_view(MHN.arc, 'network_view', network_attr, network_query)
 MHN.write_attribute_csv(network_view, network_csv, network_attr)
 arcpy.Delete_management(network_view)

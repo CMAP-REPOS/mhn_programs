@@ -70,12 +70,13 @@ overlap_transact_attr = [hwyproj_id_field,'ACTION_CODE','NEW_DIRECTIONS','NEW_TY
 overlap_transact_query = '"{0}" IN (\'{1}\')'.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in overlap_projects)))
 overlap_transact_view = MHN.make_skinny_table_view(MHN.route_systems[MHN.hwyproj][0], 'overlap_transact_view', overlap_transact_attr, overlap_transact_query)
 MHN.write_attribute_csv(overlap_transact_view, overlap_transact_csv, overlap_transact_attr)
+overlap_project_arcs = MHN.make_attribute_dict(overlap_transact_view, 'ABB', attr_list=[])
 arcpy.Delete_management(overlap_transact_view)
 
 # Export base year arc attributes.
 overlap_network_attr = ['ANODE','BNODE','ABB','DIRECTIONS','TYPE1','TYPE2','AMPM1','AMPM2','POSTEDSPEED1','POSTEDSPEED2','THRULANES1','THRULANES2',
                         'THRULANEWIDTH1','THRULANEWIDTH2','PARKLANES1','PARKLANES2','SIGIC','CLTL','RRGRADECROSS','TOLLDOLLARS','MODES','MILES']
-overlap_network_query = '"BASELINK" = \'1\''
+overlap_network_query = '"BASELINK" = \'1\' OR "ABB" IN (\'{0}\')'.format("','".join((arc_id for arc_id in overlap_project_arcs if arc_id[-1] != '1')))
 overlap_network_view = MHN.make_skinny_table_view(MHN.arc, 'overlap_network_view', overlap_network_attr, overlap_network_query)
 MHN.write_attribute_csv(overlap_network_view, overlap_network_csv, overlap_network_attr)
 arcpy.Delete_management(overlap_network_view)
