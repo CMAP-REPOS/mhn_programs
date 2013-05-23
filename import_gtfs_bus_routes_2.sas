@@ -53,11 +53,16 @@ options noxwait;
 %let rawhead=%scan(&sysparm,1,$);
 %let rawitin=%scan(&sysparm,2,$);
 %let tempdir=%scan(&sysparm,3,$);
-%let head=%scan(&sysparm,4,$);
-%let itin=%scan(&sysparm,5,$);
-%let counter=%scan(&sysparm,6,$);
-%let maxzn=%scan(&sysparm,7,$);
-%let lst=%scan(&sysparm,8,$);
+%let progdir=%scan(&sysparm,4,$);
+%let head=%scan(&sysparm,5,$);
+%let itin=%scan(&sysparm,6,$);
+%let linkdict=%scan(&sysparm,7,$);
+%let shrtpath=%scan(&sysparm,8,$);
+%let holdchck=%scan(&sysparm,9,$);
+%let abtxt=%scan(&sysparm,10,$);
+%let counter=%scan(&sysparm,11,$);
+%let maxzn=%scan(&sysparm,12,$);
+%let lst=%scan(&sysparm,13,$);
 %let count=1;
 %let tothold=0;
 %let samenode=0;
@@ -66,7 +71,6 @@ options noxwait;
 %let xmin=0; %let xmax=0; %let ymin=0; %let ymax=0;
 %let pnd=0;
 %let patherr=0;
-*%let flag32=0;      *** flag for Python3.2;
 %let timefix=0;
 
 /*_____________________________________________________________*/
@@ -74,16 +78,15 @@ options noxwait;
 filename in1 "&rawhead";
 filename in2 "&rawitin";
 filename in3 "&tempdir./network.csv";
-filename in4 "&dir.import\short_path.txt";
+filename in4 "&shrtpath";
 filename in5 "&tempdir./nodes.csv";
 filename in6 "&tempdir./transact.csv";
 
                    * OUTPUT FILES *;
 filename out1 "&itin";
-*filename out2 "&dir.import\path.txt";
-filename out3 "&head";
-*filename out4 "&dir.import\link_dictionary.txt";
-filename out5 "&dir.import\ab.txt";
+filename out2 "&head";
+filename out3 "&linkdict";
+filename out4 "&abtxt";
 /*_____________________________________________________________*/
 
 *=======================================================================*;
@@ -218,10 +221,7 @@ data route(drop=q ty); set route;
   descr=trim(route_id)||" "||trim(route_long_name)||": "||trim(direction)||" TO "||trim(terminal);
    proc sort; by newline;
 
-data route; set route;
-  batch=int(temp2/100)+1;                                    ** setup in groups of 99 for AML processing**;
-
-data rte1(drop=description type batch temp1 temp2);
+data rte1(drop=description type temp1 temp2);
   retain line route_id route_long_name direction terminal descr mode speed newline; set route;
 proc export data=rte1 outfile="&inpath.routes_processed.csv" dbms=csv replace;
 
@@ -229,7 +229,7 @@ proc export data=rte1 outfile="&inpath.routes_processed.csv" dbms=csv replace;
 proc sql noprint;
   create table section as
       select sec1.*,
-	       route.newline, batch
+	       route.newline
       from sec1,route
       where sec1.line=route.line;
 
@@ -494,7 +494,7 @@ data temp; set nodechk nobs=nonode; call symput('badnode',left(put(nonode,8.)));
         output;
          proc sort; by grp order;
 
-      data pt1(keep=grp line itinerary_a dep_time order newline batch group) pt2(keep=grp itinerary_b arr_time); set fix; by grp;
+      data pt1(keep=grp line itinerary_a dep_time order newline group) pt2(keep=grp itinerary_b arr_time); set fix; by grp;
         if first.grp then output pt1;
         if last.grp then output pt2;
 
@@ -515,7 +515,7 @@ data verify; merge verify (in=hit) mhn; by itinerary_a itinerary_b; if hit;
 
 ** Hold Segments that Do Not Match MHN Links or are the Wrong Direction **;
 ** -- This file can be used for troubleshooting and verification -- **;
-data hold(drop=group batch dir match); set verify(where=(match ne 1));
+data hold(drop=group dir match); set verify(where=(match ne 1));
   proc export data=hold outfile="&dir.import\hold_times.csv" dbms=csv replace;
 
 data temp; set hold nobs=totobs; call symput('tothold',left(put(totobs,8.))); run;
@@ -528,7 +528,7 @@ data temp; set hold nobs=totobs; call symput('tothold',left(put(totobs,8.))); ru
 
       data short(keep=itinerary_a itinerary_b); set hold; proc sort nodupkey; by itinerary_a itinerary_b;
          ** -- This file can be used for troubleshooting and verification with short_path.txt -- **;
-         proc export data=short outfile="&dir.import\hold_check.csv" dbms=csv replace;
+         proc export data=short outfile="&holdchck" dbms=csv replace;
       data short; set short; num=_n_;
       data temp; set short nobs=fixobs; call symput('totfix',left(put(fixobs,8.))); run;
       data _null_;
@@ -562,13 +562,23 @@ data temp; set hold nobs=totobs; call symput('tothold',left(put(totobs,8.))); ru
           data net1; set ntwk(where=(&xmin<=ax<=&xmax & &ymin<=ay<=&ymax));
 
 
-          %include "&dir.Programs\Transit_feed\write_dictionary.sas";
+          data dict(keep=itinerary_a itinerary_b miles); set net1(where=(itinerary_a>&maxzn & itinerary_b>&maxzn));
+            if base=1 then miles=int(mhnmi*100);
+            else miles=int(mhnmi*100)+500;                     *** add penalty of 5 miles to skeleton links to prohibit selection;
+
+          data dict; set dict; by itinerary_a;
+           file out3;
+            if first.itinerary_a then do;
+              if last.itinerary_a then put itinerary_a +0 "${" +0 itinerary_b +0 ":" miles +0 "}";
+              else put itinerary_a +0 "${" +0 itinerary_b +0 ":" miles @;
+            end;
+            else if last.itinerary_a then put +0 "," itinerary_b +0 ":" miles +0 "}";
+            else put +0 "," itinerary_b +0 ":" miles @;
 
           data _null_;
-            %if &flag32>0 %then %do; %let runpython="C:\Python26\ArcGIS10.0\python.exe"; %end;
-            command="%bquote(&runpython) &dir.Programs\Transit_feed\find_shortest_path.py &a &b &dir";
-            call system(command); run;
-%put here! flag32=&flag32 &runpython;
+             %put a=&a b=&b;
+             command="%bquote(&runpython) &progdir./shortest_path.py &a &b &linkdict &shrtpath";
+             call system(command);
          %let count=%eval(&count+1);
       %end;
 
@@ -588,7 +598,7 @@ data temp; set hold nobs=totobs; call symput('tothold',left(put(totobs,8.))); ru
           * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - *;
 
 
-      %include "&dir.Programs\Transit_feed\read_path_output.sas";
+      %include "&progdir./read_path_output.sas";
 
   %end;
 %mend itinfix;
@@ -652,8 +662,8 @@ data route; merge route sect1 stats; by newline; if start=. then start=0;
 data rte; set route;
  length rln trmnl $32.;
   rln=substr(route_long_name,1,32); trmnl=substr(terminal,1,32);
-   file out3 dsd;
-     put newline descr ~ mode type headway speed temp2 batch line route_id rln ~ direction trmnl ~ start strthour ampct vehicle;
+   file out2 dsd;
+     put newline descr ~ mode type headway speed temp2 line route_id rln ~ direction trmnl ~ start strthour ampct vehicle;
 
 
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - *;
@@ -708,7 +718,7 @@ data fix part1; set part1;
 
     *** Collapse Segments ***;
 proc sort data=fix; by newline grp ordnew;
-data a(keep=newline itinerary_a itinerary_b ordnew batch grp line group); set fix; by newline grp ordnew;
+data a(keep=newline itinerary_a itinerary_b ordnew grp line group); set fix; by newline grp ordnew;
   if first.grp;
 
 proc summary nway data=fix; class newline grp;
@@ -759,28 +769,7 @@ data section; set section; by newline order;
 data writeout; set section;
   file out1 dlm=',';
     put newline itinerary_a itinerary_b layover dwcode zfare ltime ttf
-             order route place abnode batch dep_time arr_time link_stops imputed;
-
-/*
-     *---------------------------------------*;
-      ** FORMAT PATH-BUILDING FILE FOR ARC **
-     *---------------------------------------*;
-data path(keep=node route batch); set section; by newline order;
-   node=itinerary_a; output;
-   if last.newline then do;
-     node=itinerary_b; output;
-   end;
-
-data path; set path;
- rank=_n_;
-
-     *---------------------------------*;
-        ** WRITE PATH FILE **
-     *---------------------------------*;
-data write2; set path;
-  file out2 dsd;
-    put node rank route batch;
-*/
+             order route place abnode dep_time arr_time link_stops imputed;
 
      *---------------------------------*;
       ** WRITE FILE OF ALLOWABLE LINKS **
@@ -796,7 +785,7 @@ data seg1; merge seg1 seg; by itinerary_a itinerary_b;
   ab=itinerary_a*100000+itinerary_b; d1=max(d1,0); d2=max(d2,0);
 
 data write2; set seg1;
-  file out5 dlm=',';
+  file out4 dlm=',';
     put ab d1 d2;
 
 run;

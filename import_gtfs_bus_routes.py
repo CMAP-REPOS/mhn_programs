@@ -33,6 +33,10 @@ network_csv = '/'.join((MHN.temp_dir, 'network.csv'))
 nodes_csv = '/'.join((MHN.temp_dir, 'nodes.csv'))
 header_csv = '/'.join((MHN.temp_dir, 'header.csv'))
 itin_csv = '/'.join((MHN.temp_dir, 'itin.csv'))
+link_dict_txt = ''.join((MHN.prog_dir, '/Import/link_dictionary.txt'))  # shortest_path.py input file (called by import_gtfs_bus_routes_2.sas)
+short_path_txt = ''.join((MHN.prog_dir, '/Import/short_path.txt'))      # shortest_path.py output file
+hold_check_csv = ''.join((MHN.prog_dir, '/Import/hold_check.csv'))
+ab_txt = ''.join((MHN.prog_dir, '/Import/ab.txt'))
 
 
 # -----------------------------------------------------------------------------
@@ -43,17 +47,21 @@ MHN.delete_if_exists(sas1_lst)
 MHN.delete_if_exists(transact_csv)
 MHN.delete_if_exists(network_csv)
 MHN.delete_if_exists(nodes_csv)
+MHN.delete_if_exists(link_dict_txt)
+MHN.delete_if_exists(short_path_txt)
+MHN.delete_if_exists(hold_check_csv)
+MHN.delete_if_exists(ab_txt)
 
 
 # -----------------------------------------------------------------------------
 #  Set route system-specific variables.
 # -----------------------------------------------------------------------------
-if which_bus = 'base':
+if which_bus == 'base':
     header = MHN.bus_base
-elif which_bus = 'current':
+elif which_bus == 'current':
     header = MHN.bus_current
 else:
-    MHN.die('Route system must be either "base" or "current", not {0}!'.format(which_bus))
+    MHN.die('Route system must be either "base" or "current", not "{0}"!'.format(which_bus))
 
 itin = MHN.route_systems[header][0]
 common_id_field = MHN.route_systems[header][1]
@@ -110,15 +118,19 @@ arcpy.Delete_management(nodes_view)
 # -----------------------------------------------------------------------------
 #  Use SAS program to validate coding before import.
 # -----------------------------------------------------------------------------
-arcpy.AddMessage('{0}Validating coding in {1}...'.format('\n', xls))
+arcpy.AddMessage('{0}Validating coding in {1} & {2}...'.format('\n', raw_header_csv, raw_itin_csv))
 
 sas1_sas = ''.join((MHN.prog_dir + '/', sas1_name,'.sas'))
-sas1_args = [raw_header_csv, raw_itin_csv, MHN.temp_dir, header_csv, itin_csv, str(min_route_id), str(MHN.max_poe), sas1_lst]
+sas1_args = [raw_header_csv, raw_itin_csv, MHN.temp_dir, MHN.prog_dir,
+             header_csv, itin_csv, link_dict_txt, short_path_txt, hold_check_csv,
+             ab_txt, str(min_route_id), str(MHN.max_poe), sas1_lst]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
     MHN.die('{0} did not run!'.format(sas1_sas))
 elif os.path.exists(sas1_lst):
     MHN.die('Problems with bus_{0} route coding. Please see {1}.'.format(which_bus, sas1_lst))
+elif not os.path.exists(short_path_txt):
+    MHN.die('{0}/shortest_path.py did not run! (Called by {0}.)'.format(MHN.prog_dir, sas2_sas))
 else:
     os.remove(sas1_log)
     os.remove(transact_csv)
