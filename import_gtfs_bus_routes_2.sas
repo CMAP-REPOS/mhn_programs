@@ -52,17 +52,20 @@ options noxwait;
 ** -- FIXED VARIABLES -- **;
 %let rawhead=%scan(&sysparm,1,$);
 %let rawitin=%scan(&sysparm,2,$);
-%let tempdir=%scan(&sysparm,3,$);
-%let progdir=%scan(&sysparm,4,$);
-%let head=%scan(&sysparm,5,$);
-%let itin=%scan(&sysparm,6,$);
-%let linkdict=%scan(&sysparm,7,$);
-%let shrtpath=%scan(&sysparm,8,$);
-%let holdchck=%scan(&sysparm,9,$);
-%let abtxt=%scan(&sysparm,10,$);
-%let counter=%scan(&sysparm,11,$);
-%let maxzn=%scan(&sysparm,12,$);
-%let lst=%scan(&sysparm,13,$);
+%let transact=%scan(&sysparm,3,$);
+%let network=%scan(&sysparm,4,$);
+%let nodes=%scan(&sysparm,5,$);
+%let progdir=%scan(&sysparm,6,$);
+%let head=%scan(&sysparm,7,$);
+%let itin=%scan(&sysparm,8,$);
+%let linkdict=%scan(&sysparm,9,$);
+%let shrtpath=%scan(&sysparm,10,$);
+%let holdchck=%scan(&sysparm,11,$);
+%let holdtime=%scan(&sysparm,12,$);
+%let rteprcss=%scan(&sysparm,13,$);
+%let counter=%scan(&sysparm,14,$);
+%let maxzn=%scan(&sysparm,15,$);
+%let lst=%scan(&sysparm,16,$);
 %let count=1;
 %let tothold=0;
 %let samenode=0;
@@ -77,16 +80,17 @@ options noxwait;
                    * INPUT FILES *;
 filename in1 "&rawhead";
 filename in2 "&rawitin";
-filename in3 "&tempdir./network.csv";
+filename in3 "&network";
 filename in4 "&shrtpath";
-filename in5 "&tempdir./nodes.csv";
-filename in6 "&tempdir./transact.csv";
+filename in5 "&nodes";
+filename in6 "&transact";
 
                    * OUTPUT FILES *;
-filename out1 "&itin";
-filename out2 "&head";
+filename out1 "&head";
+filename out2 "&itin";
 filename out3 "&linkdict";
-filename out4 "&abtxt";
+filename out4 "&holdtime";
+filename out5 "&rteprcss";
 /*_____________________________________________________________*/
 
 *=======================================================================*;
@@ -160,17 +164,17 @@ data pacezf; infile datalines missover dsd;
 %macro getdata;
   %if %sysfunc(fexist(in1)) %then %do;
         ** READ IN BUS CODING **;
-       proc import out=route datafile="&inpath.&hdr..csv" dbms=csv replace; getnames=yes; guessingrows=10000;
+       proc import out=route datafile="&rawhead" dbms=csv replace; getnames=yes; guessingrows=10000;
        data route(drop=route_id); set route; length temp_id $8.; temp_id=route_id;
        data route(rename=(temp_id=route_id)); set route; proc sort; by line;
   %end;
-  %else %do; data null; file "&lst"; put "File not found: &inpath.&hdr..csv"; %end;
+  %else %do; data null; file "&lst"; put "File not found: &rawhead"; %end;
 
   %if %sysfunc(fexist(in2)) %then %do;
-       proc import out=sec1 datafile="&inpath.&itn..csv" dbms=csv replace; getnames=yes; guessingrows=10000;
+       proc import out=sec1 datafile="&rawitin" dbms=csv replace; getnames=yes; guessingrows=10000;
        proc sort data=sec1; by line;
   %end;
-  %else %do; data null; file "&lst" mod; put "File not found: &inpath.&itn..csv"; %end;
+  %else %do; data null; file "&lst" mod; put "File not found: &rawitin"; %end;
 %mend getdata;
 %getdata
 run;
@@ -216,14 +220,14 @@ data route; set route; by mode line;
 
 data route(drop=q ty); set route;
  length newline $6. temp1 $5. descr $50.;
-  temp1=q; temp2=_n_;
+  temp1=q;
   newline=tranwrd(lowcase(mode)||temp1,'','0');
   descr=trim(route_id)||" "||trim(route_long_name)||": "||trim(direction)||" TO "||trim(terminal);
    proc sort; by newline;
 
-data rte1(drop=description type temp1 temp2);
+data rte1(drop=description type temp1);
   retain line route_id route_long_name direction terminal descr mode speed newline; set route;
-proc export data=rte1 outfile="&inpath.routes_processed.csv" dbms=csv replace;
+proc export data=rte1 outfile=out5 dbms=csv replace;
 
 
 proc sql noprint;
@@ -357,7 +361,7 @@ data _null_; set chk nobs=tmfix; call symput('timefix',left(put(tmfix,8.))); run
      data timefix; set pace(where=(flag=1));
 
          ** Use Node Coordinates, 30 MPH & Euclidean distance to estimate new final arrival time ... **;
-     data node; infile in5 missover dlm=',';
+     data node; infile in5 dlm=',' firstobs=2;
         input itinerary_a ax ay;  proc sort; by itinerary_a;
      data nodeb; set node; rename itinerary_a=itinerary_b ax=bx ay=by; proc sort; by itinerary_b;
 
@@ -389,7 +393,7 @@ data pace; set pace;
   proc sort; by itinerary_a;
 
 ** Attach Node Coordinates to Calculate Distance **;
-data node; infile in5 missover dlm=',';
+data node; infile in5 dlm=',' firstobs=2;
   input itinerary_a ax ay;  proc sort; by itinerary_a;
 data nodeb; set node; rename itinerary_a=itinerary_b ax=bx ay=by; proc sort; by itinerary_b;
 data pace; merge pace(in=hit) node; by itinerary_a; if hit; proc sort; by itinerary_b;
@@ -430,21 +434,23 @@ data verify; set section; proc sort; by itinerary_a itinerary_b;
                    ** VERIFY CODING **;
           *-----------------------------------*;
 ** Read in MHN Links **;
-data m; infile in3 missover dlm=',';
-  input link itinerary_a itinerary_b dir mhnmi typ1 typ2 spd1 spd2 base;
-     proc sort; by link;
+data m; infile in3 dlm=',' firstobs=2;
+  length abb $ 13;
+  input itinerary_a itinerary_b base abb dir typ1 typ2 spd1 spd2 mhnmi;
+     proc sort; by abb;
 
-data sec; infile in6 missover dlm=',';
-  input link action spd1 spd2 dir;
+data sec; infile in6 dlm=',' firstobs=2;
+  length abb $ 13;
+  input abb action spd1 spd2 dir;
    if action=3 then action=5;                                        *** make delete largest action value;
-     proc summary nway; class link; var action spd1 spd2 dir; output out=sec2 max=;
+     proc summary nway; class abb; var action spd1 spd2 dir; output out=sec2 max=;
 data sec2(drop=_type_ _freq_); set sec2;
   if spd1=0 then spd1=.; if spd2=0 then spd2=.; if dir=0 then dir=.; base=1;
 
-data trueab(drop=action); update m sec2; by link;
+data trueab(drop=action); update m sec2; by abb;
   if action=5 or typ1=6 then delete;
 
-data mhn(drop=c spd2 typ2 link); set trueab(where=(base=1));
+data mhn(drop=c spd2 typ2 abb); set trueab(where=(base=1));
     match=1;
      output;
     if dir>1 then do;
@@ -455,7 +461,7 @@ data mhn(drop=c spd2 typ2 link); set trueab(where=(base=1));
 
 
 ** Read in MHN Nodes **;
-data node; infile in5 missover dlm=',';
+data node; infile in5 dlm=',' firstobs=2;
   input itinerary_a ax ay;  proc sort; by itinerary_a;
 data ntwk; merge mhn (in=hit) node; by itinerary_a; if hit;
 
@@ -516,7 +522,7 @@ data verify; merge verify (in=hit) mhn; by itinerary_a itinerary_b; if hit;
 ** Hold Segments that Do Not Match MHN Links or are the Wrong Direction **;
 ** -- This file can be used for troubleshooting and verification -- **;
 data hold(drop=group dir match); set verify(where=(match ne 1));
-  proc export data=hold outfile="&dir.import\hold_times.csv" dbms=csv replace;
+  proc export data=hold outfile=out4 dbms=csv replace;
 
 data temp; set hold nobs=totobs; call symput('tothold',left(put(totobs,8.))); run;
 
@@ -597,7 +603,6 @@ data temp; set hold nobs=totobs; call symput('tothold',left(put(totobs,8.))); ru
             ******** Add logic to verify number of entries in short_path is equal to &totfix, else stop scripts ********;
           * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - *;
 
-
       %include "&progdir./read_path_output.sas";
 
   %end;
@@ -660,10 +665,26 @@ data route; merge route sect1 stats; by newline; if start=. then start=0;
 
     ** Replace Route Header File for ARC **;
 data rte; set route;
- length rln trmnl $32.;
+  length rln trmnl $32.;
   rln=substr(route_long_name,1,32); trmnl=substr(terminal,1,32);
-   file out2 dsd;
-     put newline descr ~ mode type headway speed temp2 line route_id rln ~ direction trmnl ~ start strthour ampct vehicle;
+data rte; set rte (keep=newline descr mode type headway speed line route_id rln direction trmnl start strthour ampct vehicle);
+  label newline='TRANSIT_LINE'
+        descr='DESCRIPTION'
+        mode='MODE'
+        type='VEHICLE_TYPE'
+        headway='HEADWAY'
+        speed='SPEED'
+        line='FEEDLINE'
+        route_id='ROUTE_ID'
+        rln='LONGNAME'
+        direction='DIRECTION'
+        trmnl='TERMINAL'
+        start='START'
+        strthour='STARTHOUR'
+        ampct='AM_SHARE'
+        vehicle='CT_VEH';
+   proc sort; by newline;
+   proc export outfile=out1 dbms=csv label replace;
 
 
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - *;
@@ -736,28 +757,23 @@ data section(drop=ordnew); set section;
       order+1;
       if line ne group then order=1;
      output;
-   proc sort; by newline order;
+   proc sort; by itinerary_a itinerary_b;
  *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*;
 
-data section; set section;
-   retain route 0;
-     if line ne group then route+1;
-     output;
-
-data section; set section;
-   place=_n_;
-     proc sort; by itinerary_a itinerary_b;
-
-data arcs; infile in3 missover dlm=",";
-   input itinerary_a itinerary_b;
-     true=1;
+data arcs (keep=itinerary_a itinerary_b abb); infile in3 dlm=',' firstobs=2;
+   length abb $ 13;
+   input itinerary_a itinerary_b base abb dir;
+    true=1;
+    output;
+    if dir>1 then do;
+      c=itinerary_a; itinerary_a=itinerary_b; itinerary_b=c;
+      output;
+    end;
       proc sort; by itinerary_a itinerary_b;
 
   ** Find True Arc Direction in MHN **;
 data section; merge section (in=hit) arcs; by itinerary_a itinerary_b;
    if hit;
-    if true=1 then abnode=itinerary_a*100000+itinerary_b;
-    else abnode=itinerary_b*100000+itinerary_a;
       proc sort; by newline order;
 
 data section; set section; by newline order;
@@ -766,26 +782,22 @@ data section; set section; by newline order;
      *---------------------------------*;
         ** WRITE ITINERARY FILE **
      *---------------------------------*;
-data writeout; set section;
-  file out1 dlm=',';
-    put newline itinerary_a itinerary_b layover dwcode zfare ltime ttf
-             order route place abnode dep_time arr_time link_stops imputed;
-
-     *---------------------------------*;
-      ** WRITE FILE OF ALLOWABLE LINKS **
-     *---------------------------------*;
-data trueab(keep=itinerary_a itinerary_b d1); set trueab; d1=1; proc sort; by itinerary_a itinerary_b;
-data seg(keep=itinerary_a itinerary_b); set section; proc sort nodupkey; by itinerary_a itinerary_b;
-data seg; merge seg (in=hit) trueab; by itinerary_a itinerary_b; if hit;
-data seg1 seg; set seg; if d1=1 then output seg1; else output seg;
-data seg(drop=c d1); set seg; c=itinerary_a; itinerary_a=itinerary_b; itinerary_b=c; proc sort; by itinerary_a itinerary_b;
-data trueab(rename=(d1=d2)); set trueab;
-data seg; merge seg (in=hit) trueab; by itinerary_a itinerary_b; if hit;
-data seg1; merge seg1 seg; by itinerary_a itinerary_b;
-  ab=itinerary_a*100000+itinerary_b; d1=max(d1,0); d2=max(d2,0);
-
-data write2; set seg1;
-  file out4 dlm=',';
-    put ab d1 d2;
+data writeout; set section (keep=newline itinerary_a itinerary_b abb order layover dwcode zfare ltime ttf link_stops imputed dep_time arr_time);
+  label newline='TRANSIT_LINE'
+        itinerary_a='ITIN_A'
+        itinerary_b='ITIN_B'
+        abb='ABB'
+        order='ITIN_ORDER'
+        layover='LAYOVER'
+        dwcode='DWELL_CODE'
+        zfare='ZONE_FARE'
+        ltime='LINE_SERV_TIME'
+        ttf='TTF'
+        link_stops='LINK_STOPS'
+        imputed='IMPUTED'
+        dep_time='DEP_TIME'
+        arr_time='ARR_TIME';
+   proc sort; by newline order;
+   proc export outfile=out2 dbms=csv label replace;
 
 run;

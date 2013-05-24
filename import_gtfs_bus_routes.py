@@ -36,7 +36,8 @@ itin_csv = '/'.join((MHN.temp_dir, 'itin.csv'))
 link_dict_txt = ''.join((MHN.prog_dir, '/Import/link_dictionary.txt'))  # shortest_path.py input file (called by import_gtfs_bus_routes_2.sas)
 short_path_txt = ''.join((MHN.prog_dir, '/Import/short_path.txt'))      # shortest_path.py output file
 hold_check_csv = ''.join((MHN.prog_dir, '/Import/hold_check.csv'))
-ab_txt = ''.join((MHN.prog_dir, '/Import/ab.txt'))
+hold_times_csv = ''.join((MHN.prog_dir, '/Import/hold_times.csv'))
+routes_processed_csv = ''.join((MHN.prog_dir, '/Import/routes_processed.csv'))
 
 
 # -----------------------------------------------------------------------------
@@ -50,7 +51,8 @@ MHN.delete_if_exists(nodes_csv)
 MHN.delete_if_exists(link_dict_txt)
 MHN.delete_if_exists(short_path_txt)
 MHN.delete_if_exists(hold_check_csv)
-MHN.delete_if_exists(ab_txt)
+MHN.delete_if_exists(hold_times_csv)
+MHN.delete_if_exists(routes_processed_csv)
 
 
 # -----------------------------------------------------------------------------
@@ -101,7 +103,7 @@ MHN.write_attribute_csv(transact_view, transact_csv, transact_attr[1:])
 project_arcs = MHN.make_attribute_dict(transact_view, 'ABB', attr_list=[])
 arcpy.Delete_management(transact_view)
 
-# Export bus year arc attributes.
+# Export arc attributes for bus year network.
 network_attr = ('ANODE', 'BNODE', 'BASELINK', 'ABB', 'DIRECTIONS', 'TYPE1', 'TYPE2', 'POSTEDSPEED1', 'POSTEDSPEED2', 'MILES')
 network_query = '"BASELINK" = \'1\' OR "ABB" IN (\'{0}\')'.format("','".join((arc_id for arc_id in project_arcs if arc_id[-1] != '1')))
 network_view = MHN.make_skinny_table_view(MHN.arc, 'network_view', network_attr, network_query)
@@ -121,9 +123,10 @@ arcpy.Delete_management(nodes_view)
 arcpy.AddMessage('{0}Validating coding in {1} & {2}...'.format('\n', raw_header_csv, raw_itin_csv))
 
 sas1_sas = ''.join((MHN.prog_dir + '/', sas1_name,'.sas'))
-sas1_args = [raw_header_csv, raw_itin_csv, MHN.temp_dir, MHN.prog_dir,
-             header_csv, itin_csv, link_dict_txt, short_path_txt, hold_check_csv,
-             ab_txt, str(min_route_id), str(MHN.max_poe), sas1_lst]
+sas1_args = [raw_header_csv, raw_itin_csv, transact_csv, network_csv, nodes_csv,
+             MHN.prog_dir, header_csv, itin_csv, link_dict_txt, short_path_txt,
+             hold_check_csv, hold_times_csv, routes_processed_csv,
+             str(min_route_id), str(MHN.max_poe), sas1_lst]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
     MHN.die('{0} did not run!'.format(sas1_sas))
