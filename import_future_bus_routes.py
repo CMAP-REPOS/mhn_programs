@@ -192,7 +192,7 @@ with arcpy.da.UpdateCursor(temp_routes_fc, route_fields) as cursor:
 
 
 # -----------------------------------------------------------------------------
-#  Merge temp routes with unaltered ones. Filter out REPLACE routes first.
+#  Merge temp routes with unaltered ones.
 # -----------------------------------------------------------------------------
 unaltered_routes_query = '"{0}" NOT IN (\'{1}\')'.format(common_id_field, "','".join(route_arcs.keys()))
 
