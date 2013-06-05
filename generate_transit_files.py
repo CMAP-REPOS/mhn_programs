@@ -74,6 +74,9 @@ MHN.delete_if_exists(bus_route_csv)
 MHN.delete_if_exists(bus_itin_csv)
 MHN.delete_if_exists(oneline_itin_txt)
 MHN.delete_if_exists(feed_groups_txt)
+MHN.delete_if_exists(missing_links_csv)
+MHN.delete_if_exists(link_dict_txt)
+MHN.delete_if_exists(short_path_txt)
 MHN.delete_if_exists(path_errors_txt)
 
 
@@ -126,7 +129,7 @@ for bus_fc in bus_fc_dict:
         arcpy.Delete_management(bus_route_view)
 
         # Export itineraries for selected runs.
-        bus_order_field = MHN.route_systems[bus_fc][1]
+        bus_order_field = MHN.route_systems[bus_fc][2]
         bus_itin_attr = [bus_id_field, 'ITIN_A', 'ITIN_B', bus_order_field, 'LAYOVER', 'DWELL_CODE', 'ZONE_FARE', 'LINE_SERV_TIME', 'TTF']
         bus_itin_query = '"{0}" IN (\'{1}\')'.format(bus_id_field, "','".join((bus_id for bus_id in selected_bus_routes)))
         bus_itin_view = MHN.make_skinny_table_view(MHN.route_systems[bus_fc][0], 'bus_itin_view', bus_itin_attr, bus_itin_query)
@@ -142,7 +145,7 @@ for bus_fc in bus_fc_dict:
         if not os.path.exists(sas1_log):
             MHN.die('{0} did not run!'.format(sas1_sas))
         elif not os.path.exists(feed_groups_txt):
-            MHN.die('{0}/gtfs_collapse_routes.py did not run! (Called by {0}.)'.format(MHN.prog_dir, sas1_sas))
+            MHN.die('{0}/gtfs_collapse_routes.py did not run! (Called by {1}.)'.format(MHN.prog_dir, sas1_sas))
         elif os.path.exists(sas1_lst) or not os.path.exists(sas1_output):
             MHN.die('{0} did not run successfully. Please review {1}.'.format(sas1_sas, sas1_log))
         else:
@@ -334,14 +337,12 @@ for scen in scen_list:
             MHN.die('{0} did not run!'.format(sas2_sas))
         elif os.path.exists(sas2_lst) or not os.path.exists(sas2_output):
             MHN.die('{0} did not run successfully. Please review {1}.'.format(sas2_sas, sas2_log))
-        elif not os.path.exists(short_path_txt):
-            MHN.die('{0}/shortest_path.py did not run! (Called by {0}.)'.format(MHN.prog_dir, sas2_sas))
         elif os.path.exists(path_errors_txt):
             MHN.die('Path errors were encountered. Please review {0}.'.format(path_errors_txt))
         else:
-            arcpy.Delete_management(sas2_log)
-            arcpy.Delete_management(rep_runs_csv)
-            arcpy.Delete_management(rep_runs_itin_csv)
+            os.remove(sas2_log)
+            os.remove(rep_runs_csv)
+            os.remove(rep_runs_itin_csv)
             MHN.delete_if_exists(replace_csv)
 
         # Call generate_transit_files_3.sas -- creates rail stop information.
@@ -470,9 +471,9 @@ for scen in scen_list:
         ctaz_txt = calculate_distances(cta_cbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, ''.join((scen_tran_path, '/ctaz.txt')))
         ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, ''.join((scen_tran_path, '/ctaz2.txt')))
         metraz_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, ''.join((scen_tran_path, '/metraz.txt')))
-        c1z_txt = MHN.write_attribute_csv(cta_cbd_fc, ''.join((scen_tran_path, '/c1z.txt')), ['cta_stop_xy_PNT_ID', MHN.zone_attr])
-        c2z_txt = MHN.write_attribute_csv(cta_noncbd_fc, ''.join((scen_tran_path, '/c2z.txt')), ['cta_stop_xy_PNT_ID', MHN.zone_attr])
-        mz_txt = MHN.write_attribute_csv(metra_stop_xy_z, ''.join((scen_tran_path, '/mz.txt')), ['metra_stop_xy_PNT_ID', MHN.zone_attr])
+        c1z_txt = MHN.write_attribute_csv(cta_cbd_fc, ''.join((scen_tran_path, '/c1z.txt')), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
+        c2z_txt = MHN.write_attribute_csv(cta_noncbd_fc, ''.join((scen_tran_path, '/c2z.txt')), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
+        mz_txt = MHN.write_attribute_csv(metra_stop_xy_z, ''.join((scen_tran_path, '/mz.txt')), ['metra_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
 
         # Clean up temp point features/layers.
         for fc in (cta_stop_xy_z, metra_stop_xy_z, bus_stop_xy_z, cta_bus_xy, pace_bus_xy, cta_cbd_fc, cta_noncbd_fc, bus_cbd_fc, bus_noncbd_fc):

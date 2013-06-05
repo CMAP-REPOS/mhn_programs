@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 5/21/13
+    Revised: 6/3/13
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -22,15 +22,13 @@ arcpy.env.OverwriteOutput = True
 #  1. DIRECTORIES & FILES
 # -----------------------------------------------------------------------------
 mem = 'in_memory'
-default_gdb = 'C:/MHN/mhn.gdb'
 #root_dir = 'V:/Secure/Master_Highway'
 root_dir = 'C:/MHN'
 out_dir = root_dir + '/Output'
 prog_dir = root_dir + '/Programs'
 temp_dir = root_dir + '/Temp'
 #gdb = root_dir + '/mhn.gdb'
-gdb = root_dir + '/mhn_test.gdb'
-#gdb = root_dir + '/sandbox.gdb'
+gdb = root_dir + '/mhn_verify.gdb'
 hwynet_name = 'hwynet'
 hwynet = gdb + '/' + hwynet_name
 arc_name = 'hwynet_arc'
@@ -42,11 +40,11 @@ bus_base = hwynet + '/bus_base'
 bus_current = hwynet + '/bus_current'
 bus_future = hwynet + '/bus_future'
 route_systems = {
-                 hwyproj: (gdb + '/hwyproj_coding', 'TIPID', ''),
-                 bus_base: (gdb + '/bus_base_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 0),
-                 bus_current: (gdb + '/bus_current_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
-                 bus_future: (gdb + '/bus_future_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
-                }
+    hwyproj: (gdb + '/hwyproj_coding', 'TIPID', ''),
+    bus_base: (gdb + '/bus_base_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 0),
+    bus_current: (gdb + '/bus_current_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
+    bus_future: (gdb + '/bus_future_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
+}
 zone_gdb = root_dir + '/zone_systems.gdb'
 zone = zone_gdb + '/Zones09'
 zone_attr = 'Zone09'
@@ -55,7 +53,7 @@ subzone_attr = 'Subzone09'
 capzone = zone_gdb + '/CapacityZones09'
 capzone_attr = 'CapacityZone09'
 
-arcpy.Delete_management(mem)  # Clear memory doing anything else
+arcpy.Delete_management(mem)  # Clear memory before doing anything else
 
 
 # -----------------------------------------------------------------------------
@@ -66,7 +64,7 @@ base_year = 2010  # BASELINK=1 network year, not necessarily scenario 100 (i.e. 
 bus_years = {'base': 2010, 'current': 2012}
 
 centroid_ranges = {
-    'CBD'    : xrange(   1,   48),  # NB. xrange(i,j) is INCLUSIVE of i, EXCLUSIVE of j
+    'CBD'    : xrange(   1,   48),  # NB. xrange(i,j) includes i & excludes j
     'Chicago': xrange(   1,  310),
     'Cook'   : xrange(   1,  855),
     'McHenry': xrange( 855,  959),

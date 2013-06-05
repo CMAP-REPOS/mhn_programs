@@ -1,7 +1,7 @@
 /*
    import_gtfs_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 5/21/13
+   revised: 6/5/13
    ----------------------------------------------------------------------------
    Program is called by import_gtfs_bus_routes.py and formats bus itineraries
    to build with arcpy.
@@ -66,6 +66,7 @@ options noxwait;
 %let counter=%scan(&sysparm,14,$);
 %let maxzn=%scan(&sysparm,15,$);
 %let lst=%scan(&sysparm,16,$);
+%let pypath=%sysfunc(tranwrd(&progdir./Import/pypath.txt,/,\));
 %let count=1;
 %let tothold=0;
 %let samenode=0;
@@ -537,17 +538,18 @@ data temp; set hold nobs=totobs; call symput('tothold',left(put(totobs,8.))); ru
          proc export data=short outfile="&holdchck" dbms=csv replace;
       data short; set short; num=_n_;
       data temp; set short nobs=fixobs; call symput('totfix',left(put(fixobs,8.))); run;
-      data _null_;
-         command="if exist pypath.txt (del pypath.txt /Q)" ; call system(command);
-         command="ftype Python.File >> pypath.txt" ; call system(command);
 
-      data null; infile "pypath.txt" length=reclen;
+      data _null_;
+         command="if exist &pypath (del &pypath /Q)" ; call system(command);
+         command="ftype Python.File >> &pypath" ; call system(command);
+
+      data null; infile "&pypath" length=reclen;
          input location $varying254. reclen;
-         loc=scan(location,2,'='); goodloc=substr(loc,1,index(loc,'.exe"')+4); flag=index(goodloc,'Python32');
-         call symput('runpython',trim(goodloc)); ****call symput('flag32',left(put(flag,5.)));
+         loc=scan(location,2,'='); goodloc=substr(loc,1,index(loc,'.exe"')+4);
+         call symput('runpython',trim(goodloc));
          run;
 
-      data _null_; command="if exist pypath.txt (del pypath.txt /Q)" ; call system(command);
+      data _null_; command="if exist &pypath (del &pypath /Q)" ; call system(command);
 
       ** -- RUN PYTHON SCRIPT -- **;
       %do %while (&count le &totfix);

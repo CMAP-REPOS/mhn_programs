@@ -1,7 +1,7 @@
 /*
    gtfs_reformat_feed.sas
    authors: cheither & npeterson
-   revised: 4/29/13
+   revised: 6/5/13
    ----------------------------------------------------------------------------
    Program reformats unloaded itinerary data for python.
 
@@ -15,6 +15,7 @@ options noxwait;
 %let feedgrp=%scan(&sysparm,5,$);  *** grouped bus routes, passed back from gtfs_collapse_routes.py;
 %let runs=%scan(&sysparm,6,$);     *** final output CSV of this program;
 %let tod=%scan(&sysparm,7,$);      *** TOD period;
+%let pypath=%sysfunc(tranwrd(&progdir./Import/pypath.txt,/,\));
 
 *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*;
 filename in1 "&busitin";
@@ -61,10 +62,10 @@ data s; set s; by line order;
        **** Run python script to collapse runs into TOD routes ***;
  *-------------------------------------------------------------------------------;
 data _null_;
-  command="if exist pypath.txt (del pypath.txt /Q)"; call system(command);
-  command="ftype Python.File >> pypath.txt"; call system(command); run;
+  command="if exist &pypath (del &pypath /Q)"; call system(command);
+  command="ftype Python.File >> &pypath"; call system(command); run;
 
-data null; infile "pypath.txt" length=reclen;
+data null; infile "&pypath" length=reclen;
   input location $varying254. reclen;
   loc=scan(location,2,'='); goodloc=substr(loc,1,index(loc,'.exe"')+4);
   call symput('runpython',trim(goodloc));
@@ -72,8 +73,8 @@ data null; infile "pypath.txt" length=reclen;
 
 %macro runpy;
   data _null_;
-    command="%bquote(&runpython) &progdir.\gtfs_collapse_routes.py &oneline &feedgrp"; call system(command);
-    command="if exist pypath.txt (del pypath.txt /Q)"; call system(command); run;
+    command="%bquote(&runpython) &progdir./gtfs_collapse_routes.py &oneline &feedgrp"; call system(command);
+    command="if exist &pypath (del &pypath /Q)"; call system(command); run;
 %mend runpy;
 %runpy
 /* end of macro */

@@ -1,7 +1,7 @@
 /*
    generate_transit_files_2.sas
    authors: cheither & npeterson
-   revised: 5/6/13
+   revised: 6/5/13
    ----------------------------------------------------------------------------
    Program creates bus transit network batchin files. Bus transit network is
    built using a modified version of MHN processing procedures.
@@ -23,9 +23,11 @@ options noxwait;
 %let progdir=%scan(&sysparm,12,$);
 %let misslink=%scan(&sysparm,13,$);
 %let linkdict=%scan(&sysparm,14,$);
-%let shrtpath=%scan(&sysparm,15,$);
+%let shrt=%scan(&sysparm,15,$);
 %let patherr=%scan(&sysparm,16,$);
 %let outtxt=%scan(&sysparm,17,$);
+%let shrtpath=%sysfunc(tranwrd(&shrt,/,\));
+%let pypath=%sysfunc(tranwrd(&progdir./Import/pypath.txt,/,\));
 %let newln=0;
 %let tothold=0;
 %let totfix=0;
@@ -282,16 +284,16 @@ data _null_; set hold nobs=totobs; call symput('tothold',left(put(totobs,8.))); 
       data short; set short; num=_n_;
       data temp; set short nobs=fixobs; call symput('totfix',left(put(fixobs,8.))); run;
       data _null_;
-         command="if exist pypath.txt (del pypath.txt /Q)" ; call system(command);
-         command="ftype Python.File >> pypath.txt" ; call system(command);
+         command="if exist &pypath (del &pypath /Q)" ; call system(command);
+         command="ftype Python.File >> &pypath" ; call system(command);
 
-      data null; infile "pypath.txt" length=reclen;
+      data null; infile "&pypath" length=reclen;
          input location $varying254. reclen;
          loc=scan(location,2,'='); goodloc=substr(loc,1,index(loc,'.exe"')+4);
          call symput('runpython',trim(goodloc));
          run;
 
-      data _null_; command="if exist pypath.txt (del pypath.txt /Q)" ; call system(command);
+      data _null_; command="if exist &pypath (del &pypath /Q)" ; call system(command);
       data _null_; command="if exist &shrtpath (del &shrtpath /Q)" ; call system(command);
 
       ** -- RUN PYTHON SCRIPT -- **;
@@ -696,7 +698,7 @@ data last; merge nd lnk bvmt;
         busvmt='Bus VMT';
         proc print label noobs; var nodes links miles lnmi seg busvmt;
                 format nodes links seg comma6. miles lnmi busvmt comma9.2; title " ";
-           title2 "&dirpath SCENARIO &scen TOD &tod BUS TRANSIT NETWORK EMME SUMMARY for MODES BEPLQb";
+           title2 "SCENARIO &scen TOD &tod BUS TRANSIT NETWORK EMME SUMMARY for MODES BEPLQb";
 
 
 proc printto;  *** return output to original location;

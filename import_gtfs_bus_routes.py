@@ -134,8 +134,6 @@ if not os.path.exists(sas1_log):
     MHN.die('{0} did not run!'.format(sas1_sas))
 elif os.path.exists(sas1_lst):
     MHN.die('Problems with bus_{0} route coding. Please see {1}.'.format(which_bus, sas1_lst))
-elif not os.path.exists(short_path_txt):
-    MHN.die('{0}/shortest_path.py did not run! (Called by {0}.)'.format(MHN.prog_dir, sas2_sas))
 else:
     os.remove(sas1_log)
     os.remove(transact_csv)
