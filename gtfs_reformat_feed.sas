@@ -15,7 +15,7 @@ options noxwait;
 %let feedgrp=%scan(&sysparm,5,$);  *** grouped bus routes, passed back from gtfs_collapse_routes.py;
 %let runs=%scan(&sysparm,6,$);     *** final output CSV of this program;
 %let tod=%scan(&sysparm,7,$);      *** TOD period;
-%let pypath=%sysfunc(tranwrd(&progdir./Import/pypath.txt,/,\));
+%let pypath=%sysfunc(tranwrd(&progdir./pypath.txt,/,\));
 
 *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*;
 filename in1 "&busitin";

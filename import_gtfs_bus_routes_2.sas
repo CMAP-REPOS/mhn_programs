@@ -66,7 +66,7 @@ options noxwait;
 %let counter=%scan(&sysparm,14,$);
 %let maxzn=%scan(&sysparm,15,$);
 %let lst=%scan(&sysparm,16,$);
-%let pypath=%sysfunc(tranwrd(&progdir./Import/pypath.txt,/,\));
+%let pypath=%sysfunc(tranwrd(&progdir./pypath.txt,/,\));
 %let count=1;
 %let tothold=0;
 %let samenode=0;

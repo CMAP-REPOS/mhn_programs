@@ -33,11 +33,11 @@ network_csv = '/'.join((MHN.temp_dir, 'network.csv'))
 nodes_csv = '/'.join((MHN.temp_dir, 'nodes.csv'))
 header_csv = '/'.join((MHN.temp_dir, 'header.csv'))
 itin_csv = '/'.join((MHN.temp_dir, 'itin.csv'))
-link_dict_txt = ''.join((MHN.prog_dir, '/Import/link_dictionary.txt'))  # shortest_path.py input file (called by import_gtfs_bus_routes_2.sas)
-short_path_txt = ''.join((MHN.prog_dir, '/Import/short_path.txt'))      # shortest_path.py output file
-hold_check_csv = ''.join((MHN.prog_dir, '/Import/hold_check.csv'))
-hold_times_csv = ''.join((MHN.prog_dir, '/Import/hold_times.csv'))
-routes_processed_csv = ''.join((MHN.prog_dir, '/Import/routes_processed.csv'))
+link_dict_txt = ''.join((MHN.out_dir, '/link_dictionary.txt'))  # shortest_path.py input file (called by import_gtfs_bus_routes_2.sas)
+short_path_txt = ''.join((MHN.out_dir, '/short_path.txt'))      # shortest_path.py output file
+hold_check_csv = ''.join((MHN.out_dir, '/hold_check.csv'))
+hold_times_csv = ''.join((MHN.out_dir, '/hold_times.csv'))
+routes_processed_csv = ''.join((MHN.out_dir, '/routes_processed.csv'))
 
 
 # -----------------------------------------------------------------------------

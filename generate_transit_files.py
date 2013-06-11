@@ -53,9 +53,9 @@ bus_route_csv = ''.join((MHN.temp_dir, '/bus_route.csv'))
 bus_itin_csv = ''.join((MHN.temp_dir, '/bus_itin.csv'))
 oneline_itin_txt = ''.join((MHN.temp_dir, '/oneline_itin.txt'))  # gtfs_collapse_routes.py input file (called by gtfs_reformat_feed.sas)
 feed_groups_txt = ''.join((MHN.temp_dir, '/feed_groups.txt'))    # gtfs_collapse_routes.py output file
-missing_links_csv = ''.join((MHN.prog_dir, '/Import/missing_bus_links.csv'))
-link_dict_txt = ''.join((MHN.prog_dir, '/Import/link_dictionary.txt'))  # shortest_path.py input file (called by generate_transit_files_2.sas)
-short_path_txt = ''.join((MHN.prog_dir, '/Import/short_path.txt'))      # shortest_path.py output file
+missing_links_csv = ''.join((MHN.out_dir, '/missing_bus_links.csv'))
+link_dict_txt = ''.join((MHN.out_dir, '/link_dictionary.txt'))  # shortest_path.py input file (called by generate_transit_files_2.sas)
+short_path_txt = ''.join((MHN.out_dir, '/short_path.txt'))      # shortest_path.py output file
 path_errors_txt = ''.join((MHN.temp_dir, '/path_errors.txt'))
 
 
@@ -504,11 +504,13 @@ for scen in scen_list:
             arcpy.Delete_management(mz_txt)
             arcpy.Delete_management(itin_final)
 
-        ### End of TOD loop ##
+        ### End of TOD loop ###
 
     ### End of scenario loop ###
 
-# Clean up script-level data.
+# -----------------------------------------------------------------------------
+#  Clean up script-level data.
+# -----------------------------------------------------------------------------
 for bus_fc in bus_fc_dict:
     which_bus = bus_fc_dict[bus_fc]
     for tod in sorted(MHN.tod_periods.keys()):

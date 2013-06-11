@@ -27,7 +27,7 @@ options noxwait;
 %let patherr=%scan(&sysparm,16,$);
 %let outtxt=%scan(&sysparm,17,$);
 %let shrtpath=%sysfunc(tranwrd(&shrt,/,\));
-%let pypath=%sysfunc(tranwrd(&progdir./Import/pypath.txt,/,\));
+%let pypath=%sysfunc(tranwrd(&progdir./pypath.txt,/,\));
 %let newln=0;
 %let tothold=0;
 %let totfix=0;
