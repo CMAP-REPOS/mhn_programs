@@ -403,8 +403,8 @@ for scen in scen_list:
         arcpy.Delete_management(bus_stop_xy)
 
         # Create CBD and non-CBD layers for CTA (rail) stops and bus stops.
-        cbd_query = ''.join(('"', MHN.zone_attr, '" >= ', str(min(MHN.centroid_ranges['CBD'])), ' AND "', MHN.zone_attr, '" <= ', str(max(MHN.centroid_ranges['CBD']))))
-        noncbd_query = ''.join(('"', MHN.zone_attr, '" < ', str(min(MHN.centroid_ranges['CBD'])), ' OR "', MHN.zone_attr, '" > ', str(max(MHN.centroid_ranges['CBD']))))
+        cbd_query = '"{0}" >= {1} AND "{0}" <= {2}'.format(MHN.zone_attr, min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['CBD']))
+        noncbd_query = '"{0}" < {1} OR "{0}" > {2}'.format(MHN.zone_attr, min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['CBD']))
 
         cta_cbd_lyr = 'cta_cbd_lyr'
         arcpy.MakeFeatureLayer_management(cta_stop_xy_z, cta_cbd_lyr, cbd_query)
