@@ -185,7 +185,7 @@ for scen in scen_list:
         w.write('c {0}\n'.format(MHN.timestamp('%d%b%y').upper()))
         w.write('t linkvertices\n')
 
-        def write_vertices(fc, reversed=False):
+        def write_vertices(fc, writer, reversed=False):
             with arcpy.da.SearchCursor(fc, ['SHAPE@','ANODE','BNODE']) as cursor:
                 for row in cursor:
                     arc = row[0]
@@ -195,13 +195,13 @@ for scen in scen_list:
                     else:
                         fnode = str(row[2])  # ANODE now references to-node
                         tnode = str(row[1])  # BNODE now references from-node
-                    w.write(' '.join(['r', fnode, tnode]) + '\n')
+                    writer.write(' '.join(['r', fnode, tnode]) + '\n')
                     n = 0  # Before for-loop, will not be reset if an arc is multi-part for some reason
                     for part in arc:
                         vertex = part.next()
                         while vertex:
                             n += 1
-                            w.write(' '.join(['a', fnode, tnode, str(n), str(vertex.X), str(vertex.Y)]) + '\n')
+                            writer.write(' '.join(['a', fnode, tnode, str(n), str(vertex.X), str(vertex.Y)]) + '\n')
                             vertex = part.next()
                             if not vertex:
                                 vertex = part.next()
@@ -209,14 +209,14 @@ for scen in scen_list:
 
         arcs_mem = MHN.mem + '/arcs'
         arcpy.CopyFeatures_management(arcs, arcs_mem)
-        write_vertices(arcs_mem)
+        write_vertices(arcs_mem, w)
 
         arcs_mem_flipped = MHN.mem + '/arcs_flipped'
         arcs_2dir_lyr = 'arcs_2dir'
         arcpy.MakeFeatureLayer_management(arcs_mem, arcs_2dir_lyr, '"DIRECTIONS" <> \'1\'')
         arcpy.CopyFeatures_management(arcs_2dir_lyr, arcs_mem_flipped)
         arcpy.FlipLine_edit(arcs_mem_flipped)
-        write_vertices(arcs_mem_flipped, reversed=True)
+        write_vertices(arcs_mem_flipped, w, reversed=True)
 
         w.close()
         arcpy.Delete_management(arcs_mem)
