@@ -1,7 +1,7 @@
 /*
    generate_highway_files_2.sas
    Authors: cheither & npeterson
-   Revised: 4/29/13
+   Revised: 6/19/13
    ----------------------------------------------------------------------------
    Program uses base conditions and project data from the MHN to build Emme
    scenario highway networks. Emme batchin files are the output of this
@@ -90,7 +90,7 @@ options pagesize=50 linesize=125;
           thruft2
           aparkln1
           aparkln2
-          asigic
+          sigic
           acltl
           arrcross
           toll
@@ -104,9 +104,9 @@ options pagesize=50 linesize=125;
                ** FORMAT VARIABLES FOR UPDATE **;
               *---------------------------------;
  data temp(drop=i); set temp;
-     array fixmiss{15} type1 type2 thruft1 thruln1 posted1 repanode repbnode
-               thruft2 thruln2 posted2 toll directn ampm1 ampm2 modes;
-          do i=1 to 15;
+     array fixmiss{16} type1 type2 sigic thruft1 thruln1 posted1 repanode
+               repbnode thruft2 thruln2 posted2 toll directn ampm1 ampm2 modes;
+          do i=1 to 16;
              if fixmiss{i}=0 then fixmiss{i}='.';
           end;
             proc sort; by tipid;
@@ -134,11 +134,11 @@ options pagesize=50 linesize=125;
        * - - - - - - - - - - - - - - - - - - - - - - - - - - *;
 
 
-      *-----------------------------------------------------------;
-          ** PROCESS PARKING, SIGIC, CLTL & GRADE SEPARATIONS **;
-      *-----------------------------------------------------------;
+      *----------------------------------------------------;
+          ** PROCESS PARKING, CLTL & GRADE SEPARATIONS **;
+      *----------------------------------------------------;
  data calc; set network;
-    keep abb parkln1 parkln2 cltl rrcross sigic;
+    keep abb parkln1 parkln2 cltl rrcross;
 
  data temp; merge temp (in=hit) calc; by abb;
    if hit;
@@ -147,8 +147,7 @@ options pagesize=50 linesize=125;
      parkln2=max(parkln2+aparkln2,0);
      cltl=max(cltl+acltl,0);
      rrcross=max(rrcross+arrcross,0);
-     sigic=max(sigic+asigic,0);
-       drop aparkln1 aparkln2 acltl arrcross asigic;
+       drop aparkln1 aparkln2 acltl arrcross;
 
 
         *--------------------------------------------;
