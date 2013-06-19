@@ -322,7 +322,7 @@ for scen in scen_list:
                 with open(bus_future_itin_csv, 'r') as reader:
                     for line in reader:
                         writer.write(line)
-            arcpy.Delete_management(bus_future_itin_csv)
+            os.remove(bus_future_itin_csv)
 
 
         # Call generate_transit_files_2.sas -- creates bus batchin files.
@@ -332,6 +332,8 @@ for scen in scen_list:
                      tod, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])),
                      str(MHN.max_poe), min(MHN.scenario_years.keys()), MHN.prog_dir, missing_links_csv,
                      link_dict_txt, short_path_txt, path_errors_txt, sas2_output)
+        if tod == sorted(MHN.tod_periods.keys())[0] and os.path.exists(sas2_output):
+            os.remove(sas2_output)  # Delete this before first iteration, or else old version will be appended to.
         MHN.submit_sas(sas2_sas, sas2_log, sas2_lst, sas2_args)
         if not os.path.exists(sas2_log):
             MHN.die('{0} did not run!'.format(sas2_sas))
