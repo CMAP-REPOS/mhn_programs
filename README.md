@@ -13,26 +13,20 @@ There are currently 7 main scripts, each of which corresponds to an ArcGIS tool.
 * **generate_highway_files.py**:
   1. Scenario Code (string; input; default=100)
   2. Root Folder for Batchin Files (folder; input)
-
 * **generate_transit_files.py**:
   1. Scenario Code (string; input; default=100)
   2. Root Folder for Batchin Files (folder; input)
   3. CT-RAMP Output (boolean; input; default=false)
-
 * **import_future_bus_routes.py**:
   1. Future Bus Route Coding XLS (file; input)
-
 * **import_gtfs_bus_routes.py**:
   1. Bus Route Header CSV (file; input)
   2. Bus Route Itinerary CSV (file; input)
   3. Bus Route System to Import Into (string; input; default=current)
-
 * **import_highway_projects.py**:
   1. Highway Project Coding XLS (file; input)
-
 * **incorporate_edits.py**:
   1. _[No parameters]_
-
 * **update_highway_project_years.py**:
   1. Project Years CSV (file; input)
   2. Uncodable Projects CSV (file; input)
