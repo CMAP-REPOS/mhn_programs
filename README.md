@@ -10,30 +10,30 @@ ArcGIS Toolbox Configuration
 ----------------------------
 There are currently 7 main scripts, each of which corresponds to an ArcGIS tool. These main scripts all import the MHN.py module, and most of them call subsequent SAS and/or Python scripts, which do not need to be configured as ArcGIS tools. The main ones should be added to an ArcGIS Toolbox (right-click -> Add -> Script...) with the following parameter configurations (parameter order _is_ important):
 
-* **generate_highway_files.py**
+* **generate_highway_files.py**:
     1. Scenario Code (string; input; default=100)
     2. Root Folder for Batchin Files (folder; input)
 
-* **generate_transit_files.py**
+* **generate_transit_files.py**:
     1. Scenario Code (string; input; default=100)
     2. Root Folder for Batchin Files (folder; input)
     3. CT-RAMP Output (boolean; input; default=false)
 
-* **import_future_bus_routes.py**
+* **import_future_bus_routes.py**:
     1. Future Bus Route Coding XLS (file; input)
 
-* **import_gtfs_bus_routes.py**
+* **import_gtfs_bus_routes.py**:
     1. Bus Route Header CSV (file; input)
     2. Bus Route Itinerary CSV (file; input)
     3. Bus Route System to Import Into (string; input; default=current)
 
-* **import_highway_projects.py**
+* **import_highway_projects.py**:
     1. Highway Project Coding XLS (file; input)
 
-* **incorporate_edits.py**
+* **incorporate_edits.py**:
   * Parameters: _N/A_
 
-* **update_highway_project_years.py**
+* **update_highway_project_years.py**:
     1. Project Years CSV (file; input)
     2. Uncodable Projects CSV (file; input)
     3. MRN Geodatabase (workspace; input)
@@ -41,6 +41,6 @@ There are currently 7 main scripts, each of which corresponds to an ArcGIS tool.
 ### Optional Utilities Toolset
 This repository also includes a "Util" folder, containing scripts that perform various utilitarian functions relating to the MHN. If you wish to use any of them, you can create a new Toolset within your Toolbox (right-click -> New -> Toolset) and add the scripts to it in the same way as you added the main ones. The parameter configurations are as follows:
 
-* **generate_directional_links.py**
+* **generate_directional_links.py**:
     1. Input Arc Feature Class (feature class; input)
     2. Output Feature Class (feature class; output)
