@@ -6,7 +6,8 @@ The MHN itself contains information about all of the major roads within the 21-c
 
 The scripts in this repository are used to import new GTFS bus data and road construction project details, maintain the integrity of the network after geometric edits have been made, and export data in a format suitable for input into Emme modeling networks. They are intended to be loaded into an ArcGIS toolbox and run from within the ArcMap or ArcCatalog GUI.
 
-==ArcGIS Toolbox Configuration==
+ArcGIS Toolbox Configuration
+----------------------------
 There are currently 7 main scripts, each of which corresponds to an ArcGIS tool. These main scripts all import the MHN.py module, and most of them call subsequent SAS and/or Python scripts, which do not need to be configured as ArcGIS tools. The main ones should be added to an ArcGIS Toolbox (right-click -> Add -> Script...) with the following configurations (parameter order _is_ important):
 
 * **generate_highway_files.py**
@@ -43,7 +44,7 @@ There are currently 7 main scripts, each of which corresponds to an ArcGIS tool.
     2. Uncodable Projects CSV (file; input)
     3. MRN Geodatabase (workspace; input)
 
-===Optional Utilities Toolset===
+### Optional Utilities Toolset
 This repository also includes a "Util" folder, containing scripts that perform various utilitarian functions relating to the MHN. If you wish to use any of them, you can create a new Toolset within your Toolbox (right-click -> New -> Toolset) and add the scripts to it in the same way as you added the main ones. The configurations are as follows:
 
 * **generate_directional_links.py**
