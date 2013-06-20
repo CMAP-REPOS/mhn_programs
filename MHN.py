@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 6/3/13
+    Revised: 6/20/13
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -332,7 +332,7 @@ def submit_sas(sas_file, sas_log, sas_lst, arg_list=None):
     else:
         arg_str = '$'.join(arg_list)
     from subprocess import call
-    bat = prog_dir + '/sasrun_gdb.bat'
+    bat = prog_dir + '/sasrun.bat'
     cmd = [bat, sas_file, arg_str, sas_log, sas_lst]
     return call(cmd)
 
