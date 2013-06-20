@@ -1,5 +1,5 @@
-GOTO2040/mhn_programs
-=====================
+GOTO2040 / mhn_programs
+=======================
 The MHN Programs repository is a collection of (mostly) Python scripts used to administer the Chicago Metropolitan Agency for Planning (CMAP)'s Master Highway Network geodatabase. This geodatabase is used, in conjunction with the Master Rail Network, to generate travel demand modeling networks, which we use for all of our modeling needs, including transportation conformity.
 
 The MHN itself contains information about all of the major roads within the 21-county CMAP modeling area, as well as all major road construction projects scheduled between now and 2040, all current CTA and Pace bus routes, and planned future bus routes (like CTA's Ashland BRT).
