@@ -39,7 +39,7 @@ There are currently 7 main scripts, each of which corresponds to an ArcGIS tool.
   3. MRN Geodatabase (workspace; input)
 
 ### Optional Utilities Toolset
-This repository also includes a "Util" folder, containing scripts that perform various utilitarian functions relating to the MHN. If you wish to use any of them, you can create a new Toolset within your Toolbox (right-click -> New -> Toolset) and add the scripts to it in the same way as you added the main ones. The parameter configurations are as follows:
+This repository also includes a "Utilities" folder, containing scripts that perform various utilitarian functions relating to the MHN. If you wish to use any of them, you can create a new Toolset within your Toolbox (right-click -> New -> Toolset) and add the scripts to it in the same way as you added the main ones. The parameter configurations are as follows:
 
 * **generate_directional_links.py**:
   1. Input Arc Feature Class (feature class; input)
