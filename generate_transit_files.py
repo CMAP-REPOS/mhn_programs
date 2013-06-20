@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 5/7/13
+    Revised: 6/20/13
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -87,7 +87,7 @@ arc_miles_view = 'arc_miles_view'
 MHN.make_skinny_table_view(MHN.arc, arc_miles_view, ['ABB', 'MILES'])
 
 node_oid_field = MHN.determine_OID_fieldname(MHN.node)
-centroid_lyr = MHN.make_skinny_feature_layer(MHN.node, 'centroid_lyr', [node_oid_field, 'NODE'], '"NODE" <= ' + str(max(MHN.centroid_ranges['MHN'])))
+centroid_lyr = MHN.make_skinny_feature_layer(MHN.node, 'centroid_lyr', [node_oid_field, 'NODE'], '"NODE" <= {0}'.format(max(MHN.centroid_ranges['MHN'])))
 centroid_fc = ''.join((MHN.mem, '/centroid_fc'))
 arcpy.CopyFeatures_management(centroid_lyr, centroid_fc)
 
@@ -159,7 +159,7 @@ for bus_fc in bus_fc_dict:
 
 
 # -----------------------------------------------------------------------------
-#  Generate large itinerary files joined with MILES attribute.
+#  Generate large itinerary tables joined with MILES attribute.
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('\nCreating temporary itinerary datasets...')
 all_runs_itin_miles_dict = {}
