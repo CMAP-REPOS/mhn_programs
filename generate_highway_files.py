@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 5/8/13
+    Revised: 6/21/13
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -20,6 +20,7 @@ import MHN  # Custom library for MHN processing functionality
 # -----------------------------------------------------------------------------
 scen_code = arcpy.GetParameterAsText(0)                                      # String, default = '100'
 root_path = arcpy.GetParameterAsText(1).replace('\\','/').rstrip('/') + '/'  # String, no default
+create_tollsys_flag = arcpy.GetParameter(2)                                  # Boolean, default = True
 if os.path.exists(root_path):
     hwy_path = MHN.ensure_dir(root_path + 'highway/')
 else:
@@ -47,6 +48,28 @@ MHN.delete_if_exists(sas1_lst)
 MHN.delete_if_exists(overlap_year_csv)
 MHN.delete_if_exists(overlap_transact_csv)
 MHN.delete_if_exists(overlap_network_csv)
+
+
+# -----------------------------------------------------------------------------
+#  Write tollsys.flag file if desired.
+# -----------------------------------------------------------------------------
+if create_tollsys_flag:
+    tollsys_flag = ''.join((hwy_path, 'tollsys.flag'))
+    MHN.delete_if_exists(tollsys_flag)
+    tollsys_lyr = 'tollsys_lyr'
+    tollsys_query = ''' "TOLLSYS" = 1 '''
+    arcpy.MakeFeatureLayer_management(MHN.arc, tollsys_lyr, tollsys_query)
+    with open(tollsys_flag, 'w') as w:
+        w.write('~# TOLLSYS=1 links\n')
+        with arcpy.da.SearchCursor(tollsys_lyr, ['ANODE', 'BNODE', 'DIRECTIONS']) as cursor:
+            for row in cursor:
+                anode = row[0]
+                bnode = row[1]
+                directions = int(row[2])
+                w.write('l={0},{1}\n'.format(anode, bnode))
+                if directions > 1:  # There probably won't be any, but just in case...
+                    w.write('l={1},{0}\n'.format(anode, bnode))
+    arcpy.Delete_management(tollsys_lyr)
 
 
 # -----------------------------------------------------------------------------

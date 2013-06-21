@@ -12,10 +12,11 @@ There are currently 7 main scripts, each of which corresponds to an ArcGIS tool.
 
 * **generate_highway_files.py**:
   1. Scenario Code (string; input; default=100)
-  2. Root Folder for Batchin Files (folder; input)
+  2. Root Folder for Emme Batchin Files (folder; input)
+  3. Create Scenario-Independent TOLLSYS.FLAG File (boolean; input; default=true)
 * **generate_transit_files.py**:
   1. Scenario Code (string; input; default=100)
-  2. Root Folder for Batchin Files (folder; input)
+  2. Root Folder for Emme Batchin Files (folder; input)
   3. CT-RAMP Output (boolean; input; default=false)
 * **import_future_bus_routes.py**:
   1. Future Bus Route Coding XLS (file; input)
