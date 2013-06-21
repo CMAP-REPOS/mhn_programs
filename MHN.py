@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 6/20/13
+    Revised: 6/21/13
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -29,8 +29,8 @@ out_dir = root_dir + '/output'
 prog_dir = 'V:/Secure/Master_Highway/mhn_programs'
 temp_dir = root_dir + '/temp'
 #gdb = root_dir + '/mhn.gdb'
-#gdb = root_dir + '/mhn_verify.gdb'
-gdb = root_dir + '/mhn_test.gdb'
+gdb = root_dir + '/mhn_verify.gdb'
+#gdb = root_dir + '/mhn_test.gdb'
 hwynet_name = 'hwynet'
 hwynet = gdb + '/' + hwynet_name
 arc_name = 'hwynet_arc'
@@ -364,3 +364,23 @@ def write_attribute_csv(in_obj, textfile, field_list=None, include_headers=True)
             csv.write(','.join(map(str,row)) + '\n')
     csv.close()
     return textfile
+
+
+def write_arc_flag_file(flag_file, flag_query):
+    ''' Create a file containing l=anode,bnode rows for all directional links
+        meeting a specified criterion. '''
+    delete_if_exists(flag_file)
+    flag_lyr = 'flag_lyr'
+    arcpy.MakeFeatureLayer_management(arc, flag_lyr, flag_query)
+    with open(flag_file, 'w') as w:
+        w.write('~# {0} links\n'.format(flag_query.strip()))
+        with arcpy.da.SearchCursor(flag_lyr, ['ANODE', 'BNODE', 'DIRECTIONS']) as cursor:
+            for row in cursor:
+                anode = row[0]
+                bnode = row[1]
+                directions = int(row[2])
+                w.write('l={0},{1}\n'.format(anode, bnode))
+                if directions > 1:
+                    w.write('l={1},{0}\n'.format(anode, bnode))
+    arcpy.Delete_management(flag_lyr)
+    return flag_file
