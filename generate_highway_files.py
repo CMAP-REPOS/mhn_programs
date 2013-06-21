@@ -55,21 +55,7 @@ MHN.delete_if_exists(overlap_network_csv)
 # -----------------------------------------------------------------------------
 if create_tollsys_flag:
     tollsys_flag = ''.join((hwy_path, 'tollsys.flag'))
-    MHN.delete_if_exists(tollsys_flag)
-    tollsys_lyr = 'tollsys_lyr'
-    tollsys_query = ''' "TOLLSYS" = 1 '''
-    arcpy.MakeFeatureLayer_management(MHN.arc, tollsys_lyr, tollsys_query)
-    with open(tollsys_flag, 'w') as w:
-        w.write('~# TOLLSYS=1 links\n')
-        with arcpy.da.SearchCursor(tollsys_lyr, ['ANODE', 'BNODE', 'DIRECTIONS']) as cursor:
-            for row in cursor:
-                anode = row[0]
-                bnode = row[1]
-                directions = int(row[2])
-                w.write('l={0},{1}\n'.format(anode, bnode))
-                if directions > 1:  # There probably won't be any, but just in case...
-                    w.write('l={1},{0}\n'.format(anode, bnode))
-    arcpy.Delete_management(tollsys_lyr)
+    MHN.write_arc_flag_file(tollsys_flag, ''' "TOLLSYS" = 1 ''')
 
 
 # -----------------------------------------------------------------------------
