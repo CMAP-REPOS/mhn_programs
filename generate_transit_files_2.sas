@@ -501,6 +501,7 @@ data out1; set segout;
     else if dwcode=5 then d=compress('dwt=*'||dwell);
     else d=compress('dwt='||dwell);
     tf=compress('ttf='||ttf);
+    us1=round(us1, 0.1);
 
    file out1;
    if _n_=1 then do;
