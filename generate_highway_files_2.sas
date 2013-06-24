@@ -1,7 +1,7 @@
 /*
    generate_highway_files_2.sas
    Authors: cheither & npeterson
-   Revised: 6/19/13
+   Revised: 6/24/13
    ----------------------------------------------------------------------------
    Program uses base conditions and project data from the MHN to build Emme
    scenario highway networks. Emme batchin files are the output of this
@@ -59,15 +59,17 @@ options pagesize=50 linesize=125;
           trkres
           vertclrn
           miles;
- if parkres1 ne '' then resln1=thruln1+1;  *** -- increased through lanes due to parking restriction (hold for later use) **;
- if parkres2 ne '' then do;
-   if directn=2 then resln2=thruln1+1;
-   if directn=3 then resln2=thruln2+1;
- end;
-    proc sort; by abb;
+    if parkres1 ne '' then resln1=thruln1+1;  *** -- increased through lanes due to parking restriction (hold for later use) **;
+    if parkres2 ne '' then do;
+      if directn=2 then resln2=thruln1+1;
+      if directn=3 then resln2=thruln2+1;
+    end;
+      proc sort; by abb;
+  data network; set network;
+    miles = round(miles, 0.01);
 
 *- - - - - - - - - - - - - - - - - -*;
-   %if &scen=&baseyr %then %goto skip;
+   %if &scen=&baseyr %then %goto skip;   *** CURRENTLY APPLES-TO-ORANGES, e.g. 100 vs 2010, so never skipped;
 *- - - - - - - - - - - - - - - - - -*;
 
                       *-------------------------------;

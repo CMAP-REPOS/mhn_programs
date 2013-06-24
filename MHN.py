@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 6/21/13
+    Revised: 6/24/13
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -26,11 +26,11 @@ mem = 'in_memory'
 root_dir = 'C:/MHN'
 imp_dir = root_dir + '/import'
 out_dir = root_dir + '/output'
-prog_dir = 'V:/Secure/Master_Highway/mhn_programs'
+prog_dir = sys.path[0]
 temp_dir = root_dir + '/temp'
 #gdb = root_dir + '/mhn.gdb'
-gdb = root_dir + '/mhn_verify.gdb'
-#gdb = root_dir + '/mhn_test.gdb'
+#gdb = root_dir + '/mhn_verify.gdb'
+gdb = root_dir + '/mhn_test.gdb'
 hwynet_name = 'hwynet'
 hwynet = gdb + '/' + hwynet_name
 arc_name = 'hwynet_arc'
