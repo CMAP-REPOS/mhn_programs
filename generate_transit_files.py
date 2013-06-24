@@ -460,12 +460,12 @@ for scen in scen_list:
             return out_csv
 
         # -- Mode c: 1/8 mile inside CBD; 1/2 mile outside CBD.
-        cbddist_txt = calculate_distances(cta_cbd_lyr, 'cta_stop_xy_PNT_ID', bus_stop_xy_z, 'bus_stop_xy_PNT_ID', 660, ''.join((scen_tran_path, '/cbddist.txt')))
-        ctadist_txt = calculate_distances(cta_noncbd_lyr, 'cta_stop_xy_PNT_ID', bus_stop_xy_z, 'bus_stop_xy_PNT_ID', 2640, ''.join((scen_tran_path, '/ctadist.txt')))
+        cbddist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_cbd_lyr, 'cta_stop_xy_PNT_ID', 660, ''.join((scen_tran_path, '/cbddist.txt')))
+        ctadist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_noncbd_lyr, 'cta_stop_xy_PNT_ID', 2640, ''.join((scen_tran_path, '/ctadist.txt')))
 
         # -- Mode m: 1/4 mile from modes B,E; 0.55 miles from modes P,L,Q.
-        metracta_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', cta_bus_xy, 'cta_bus_xy_PNT_ID', 1320, ''.join((scen_tran_path, '/metracta.txt')))
-        metrapace_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', pace_bus_xy, 'pace_bus_xy_PNT_ID', 2904, ''.join((scen_tran_path, '/metrapace.txt')))
+        metracta_txt = calculate_distances(cta_bus_xy, 'cta_bus_xy_PNT_ID', metra_stop_xy_z, 'metra_stop_xy_PNT_ID', 1320, ''.join((scen_tran_path, '/metracta.txt')))
+        metrapace_txt = calculate_distances(pace_bus_xy, 'pace_bus_xy_PNT_ID', metra_stop_xy_z, 'metra_stop_xy_PNT_ID', 2904, ''.join((scen_tran_path, '/metrapace.txt')))
 
         # -- Modes u, v, w, x, y & z.
         busz_txt = calculate_distances(bus_cbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 1320, ''.join((scen_tran_path, '/busz.txt')))
