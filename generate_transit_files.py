@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 6/20/13
+    Revised: 6/24/13
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -317,7 +317,7 @@ for scen in scen_list:
                 with open(bus_future_csv, 'r') as reader:
                     for line in reader:
                         writer.write(line)
-            arcpy.Delete_management(bus_future_csv)
+            os.remove(bus_future_csv)
             with open(rep_runs_itin_csv, 'a') as writer:
                 with open(bus_future_itin_csv, 'r') as reader:
                     for line in reader:

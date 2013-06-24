@@ -1,7 +1,7 @@
 /*
    generate_transit_files_2.sas
    authors: cheither & npeterson
-   revised: 6/5/13
+   revised: 6/24/13
    ----------------------------------------------------------------------------
    Program creates bus transit network batchin files. Bus transit network is
    built using a modified version of MHN processing procedures.
@@ -143,6 +143,8 @@ data itins; infile in2 dsd missover firstobs=2;
  input linename $ itina itinb order layover dwcode zfare ltime ttf fmeas tmeas miles;
   if ttf=0 then ttf=1;
     proc sort; by linename itina itinb;
+data itins; set itins;
+  miles = round(miles, 0.01);
 
 data r(keep=linename mode headway); set routes;
 data itins; merge itins r(in=hit); by linename; if hit;
