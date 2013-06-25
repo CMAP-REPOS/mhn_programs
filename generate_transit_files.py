@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 6/24/13
+    Revised: 6/25/13
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -149,11 +149,11 @@ for bus_fc in bus_fc_dict:
         elif os.path.exists(sas1_lst) or not os.path.exists(sas1_output):
             MHN.die('{0} did not run successfully. Please review {1}.'.format(sas1_sas, sas1_log))
         else:
-            arcpy.Delete_management(sas1_log)
-            arcpy.Delete_management(bus_route_csv)
-            arcpy.Delete_management(bus_itin_csv)
-            arcpy.Delete_management(oneline_itin_txt)
-            arcpy.Delete_management(feed_groups_txt)
+            os.remove(sas1_log)
+            os.remove(bus_route_csv)
+            os.remove(bus_itin_csv)
+            os.remove(oneline_itin_txt)
+            os.remove(feed_groups_txt)
 
         rep_runs_dict[which_bus][tod] = sas1_output
 
@@ -179,14 +179,14 @@ for bus_fc in bus_fc_dict:
 # Generate future itinerary joined with MILES, if necessary.
 if scen_code != '100':
     arcpy.AddMessage('-- bus_future_itin + MILES')
-    all_runs_itin_view = 'future_runs_itin_view'
-    arcpy.MakeTableView_management(MHN.route_systems[MHN.bus_future][0], all_runs_itin_view)
-    arcpy.AddJoin_management(all_runs_itin_view, 'ABB', arc_miles_view, 'ABB', 'KEEP_ALL')
-    all_runs_itin_miles = MHN.mem + '/all_runs_itin_miles_future'
-    arcpy.CopyRows_management(all_runs_itin_view, all_runs_itin_miles)
-    arcpy.RemoveJoin_management(all_runs_itin_view)
-    arcpy.Delete_management(all_runs_itin_view)
-    all_runs_itin_miles_dict['future'] = all_runs_itin_miles
+    future_runs_itin_view = 'future_runs_itin_view'
+    arcpy.MakeTableView_management(MHN.route_systems[MHN.bus_future][0], future_runs_itin_view)
+    arcpy.AddJoin_management(future_runs_itin_view, 'ABB', arc_miles_view, 'ABB', 'KEEP_ALL')
+    future_runs_itin_miles = MHN.mem + '/all_runs_itin_miles_future'
+    arcpy.CopyRows_management(future_runs_itin_view, future_runs_itin_miles)
+    arcpy.RemoveJoin_management(future_runs_itin_view)
+    arcpy.Delete_management(future_runs_itin_view)
+    all_runs_itin_miles_dict['future'] = future_runs_itin_miles
     arcpy.Delete_management(arc_miles_view)
 
 
@@ -255,7 +255,7 @@ for scen in scen_list:
         arcpy.MakeFeatureLayer_management(bus_fc, bus_lyr)
         bus_id_field = MHN.route_systems[bus_fc][1]
         rep_runs = rep_runs_dict[which_bus][tod]
-        arcpy.AddJoin_management(bus_lyr, bus_id_field, rep_runs, 'TRANSIT_LINE', 'KEEP_COMMON')
+        arcpy.AddJoin_management(bus_lyr, bus_id_field, rep_runs, 'TRANSIT_LINE', 'KEEP_COMMON')  # 'KEEP_COMMON' excludes unmatched routes
         rep_runs_table = ''.join((MHN.mem, '/rep_runs'))
         arcpy.CopyRows_management(bus_lyr, rep_runs_table)
         arcpy.RemoveJoin_management(bus_lyr)
