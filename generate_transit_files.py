@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 6/24/13
+    Revised: 6/25/13
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -149,11 +149,11 @@ for bus_fc in bus_fc_dict:
         elif os.path.exists(sas1_lst) or not os.path.exists(sas1_output):
             MHN.die('{0} did not run successfully. Please review {1}.'.format(sas1_sas, sas1_log))
         else:
-            arcpy.Delete_management(sas1_log)
-            arcpy.Delete_management(bus_route_csv)
-            arcpy.Delete_management(bus_itin_csv)
-            arcpy.Delete_management(oneline_itin_txt)
-            arcpy.Delete_management(feed_groups_txt)
+            os.remove(sas1_log)
+            os.remove(bus_route_csv)
+            os.remove(bus_itin_csv)
+            os.remove(oneline_itin_txt)
+            os.remove(feed_groups_txt)
 
         rep_runs_dict[which_bus][tod] = sas1_output
 
@@ -179,14 +179,14 @@ for bus_fc in bus_fc_dict:
 # Generate future itinerary joined with MILES, if necessary.
 if scen_code != '100':
     arcpy.AddMessage('-- bus_future_itin + MILES')
-    all_runs_itin_view = 'future_runs_itin_view'
-    arcpy.MakeTableView_management(MHN.route_systems[MHN.bus_future][0], all_runs_itin_view)
-    arcpy.AddJoin_management(all_runs_itin_view, 'ABB', arc_miles_view, 'ABB', 'KEEP_ALL')
-    all_runs_itin_miles = MHN.mem + '/all_runs_itin_miles_future'
-    arcpy.CopyRows_management(all_runs_itin_view, all_runs_itin_miles)
-    arcpy.RemoveJoin_management(all_runs_itin_view)
-    arcpy.Delete_management(all_runs_itin_view)
-    all_runs_itin_miles_dict['future'] = all_runs_itin_miles
+    future_runs_itin_view = 'future_runs_itin_view'
+    arcpy.MakeTableView_management(MHN.route_systems[MHN.bus_future][0], future_runs_itin_view)
+    arcpy.AddJoin_management(future_runs_itin_view, 'ABB', arc_miles_view, 'ABB', 'KEEP_ALL')
+    future_runs_itin_miles = MHN.mem + '/all_runs_itin_miles_future'
+    arcpy.CopyRows_management(future_runs_itin_view, future_runs_itin_miles)
+    arcpy.RemoveJoin_management(future_runs_itin_view)
+    arcpy.Delete_management(future_runs_itin_view)
+    all_runs_itin_miles_dict['future'] = future_runs_itin_miles
     arcpy.Delete_management(arc_miles_view)
 
 
@@ -255,7 +255,7 @@ for scen in scen_list:
         arcpy.MakeFeatureLayer_management(bus_fc, bus_lyr)
         bus_id_field = MHN.route_systems[bus_fc][1]
         rep_runs = rep_runs_dict[which_bus][tod]
-        arcpy.AddJoin_management(bus_lyr, bus_id_field, rep_runs, 'TRANSIT_LINE', 'KEEP_COMMON')
+        arcpy.AddJoin_management(bus_lyr, bus_id_field, rep_runs, 'TRANSIT_LINE', 'KEEP_COMMON')  # 'KEEP_COMMON' excludes unmatched routes
         rep_runs_table = ''.join((MHN.mem, '/rep_runs'))
         arcpy.CopyRows_management(bus_lyr, rep_runs_table)
         arcpy.RemoveJoin_management(bus_lyr)
@@ -386,11 +386,11 @@ for scen in scen_list:
         pace_bus_xy = pnt_file_to_fc(pace_bus, MHN.mem, 'pace_bus_xy')
         cta_stop_xy = pnt_file_to_fc(cta_stop, MHN.mem, 'cta_stop_xy')
         metra_stop_xy = pnt_file_to_fc(metra_stop, MHN.mem, 'metra_stop_xy')
-        arcpy.Delete_management(bus_stop)
-        arcpy.Delete_management(cta_bus)
-        arcpy.Delete_management(pace_bus)
-        arcpy.Delete_management(cta_stop)
-        arcpy.Delete_management(metra_stop)
+        os.remove(bus_stop)
+        os.remove(cta_bus)
+        os.remove(pace_bus)
+        os.remove(cta_stop)
+        os.remove(metra_stop)
 
         # Intersect CTA rail, Metra, and bus stop points with zones.
         zone_suffix = '_z'
@@ -460,12 +460,12 @@ for scen in scen_list:
             return out_csv
 
         # -- Mode c: 1/8 mile inside CBD; 1/2 mile outside CBD.
-        cbddist_txt = calculate_distances(cta_cbd_lyr, 'cta_stop_xy_PNT_ID', bus_stop_xy_z, 'bus_stop_xy_PNT_ID', 660, ''.join((scen_tran_path, '/cbddist.txt')))
-        ctadist_txt = calculate_distances(cta_noncbd_lyr, 'cta_stop_xy_PNT_ID', bus_stop_xy_z, 'bus_stop_xy_PNT_ID', 2640, ''.join((scen_tran_path, '/ctadist.txt')))
+        cbddist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_cbd_lyr, 'cta_stop_xy_PNT_ID', 660, ''.join((scen_tran_path, '/cbddist.txt')))
+        ctadist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_noncbd_lyr, 'cta_stop_xy_PNT_ID', 2640, ''.join((scen_tran_path, '/ctadist.txt')))
 
         # -- Mode m: 1/4 mile from modes B,E; 0.55 miles from modes P,L,Q.
-        metracta_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', cta_bus_xy, 'cta_bus_xy_PNT_ID', 1320, ''.join((scen_tran_path, '/metracta.txt')))
-        metrapace_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', pace_bus_xy, 'pace_bus_xy_PNT_ID', 2904, ''.join((scen_tran_path, '/metrapace.txt')))
+        metracta_txt = calculate_distances(cta_bus_xy, 'cta_bus_xy_PNT_ID', metra_stop_xy_z, 'metra_stop_xy_PNT_ID', 1320, ''.join((scen_tran_path, '/metracta.txt')))
+        metrapace_txt = calculate_distances(pace_bus_xy, 'pace_bus_xy_PNT_ID', metra_stop_xy_z, 'metra_stop_xy_PNT_ID', 2904, ''.join((scen_tran_path, '/metrapace.txt')))
 
         # -- Modes u, v, w, x, y & z.
         busz_txt = calculate_distances(bus_cbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 1320, ''.join((scen_tran_path, '/busz.txt')))
@@ -491,20 +491,20 @@ for scen in scen_list:
         elif os.path.exists(sas4_lst) or not os.path.exists(sas4_output):
             MHN.die('{0} did not run successfully. Please review {1}.'.format(sas4_sas, sas4_log))
         else:
-            arcpy.Delete_management(sas4_log)
-            arcpy.Delete_management(cbddist_txt)
-            arcpy.Delete_management(ctadist_txt)
-            arcpy.Delete_management(metracta_txt)
-            arcpy.Delete_management(metrapace_txt)
-            arcpy.Delete_management(busz_txt)
-            arcpy.Delete_management(busz2_txt)
-            arcpy.Delete_management(ctaz_txt)
-            arcpy.Delete_management(ctaz2_txt)
-            arcpy.Delete_management(metraz_txt)
-            arcpy.Delete_management(c1z_txt)
-            arcpy.Delete_management(c2z_txt)
-            arcpy.Delete_management(mz_txt)
-            arcpy.Delete_management(itin_final)
+            os.remove(sas4_log)
+            os.remove(cbddist_txt)
+            os.remove(ctadist_txt)
+            os.remove(metracta_txt)
+            os.remove(metrapace_txt)
+            os.remove(busz_txt)
+            os.remove(busz2_txt)
+            os.remove(ctaz_txt)
+            os.remove(ctaz2_txt)
+            os.remove(metraz_txt)
+            os.remove(c1z_txt)
+            os.remove(c2z_txt)
+            os.remove(mz_txt)
+            os.remove(itin_final)
 
         ### End of TOD loop ###
 
