@@ -1,7 +1,7 @@
 /*
    generate_transit_files_2.sas
    authors: cheither & npeterson
-   revised: 6/24/13
+   revised: 6/25/13
    ----------------------------------------------------------------------------
    Program creates bus transit network batchin files. Bus transit network is
    built using a modified version of MHN processing procedures.
@@ -501,7 +501,8 @@ data out1; set segout;
     else if dwcode=5 then d=compress('dwt=*'||dwell);
     else d=compress('dwt='||dwell);
     tf=compress('ttf='||ttf);
-    us1=round(us1, 0.1);
+data out1; set out1;
+    ltime=round(ltime, 0.1);
 
    file out1;
    if _n_=1 then do;
