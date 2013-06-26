@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 6/21/13
+    Revised: 6/26/13
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -54,6 +54,7 @@ MHN.delete_if_exists(overlap_network_csv)
 #  Write tollsys.flag file if desired.
 # -----------------------------------------------------------------------------
 if create_tollsys_flag:
+    arcpy.AddMessage('\nGenerating tollsys.flag file...')
     tollsys_flag = ''.join((hwy_path, 'tollsys.flag'))
     MHN.write_arc_flag_file(tollsys_flag, ''' "TOLLSYS" = 1 ''')
 
@@ -99,10 +100,10 @@ if not os.path.exists(sas1_log):
 elif os.path.exists(sas1_lst):
     MHN.die('Please review {0} for potential coding errors.'.format(sas1_lst))
 else:
-    arcpy.Delete_management(sas1_log)
-    arcpy.Delete_management(overlap_year_csv)
-    arcpy.Delete_management(overlap_transact_csv)
-    arcpy.Delete_management(overlap_network_csv)
+    os.remove(sas1_log)
+    os.remove(overlap_year_csv)
+    os.remove(overlap_transact_csv)
+    os.remove(overlap_network_csv)
 
 
 # -----------------------------------------------------------------------------
@@ -178,12 +179,12 @@ for scen in scen_list:
     elif 'errorlevel=' in open(sas2_lst).read():
         MHN.die('Errors during SAS processing. Please see {0}.'.format(sas2_log))
     else:
-        arcpy.Delete_management(sas2_log)
+        os.remove(sas2_log)
         # NOTE: Do not delete sas2_lst: leave for reference.
-        arcpy.Delete_management(hwy_year_csv)
-        arcpy.Delete_management(hwy_transact_csv)
-        arcpy.Delete_management(hwy_network_csv)
-        arcpy.Delete_management(hwy_nodes_csv)
+        os.remove(hwy_year_csv)
+        os.remove(hwy_transact_csv)
+        os.remove(hwy_network_csv)
+        os.remove(hwy_nodes_csv)
         arcpy.AddMessage('-- Scenario {0} l1, l2, n1, n2 files generated successfully.'.format(scen))
 
     # Create linkshape.in.
