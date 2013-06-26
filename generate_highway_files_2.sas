@@ -1,7 +1,7 @@
 /*
    generate_highway_files_2.sas
    Authors: cheither & npeterson
-   Revised: 6/24/13
+   Revised: 6/26/13
    ----------------------------------------------------------------------------
    Program uses base conditions and project data from the MHN to build Emme
    scenario highway networks. Emme batchin files are the output of this
@@ -67,6 +67,7 @@ options pagesize=50 linesize=125;
       proc sort; by abb;
   data network; set network;
     miles = round(miles, 0.01);
+    toll = round(toll, 0.01);
 
 *- - - - - - - - - - - - - - - - - -*;
    %if &scen=&baseyr %then %goto skip;   *** CURRENTLY APPLES-TO-ORANGES, e.g. 100 vs 2010, so never skipped;
