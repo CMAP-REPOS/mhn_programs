@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 6/24/13
+    Revised: 6/26/13
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -21,16 +21,15 @@ arcpy.env.OverwriteOutput = True
 # -----------------------------------------------------------------------------
 #  1. DIRECTORIES & FILES
 # -----------------------------------------------------------------------------
+ROOT_DIR = 'C:/MHN'
+gdb = ROOT_DIR + '/mhn.gdb'
+
+imp_dir = ROOT_DIR + '/import'
+out_dir = ROOT_DIR + '/output'
+temp_dir = ROOT_DIR + '/temp'
+prog_dir = sys.path[0]  # Directory containing this module
 mem = 'in_memory'
-#root_dir = 'V:/Secure/Master_Highway'
-root_dir = 'C:/MHN'
-imp_dir = root_dir + '/import'
-out_dir = root_dir + '/output'
-prog_dir = sys.path[0]
-temp_dir = root_dir + '/temp'
-#gdb = root_dir + '/mhn.gdb'
-#gdb = root_dir + '/mhn_verify.gdb'
-gdb = root_dir + '/mhn_test.gdb'
+
 hwynet_name = 'hwynet'
 hwynet = gdb + '/' + hwynet_name
 arc_name = 'hwynet_arc'
@@ -47,7 +46,8 @@ route_systems = {
     bus_current: (gdb + '/bus_current_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
     bus_future: (gdb + '/bus_future_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
 }
-zone_gdb = root_dir + '/zone_systems.gdb'
+
+zone_gdb = ROOT_DIR + '/zone_systems.gdb'
 zone = zone_gdb + '/Zones09'
 zone_attr = 'Zone09'
 subzone = zone_gdb + '/Subzones09'
@@ -150,9 +150,9 @@ def calculate_itin_measures(itin_table):
             route = row[0]
             abb = row[1]
             if route in route_miles_dict:
-                 route_miles_dict[route] += abb_miles_dict[abb]['MILES']
+                route_miles_dict[route] += abb_miles_dict[abb]['MILES']
             else:
-                 route_miles_dict[route] = abb_miles_dict[abb]['MILES']
+                route_miles_dict[route] = abb_miles_dict[abb]['MILES']
     # 2nd loop to calculate F_MEAS and T_MEAS for each row.
     with arcpy.da.UpdateCursor(itin_table, ['TRANSIT_LINE', 'ITIN_ORDER', 'ABB', 'F_MEAS', 'T_MEAS']) as cursor:
         order_tracker = 0
@@ -184,21 +184,21 @@ def delete_if_exists(filepath):
     return message
 
 
-def determine_arc_bearing(arc):
+def determine_arc_bearing(line_feature):
     ''' Determines the cardinal direction of a single arc, determined from its
         two endpoints. The angle is determined by the atan2() function, and
         after some numeric manipulation is then used to select the correct
         cardinal direction from an ordered list of possibilities. '''
     from math import atan2, degrees, floor
-    x1 = arc.firstPoint.X
-    y1 = arc.firstPoint.Y
-    x2 = arc.lastPoint.X
-    y2 = arc.lastPoint.Y
+    x1 = line_feature.firstPoint.X
+    y1 = line_feature.firstPoint.Y
+    x2 = line_feature.lastPoint.X
+    y2 = line_feature.lastPoint.Y
     xdiff = x2 - x1
     ydiff = y2 - y1
     angle = degrees(atan2(ydiff, xdiff))
     index = int(floor(((angle + 22.5) % 360) / 45))
-    cardinal_dirs = ('E','NE','N','NW','W','SW','S','SE')  # Order here is critical
+    cardinal_dirs = ('E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE')  # Order here is critical
     bearing = cardinal_dirs[index]
     return bearing
 
@@ -213,8 +213,8 @@ def determine_OID_fieldname(fc):
 def die(error_message):
     ''' End processing prematurely. '''
     arcpy.AddError('\n' + error_message + '\n')
-    from sys import exit
-    exit()
+    sys.exit()
+    return None
 
 
 def ensure_dir(directory):
@@ -257,7 +257,7 @@ def make_attribute_dict(fc, key_field, attr_list=['*']):
     cursor_fields = [key_field] + list(set(valid_fields) - set([key_field]))
     with arcpy.da.SearchCursor(fc, cursor_fields) as cursor:
         for row in cursor:
-            attr_dict[row[0]] = dict(zip(cursor.fields,row))
+            attr_dict[row[0]] = dict(zip(cursor.fields, row))
     return attr_dict
 
 
@@ -303,7 +303,7 @@ def set_nulls(value, fc, fields):
     if type(value) is str:
         valid_types = ['String']
     else:
-        valid_types = ['String','SmallInteger','Integer','Single','Double']
+        valid_types = ['String', 'SmallInteger', 'Integer', 'Single', 'Double']
     matched_fields = [field for field in arcpy.ListFields(fc) if field.name in fields and field.type in valid_types]
     for field in matched_fields:
         if field.type == 'String':
@@ -337,13 +337,13 @@ def submit_sas(sas_file, sas_log, sas_lst, arg_list=None):
     return call(cmd)
 
 
-def timestamp(format='%Y%m%d%H%M%S'):
+def timestamp(ts_format='%Y%m%d%H%M%S'):
     ''' Creates a timestamp string, defaulting to the form YYYYMMDDHHMMSS, but
         any standard date formatting is accepted. See docs for details:
         <http://docs.python.org/2/library/datetime.html#strftime-strptime-behavior>. '''
     from datetime import datetime
-    timestamp = datetime.now().strftime(format)
-    return timestamp
+    ts = datetime.now().strftime(ts_format)
+    return ts
 
 
 def write_attribute_csv(in_obj, textfile, field_list=None, include_headers=True):
@@ -361,7 +361,7 @@ def write_attribute_csv(in_obj, textfile, field_list=None, include_headers=True)
         csv.write(','.join(fields) + '\n')
     with arcpy.da.SearchCursor(in_obj, fields) as cursor:
         for row in cursor:
-            csv.write(','.join(map(str,row)) + '\n')
+            csv.write(','.join(map(str, row)) + '\n')
     csv.close()
     return textfile
 
