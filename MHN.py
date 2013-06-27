@@ -22,15 +22,12 @@ arcpy.env.OverwriteOutput = True
 #  1. DIRECTORIES & FILES
 # -----------------------------------------------------------------------------
 mem = 'in_memory'
-#root_dir = 'V:/Secure/Master_Highway'
-root_dir = 'C:/MHN'
+root_dir = 'V:/Secure/Master_Highway'
 imp_dir = root_dir + '/import'
 out_dir = root_dir + '/output'
 prog_dir = sys.path[0]
 temp_dir = root_dir + '/temp'
-#gdb = root_dir + '/mhn.gdb'
-#gdb = root_dir + '/mhn_verify.gdb'
-gdb = root_dir + '/mhn_test.gdb'
+gdb = root_dir + '/mhn.gdb'
 hwynet_name = 'hwynet'
 hwynet = gdb + '/' + hwynet_name
 arc_name = 'hwynet_arc'
