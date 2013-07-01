@@ -2,7 +2,7 @@
 '''
     update_highway_project_years.py
     Author: npeterson
-    Revised: 6/11/13
+    Revised: 7/1/13
     ---------------------------------------------------------------------------
     This script updates the completion years of projects to be included in
     Conformity analyses. The final completion year file is received from the
@@ -32,12 +32,15 @@ hwyproj_year_csv = arcpy.GetParameterAsText(0).replace('\\','/')
 uncodable_hwyproj_csv = arcpy.GetParameterAsText(1).replace('\\','/')
 mrn_gdb = arcpy.GetParameterAsText(2).replace('\\','/')
 mrn_future_fc = ''.join((mrn_gdb, '/railnet/future'))
+people_mover_table = ''.join((mrn_gdb, '/people_mover'))
 sas1_name = 'update_highway_project_years_2'
 
 if not arcpy.Exists(mrn_gdb):
     MHN.die("{0} doesn't exist!".format(mrn_gdb))
 if not arcpy.Exists(mrn_future_fc):
     MHN.die("{0} doesn't exist!".format(mrn_future_fc))
+if not arcpy.Exists(people_mover_table):
+    MHN.die("{0} doesn't exist!".format(people_mover_table))
 if not os.path.exists(hwyproj_year_csv):
     MHN.die("{0} doesn't exist!".format(hwyproj_year_csv))
 if not os.path.exists(uncodable_hwyproj_csv):
@@ -65,23 +68,27 @@ MHN.delete_if_exists(in_mhn_not_year_txt)
 
 
 # -----------------------------------------------------------------------------
-#  Call SAS program to check future transit years.
+#  Generate DBFs and call SAS program to check future transit years.
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('{0}Checking future transit projects...'.format('\n'))
 
-future_rail_dbf = ''.join((MHN.imp_dir, '/future_rail.dbf'))
-arcpy.CopyRows_management(mrn_future_fc, future_rail_dbf)
-with arcpy.da.UpdateCursor(future_rail_dbf, ['NOTES']) as cursor:
-    for row in cursor:
-        row[0] = row[0].replace('-', '')  # Remove dashes from TIPIDs
-        cursor.updateRow(row)
+def make_future_transit_dbf(input_table, output_dbf):
+    ''' Copy all header rows from a future bus/rail fc/table to a DBF. '''
+    arcpy.CopyRows_management(input_table, output_dbf)
+    with arcpy.da.UpdateCursor(output_dbf, ['NOTES']) as cursor:
+        for row in cursor:
+            row[0] = row[0].replace('-', '')  # Remove dashes from TIPIDs
+            cursor.updateRow(row)
+    return output_dbf
 
-future_bus_dbf = ''.join((MHN.imp_dir, '/future_bus.dbf'))
-arcpy.CopyRows_management(MHN.bus_future, future_bus_dbf)
-with arcpy.da.UpdateCursor(future_bus_dbf, ['NOTES']) as cursor:
-    for row in cursor:
-        row[0] = row[0].replace('-', '')  # Remove dashes from TIPIDs
-        cursor.updateRow(row)
+future_bus_dbf = '/'.join((MHN.imp_dir, 'future_bus.dbf'))
+make_future_transit_dbf(MHN.bus_future, future_bus_dbf)
+
+future_rail_dbf = '/'.join((MHN.imp_dir, 'future_rail.dbf'))
+make_future_transit_dbf(mrn_future_fc, future_rail_dbf)
+
+people_mover_dbf = '/'.join((MHN.imp_dir, 'people_mover.dbf'))
+make_future_transit_dbf(people_mover_table, people_mover_dbf)
 
 sas1_sas = ''.join((MHN.prog_dir, '/', sas1_name, '.sas'))
 sas1_args = [hwyproj_year_csv, future_rail_dbf, future_bus_dbf, sas1_output]
@@ -95,6 +102,7 @@ elif os.path.exists(sas1_lst):
 else:
     arcpy.Delete_management(sas1_log)
     arcpy.Delete_management(future_rail_dbf)
+    arcpy.Delete_management(people_mover_dbf)
     arcpy.Delete_management(future_bus_dbf)
 
 
