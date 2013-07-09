@@ -36,7 +36,7 @@ data mover(keep=tr_line scen10 notes50 code); set routes(where=(scenario not in 
   scen10=scenario;
   notes=compress(notes,'-');
   notes50=notes;
-  code='R';
+  code='P';
 data mover(rename=(scen10=scenario notes50=notes)); set mover;
 
 *** READ IN BUS INFORMATION ***;

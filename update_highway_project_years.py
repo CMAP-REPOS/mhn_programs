@@ -154,7 +154,7 @@ else:
         with arcpy.da.SearchCursor(hwyproj_view, [common_id_field, 'COMPLETION_YEAR']) as cursor:
             for row in cursor:
                 miscoded_output.write('{0},{1}\n'.format(row[0], row[1]))
-    arcpy.AddMessage('{0}Some projects coded in MHN are not coded in {1}. See {2} for details.'.format('\n', hwyproj_year_csv, in_mhn_not_year_txt))
+    arcpy.AddWarning('{0}WARNING: Some projects coded in MHN are not coded in {1}. See {2} for details.'.format('\n', hwyproj_year_csv, in_mhn_not_year_txt))
 
 
 # -----------------------------------------------------------------------------
@@ -165,7 +165,7 @@ uncoded_hwyproj = [hwyproj_id for hwyproj_id in hwyproj_years if hwyproj_id not 
 with open(in_year_not_mhn_txt, 'w') as uncoded_output:
     for hwyproj_id in sorted(uncoded_hwyproj):
         uncoded_output.write('{0}\n'.format(hwyproj_id))
-arcpy.AddMessage('{0}Some projects in {1} and not {2} are not yet coded in MHN. See {3} for details.'.format('\n', hwyproj_year_csv, uncodable_hwyproj_csv, in_year_not_mhn_txt))
+arcpy.AddWarning('{0}WARNING: Some projects in {1} and not {2} are not yet coded in MHN. See {3} for details.'.format('\n', hwyproj_year_csv, uncodable_hwyproj_csv, in_year_not_mhn_txt))
 
 
 # -----------------------------------------------------------------------------
