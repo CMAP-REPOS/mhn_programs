@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 6/26/13
+    Revised: 7/1/13
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -88,7 +88,7 @@ projection = arcpy.Describe(hwynet).spatialReference
 scenario_years = {
     '100': 2010,
     '200': 2015,
-    '300': 2020,
+    #'300': 2020, # No longer in use, as of C13Q3
     '400': 2025,
     '500': 2030,
     '600': 2040
