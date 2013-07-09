@@ -1,7 +1,7 @@
 /*
    update_highway_project_years_2.sas
    authors: cheither & npeterson
-   revised: 6/7/13
+   revised: 7/9/13
    ----------------------------------------------------------------------------
    Program checks rail & bus project scenario year against tip completion year.
 
@@ -10,32 +10,48 @@
 %let yearcsv=%scan(&sysparm,1,$);
 %let raildbf=%scan(&sysparm,2,$);
 %let busdbf=%scan(&sysparm,3,$);
-%let yearadj=%scan(&sysparm,4,$);
+%let pmdbf=%scan(&sysparm,4,$);
+%let yearadj=%scan(&sysparm,5,$);
 
 filename in1 "&yearcsv";
 filename out1 "&yearadj";
 
 
-   *** READ IN RAIL INFORMATION ***;
-  proc import datafile="&raildbf" dbms=dbf out=routes replace;
+*** READ IN RAIL INFORMATION ***;
+proc import datafile="&raildbf" dbms=dbf out=routes replace;
 data rail(keep=trline10 scen10 notes50 code); set routes(where=(scenario not in ('','7','9') & notes is not null));
  length trline10 scen10 $10. notes50 $50.;
   trline10=tr_line;
   scen10=scenario;
+  notes=compress(notes,'-');
   notes50=notes;
-  notes=compress(notes,'-'); code='R';
+  code='R';
 data rail(rename=(trline10=tr_line scen10=scenario notes50=notes)); set rail;
 
-   *** READ IN BUS INFORMATION ***;
-  proc import datafile="&busdbf" dbms=dbf out=routes replace;
+*** READ IN PEOPLE MOVER INFORMATION ***;
+proc import datafile="&pmdbf" dbms=dbf out=routes replace;
+data mover(keep=tr_line scen10 notes50 code); set routes(where=(scenario not in ('','9') & notes is not null));
+ length tr_line scen10 $10. notes50 $50.;
+  tr_line='ppl_mover';
+  scen10=scenario;
+  notes=compress(notes,'-');
+  notes50=notes;
+  code='R';
+data mover(rename=(scen10=scenario notes50=notes)); set mover;
+
+*** READ IN BUS INFORMATION ***;
+proc import datafile="&busdbf" dbms=dbf out=routes replace;
 data bus(keep=tr_line scn notes code); set routes(where=(scenario not in ('','9') & notes is not null));
  length tr_line scn $10.;
-  tr_line=transit_li;  scn=scenario; notes=compress(notes,'-'); code='B';
+  tr_line=transit_li;
+  scn=scenario;
+  notes=compress(notes,'-');
+  code='B';
 data bus(rename=(scn=scenario)); set bus;
   if scn='X' or scn='Z' then delete;
 
-  *** ISOLATE TIPID NUMBERS ***;
-data rail; set rail bus;
+*** ISOLATE TIPID NUMBERS ***;
+data rail; set rail mover bus;
   length tip $20.;
     output;
     c=count(notes,':'); if c>0 then c=c+1;
@@ -90,8 +106,7 @@ data check; merge proj rail2 (in=hit); by tipid;
   *** c13q1 scenarios***;
    if 1990<=year<=2010 then compscen=1;
    else if 2011<=year<=2015 then compscen=2;
-   else if 2016<=year<=2020 then compscen=3;
-   else if 2021<=year<=2025 then compscen=4;
+   else if 2016<=year<=2025 then compscen=4;  * Scenario 300 is a goner :( *;
    else if 2026<=year<=2030 then compscen=5;
    else if 2031<=year<=2040 then compscen=6;
 

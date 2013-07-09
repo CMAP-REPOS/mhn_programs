@@ -2,7 +2,7 @@
 '''
     update_highway_project_years.py
     Author: npeterson
-    Revised: 7/1/13
+    Revised: 7/9/13
     ---------------------------------------------------------------------------
     This script updates the completion years of projects to be included in
     Conformity analyses. The final completion year file is received from the
@@ -91,7 +91,7 @@ people_mover_dbf = '/'.join((MHN.imp_dir, 'people_mover.dbf'))
 make_future_transit_dbf(people_mover_table, people_mover_dbf)
 
 sas1_sas = ''.join((MHN.prog_dir, '/', sas1_name, '.sas'))
-sas1_args = [hwyproj_year_csv, future_rail_dbf, future_bus_dbf, sas1_output]
+sas1_args = [hwyproj_year_csv, future_rail_dbf, future_bus_dbf, people_mover_dbf, sas1_output]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
     MHN.die('{0} did not run!'.format(sas1_sas))
