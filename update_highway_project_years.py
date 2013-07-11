@@ -2,7 +2,7 @@
 '''
     update_highway_project_years.py
     Author: npeterson
-    Revised: 6/11/13
+    Revised: 7/10/13
     ---------------------------------------------------------------------------
     This script updates the completion years of projects to be included in
     Conformity analyses. The final completion year file is received from the
@@ -10,7 +10,8 @@
 
     Input files (pre-requisites for running this script):
     1. CSV containing TIPIDs & completion years of conformed projects.
-    2. CSV containing TIPIDs of conformed projects deemed uncodable.
+    2. CSV containing TIPIDs & completion years of coded exempt projects.
+    3. CSV containing TIPIDs of conformed projects deemed uncodable.
 
     Output files, if errors encountered:
     1. Output/in_year_not_mhn.txt: projects in hwyproj_year.csv but not in
@@ -29,17 +30,23 @@ import MHN
 #  Set parameters.
 # -----------------------------------------------------------------------------
 hwyproj_year_csv = arcpy.GetParameterAsText(0).replace('\\','/')
-uncodable_hwyproj_csv = arcpy.GetParameterAsText(1).replace('\\','/')
-mrn_gdb = arcpy.GetParameterAsText(2).replace('\\','/')
+hwyproj_exempt_csv = arcpy.GetParameterAsText(1).replace('\\','/')
+uncodable_hwyproj_csv = arcpy.GetParameterAsText(2).replace('\\','/')
+mrn_gdb = arcpy.GetParameterAsText(3).replace('\\','/')
 mrn_future_fc = ''.join((mrn_gdb, '/railnet/future'))
+people_mover_table = ''.join((mrn_gdb, '/people_mover'))
 sas1_name = 'update_highway_project_years_2'
 
 if not arcpy.Exists(mrn_gdb):
     MHN.die("{0} doesn't exist!".format(mrn_gdb))
 if not arcpy.Exists(mrn_future_fc):
     MHN.die("{0} doesn't exist!".format(mrn_future_fc))
+if not arcpy.Exists(people_mover_table):
+    MHN.die("{0} doesn't exist!".format(people_mover_table))
 if not os.path.exists(hwyproj_year_csv):
     MHN.die("{0} doesn't exist!".format(hwyproj_year_csv))
+if not os.path.exists(hwyproj_exempt_csv):
+    MHN.die("{0} doesn't exist!".format(hwyproj_exempt_csv))
 if not os.path.exists(uncodable_hwyproj_csv):
     MHN.die("{0} doesn't exist!".format(uncodable_hwyproj_csv))
 
@@ -47,9 +54,10 @@ if not os.path.exists(uncodable_hwyproj_csv):
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
+hwyproj_all_csv = ''.join((MHN.temp_dir, '/hwyproj_all.csv'))
 sas1_log = ''.join((MHN.temp_dir, '/', sas1_name, '.log'))
 sas1_lst = ''.join((MHN.temp_dir, '/', sas1_name, '.lst'))
-sas1_output = ''.join((MHN.temp_dir, '/hwyproj_year_adj.csv'))
+sas1_output = ''.join((MHN.temp_dir, '/hwyproj_all_adj.csv'))
 in_year_not_mhn_txt = ''.join((MHN.out_dir, '/in_year_not_mhn.txt'))
 in_mhn_not_year_txt = ''.join((MHN.out_dir, '/in_mhn_not_year.txt'))
 
@@ -57,6 +65,7 @@ in_mhn_not_year_txt = ''.join((MHN.out_dir, '/in_mhn_not_year.txt'))
 # -----------------------------------------------------------------------------
 #  Clean up old temp/output files, if necessary.
 # -----------------------------------------------------------------------------
+MHN.delete_if_exists(hwyproj_all_csv)
 MHN.delete_if_exists(sas1_log)
 MHN.delete_if_exists(sas1_lst)
 MHN.delete_if_exists(sas1_output)
@@ -65,26 +74,40 @@ MHN.delete_if_exists(in_mhn_not_year_txt)
 
 
 # -----------------------------------------------------------------------------
-#  Call SAS program to check future transit years.
+#  Merge conformed project years with coded exempt project years.
+# -----------------------------------------------------------------------------
+with open(hwyproj_all_csv, 'w') as merged:
+    with open(hwyproj_year_csv, 'r') as conformed:
+        merged.write(conformed.read())
+    with open(hwyproj_exempt_csv, 'r') as exempt:
+        merged.write(exempt.read())
+
+
+# -----------------------------------------------------------------------------
+#  Generate DBFs and call SAS program to check future transit years.
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('{0}Checking future transit projects...'.format('\n'))
 
-future_rail_dbf = ''.join((MHN.imp_dir, '/future_rail.dbf'))
-arcpy.CopyRows_management(mrn_future_fc, future_rail_dbf)
-with arcpy.da.UpdateCursor(future_rail_dbf, ['NOTES']) as cursor:
-    for row in cursor:
-        row[0] = row[0].replace('-', '')  # Remove dashes from TIPIDs
-        cursor.updateRow(row)
+def make_future_transit_dbf(input_table, output_dbf):
+    ''' Copy all header rows from a future bus/rail fc/table to a DBF. '''
+    arcpy.CopyRows_management(input_table, output_dbf)
+    with arcpy.da.UpdateCursor(output_dbf, ['NOTES']) as cursor:
+        for row in cursor:
+            row[0] = row[0].replace('-', '')  # Remove dashes from TIPIDs
+            cursor.updateRow(row)
+    return output_dbf
 
-future_bus_dbf = ''.join((MHN.imp_dir, '/future_bus.dbf'))
-arcpy.CopyRows_management(MHN.bus_future, future_bus_dbf)
-with arcpy.da.UpdateCursor(future_bus_dbf, ['NOTES']) as cursor:
-    for row in cursor:
-        row[0] = row[0].replace('-', '')  # Remove dashes from TIPIDs
-        cursor.updateRow(row)
+future_bus_dbf = '/'.join((MHN.imp_dir, 'future_bus.dbf'))
+make_future_transit_dbf(MHN.bus_future, future_bus_dbf)
+
+future_rail_dbf = '/'.join((MHN.imp_dir, 'future_rail.dbf'))
+make_future_transit_dbf(mrn_future_fc, future_rail_dbf)
+
+people_mover_dbf = '/'.join((MHN.imp_dir, 'people_mover.dbf'))
+make_future_transit_dbf(people_mover_table, people_mover_dbf)
 
 sas1_sas = ''.join((MHN.prog_dir, '/', sas1_name, '.sas'))
-sas1_args = [hwyproj_year_csv, future_rail_dbf, future_bus_dbf, sas1_output]
+sas1_args = [hwyproj_all_csv, future_rail_dbf, future_bus_dbf, people_mover_dbf, sas1_output]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
     MHN.die('{0} did not run!'.format(sas1_sas))
@@ -93,9 +116,11 @@ elif not os.path.exists(sas1_output):
 elif os.path.exists(sas1_lst):
     MHN.die('Problems with future transit coding. Please review {0}.'.format(sas1_lst))
 else:
-    arcpy.Delete_management(sas1_log)
-    arcpy.Delete_management(future_rail_dbf)
-    arcpy.Delete_management(future_bus_dbf)
+    os.remove(sas1_log)
+    os.remove(hwyproj_all_csv)
+    os.remove(future_rail_dbf)
+    os.remove(people_mover_dbf)
+    os.remove(future_bus_dbf)
 
 
 # -----------------------------------------------------------------------------
@@ -104,15 +129,18 @@ else:
 common_id_field = MHN.route_systems[MHN.hwyproj][1]
 
 hwyproj_years = {}
+duplicates = []
 with open(sas1_output, 'r') as year_adj:
     year_adj_dr = csv.DictReader(year_adj)
     for proj_dict in year_adj_dr:
         hwyproj_id = proj_dict[common_id_field]
         completion_year = int(proj_dict['COMPLETION_YEAR'])
         if hwyproj_id in hwyproj_years and completion_year != hwyproj_years[hwyproj_id]:
-            MHN.die('Duplicate TIPID in {0}: {1}!'.format(hwyproj_year_csv, hwyproj_id))
+            duplicates.append(hwyproj_id)
         else:
             hwyproj_years[hwyproj_id] = completion_year
+if duplicates:
+    MHN.die('Duplicate TIPID(s) in "{0}" and/or "{1}": {2}!'.format(hwyproj_year_csv, hwyproj_exempt_csv, ', '.join(duplicates)))
 
 uncodable_hwyproj = []
 with open(uncodable_hwyproj_csv, 'r') as no_code:
@@ -146,7 +174,7 @@ else:
         with arcpy.da.SearchCursor(hwyproj_view, [common_id_field, 'COMPLETION_YEAR']) as cursor:
             for row in cursor:
                 miscoded_output.write('{0},{1}\n'.format(row[0], row[1]))
-    arcpy.AddMessage('{0}Some projects coded in MHN are not coded in {1}. See {2} for details.'.format('\n', hwyproj_year_csv, in_mhn_not_year_txt))
+    arcpy.AddWarning('{0}WARNING: Some projects coded in MHN are not coded in {1}. See {2} for details.'.format('\n', hwyproj_year_csv, in_mhn_not_year_txt))
 
 
 # -----------------------------------------------------------------------------
@@ -157,7 +185,7 @@ uncoded_hwyproj = [hwyproj_id for hwyproj_id in hwyproj_years if hwyproj_id not 
 with open(in_year_not_mhn_txt, 'w') as uncoded_output:
     for hwyproj_id in sorted(uncoded_hwyproj):
         uncoded_output.write('{0}\n'.format(hwyproj_id))
-arcpy.AddMessage('{0}Some projects in {1} and not {2} are not yet coded in MHN. See {3} for details.'.format('\n', hwyproj_year_csv, uncodable_hwyproj_csv, in_year_not_mhn_txt))
+arcpy.AddWarning('{0}WARNING: Some projects in {1} and not {2} are not yet coded in MHN. See {3} for details.'.format('\n', hwyproj_year_csv, uncodable_hwyproj_csv, in_year_not_mhn_txt))
 
 
 # -----------------------------------------------------------------------------
