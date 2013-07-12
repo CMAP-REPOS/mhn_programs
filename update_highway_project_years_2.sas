@@ -106,7 +106,8 @@ data check; merge proj rail2 (in=hit); by tipid;
   *** c13q1 scenarios***;
    if 1990<=year<=2010 then compscen=1;
    else if 2011<=year<=2015 then compscen=2;
-   else if 2016<=year<=2025 then compscen=4;  * Scenario 300 is a goner :( *;
+   else if 2016<=year<=2020 then compscen=3;
+   else if 2021<=year<=2025 then compscen=4;
    else if 2026<=year<=2030 then compscen=5;
    else if 2031<=year<=2040 then compscen=6;
 
