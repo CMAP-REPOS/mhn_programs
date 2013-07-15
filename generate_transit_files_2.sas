@@ -1,7 +1,7 @@
 /*
    generate_transit_files_2.sas
    authors: cheither & npeterson
-   revised: 6/25/13
+   revised: 7/15/13
    ----------------------------------------------------------------------------
    Program creates bus transit network batchin files. Bus transit network is
    built using a modified version of MHN processing procedures.
@@ -239,7 +239,21 @@ data links; merge links(in=hit) bnode; by itinb; if hit;
 data verify; merge verify(in=hit) links; by itina itinb; if hit;
 
  ** Hold Segments that Do Not Match MHN Links **;
-data hold(drop=miles thruln vdf x_a y_a zone atype x_b y_b base); set verify(where=(base=.));
+data gapcheck(drop=miles thruln vdf x_a y_a zone atype x_b y_b base); set verify;
+  proc sort; by linename order;
+data gapcheck; set gapcheck;
+  z=lag(itinb);
+  o=lag(order);
+  if itina ne z and order>1 then do;
+    itinb = itina;
+    itina = z;
+    order = o + 1;
+    output;
+  end;
+
+data nomatch(drop=miles thruln vdf x_a y_a zone atype x_b y_b base); set verify(where=(base=.));
+
+data hold(drop=z); set gapcheck nomatch;
   proc export data=hold outfile="&misslink" dbms=csv replace;
 data _null_; set hold nobs=totobs; call symput('tothold',left(put(totobs,8.))); run;
 %put tothold=&tothold;
