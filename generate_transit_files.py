@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 6/25/13
+    Revised: 7/18/13
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -324,6 +324,80 @@ for scen in scen_list:
                         writer.write(line)
             os.remove(bus_future_itin_csv)
 
+        # Identify any missing itinerary endpoints (1st itin_a/last itin_b).
+        scen_nodes = []
+        with open(hwy_n1, 'r') as all_nodes:
+            for row in all_nodes:
+                attr = row.split()
+                if attr[0] == 'a': # ignore comments and 'a*', which are centroids
+                    scen_nodes.append(attr[1])
+
+        itin_endpoints = []
+        with open(rep_runs_itin_csv, 'r') as itin:
+            itina_index = rep_runs_itin_attr.index('ITIN_A')
+            itinb_index = rep_runs_itin_attr.index('ITIN_B')
+            fmeas_index = rep_runs_itin_attr.index('F_MEAS')
+            tmeas_index = rep_runs_itin_attr.index('T_MEAS')
+            first_line = True
+            for row in itin:
+                if first_line:
+                    first_line = False
+                    continue
+                attr = row.strip().split(',')
+                fmeas = float(attr[fmeas_index])
+                tmeas = float(attr[tmeas_index])
+                itina = attr[itina_index]
+                itinb = attr[itinb_index]
+                if fmeas == 0:
+                    itin_endpoints.append(itina)
+                if tmeas == 100:
+                    itin_endpoints.append(itinb)
+
+        missing_endpoints = list(set(itin_endpoints).difference(set(scen_nodes)))
+
+        # Replace any missing itinerary endpoints with closest existing node.
+        if missing_endpoints:
+            replacements = {}
+            node_oid_field = MHN.determine_OID_fieldname(MHN.node)
+            scen_nodes_query = ''' "NODE" IN ({0}) '''.format(','.join(scen_nodes))
+            scen_nodes_lyr = MHN.make_skinny_feature_layer(MHN.node, 'scen_nodes_lyr', [node_oid_field, 'NODE'], scen_nodes_query)
+            for node in missing_endpoints:
+                missing_node_lyr = MHN.make_skinny_feature_layer(MHN.node, 'missing_node_lyr', [node_oid_field, 'NODE'], '"NODE" = {0}'.format(node))
+                closest_node_table = '/'.join((MHN.mem, 'closest_node_table'))
+                arcpy.GenerateNearTable_analysis(missing_node_lyr, scen_nodes_lyr, closest_node_table)  # Defaults to single closest feature
+                with arcpy.da.SearchCursor(closest_node_table, ['NEAR_FID']) as cursor:
+                    for row in cursor:
+                        closest_node_query = '"{0}" = {1}'.format(node_oid_field, str(row[0]))
+                        closest_node_layer = arcpy.MakeFeatureLayer_management(MHN.node, 'closest_node_lyr', closest_node_query)
+                        replacements[node] = [str(row[0]) for row in arcpy.da.SearchCursor(closest_node_layer, ['NODE'])][0]
+                arcpy.Delete_management(closest_node_table)
+
+            rep_runs_itin_fixed_csv = rep_runs_itin_csv.replace('.csv', '_fixed.csv')
+            with open(rep_runs_itin_fixed_csv, 'w') as new_itin:
+                with open(rep_runs_itin_csv, 'r') as old_itin:
+                    itina_index = rep_runs_itin_attr.index('ITIN_A')
+                    itinb_index = rep_runs_itin_attr.index('ITIN_B')
+                    fmeas_index = rep_runs_itin_attr.index('F_MEAS')
+                    tmeas_index = rep_runs_itin_attr.index('T_MEAS')
+                    first_line = True
+                    for row in old_itin:
+                        if first_line:
+                            new_itin.write(row)
+                            first_line = False
+                            continue
+                        attr = row.strip().split(',')
+                        fmeas = float(attr[fmeas_index])
+                        tmeas = float(attr[tmeas_index])
+                        itina = attr[itina_index]
+                        itinb = attr[itinb_index]
+                        if fmeas == 0 and itina in missing_endpoints:
+                            row = row.replace(itina, replacements[itina])
+                        if tmeas == 100 and itinb in missing_endpoints:
+                            row = row.replace(itinb, replacements[itinb])
+                        new_itin.write(row)
+
+            os.remove(rep_runs_itin_csv)
+            rep_runs_itin_csv = rep_runs_itin_fixed_csv
 
         # Call generate_transit_files_2.sas -- creates bus batchin files.
         sas2_sas = ''.join((MHN.prog_dir, '/', sas2_name, '.sas'))
