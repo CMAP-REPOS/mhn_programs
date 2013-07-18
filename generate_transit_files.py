@@ -373,7 +373,7 @@ for scen in scen_list:
                 with open(pnt_file, 'r') as in_pts:
                     for row in in_pts:
                         row_list = row.strip().split(',')
-                        if len(row_list) == 3:
+                        if len(row_list) == 3: # and (row_list[0] and row_list[1] and row_list[2]):
                             id_num = row_list[0]
                             x_coord = float(row_list[1])
                             y_coord = float(row_list[2])
