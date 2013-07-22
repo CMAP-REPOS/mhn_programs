@@ -48,7 +48,7 @@ arcpy.CopyFeatures_management(MHN.arc, temp_arcs)
 MHN.set_nulls_to_zero(temp_arcs, ['ANODE','BNODE','DIRECTIONS','TYPE1','TYPE2','THRULANES1','THRULANES2',
                                   'THRULANEWIDTH1','THRULANEWIDTH2','AMPM1','AMPM2','MODES','POSTEDSPEED1',
                                   'POSTEDSPEED2','PARKLANES1','PARKLANES2','SIGIC','CLTL','RRGRADECROSS',
-                                  'TOLLSYS','TOLLDOLLARS','NHSIC','CHIBLVD','TRUCKRTE','TRUCKRES','VCLEARANCE'])
+                                  'TOLLSYS','TOLLDOLLARS','NHSIC','CHIBLVD','TRUCKRTE','TRUCKRES','VCLEARANCE','MESO'])
 MHN.set_nulls_to_space(temp_arcs, ['BASELINK','ROADNAME','PARKRES1','PARKRES2','SRA','TRUCKRES_UPDATED'])
 
 # Update existing ABB values.
