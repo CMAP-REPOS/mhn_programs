@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 7/1/13
+    Revised: 7/22/13
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -21,12 +21,12 @@ arcpy.env.OverwriteOutput = True
 # -----------------------------------------------------------------------------
 #  1. DIRECTORIES & FILES
 # -----------------------------------------------------------------------------
-ROOT_DIR = 'C:/MHN'
-gdb = ROOT_DIR + '/mhn.gdb'
+gdb = 'C:/MHN/mhn.gdb'
 
-imp_dir = ROOT_DIR + '/import'
-out_dir = ROOT_DIR + '/output'
-temp_dir = ROOT_DIR + '/temp'
+root_dir = os.path.dirname(gdb)
+imp_dir = root_dir + '/import'
+out_dir = root_dir + '/output'
+temp_dir = root_dir + '/temp'
 prog_dir = sys.path[0]  # Directory containing this module
 mem = 'in_memory'
 
@@ -47,7 +47,7 @@ route_systems = {
     bus_future: (gdb + '/bus_future_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
 }
 
-zone_gdb = ROOT_DIR + '/zone_systems.gdb'
+zone_gdb = root_dir + '/zone_systems.gdb'
 zone = zone_gdb + '/Zones09'
 zone_attr = 'Zone09'
 subzone = zone_gdb + '/Subzones09'
@@ -307,13 +307,13 @@ def set_nulls(value, fc, fields):
     matched_fields = [field for field in arcpy.ListFields(fc) if field.name in fields and field.type in valid_types]
     for field in matched_fields:
         if field.type == 'String':
-            expression = "'" + str(value) + "'"
+            expression = "'{0}'".format(value)
         else:
-            expression = str(value)
+            expression = '{0}'.format(value)
         null_view = 'null_view'
-        arcpy.MakeTableView_management(fc, null_view, '"' + field.name + '" IS NULL')
+        arcpy.MakeTableView_management(fc, null_view, '"{0}" IS NULL'.format(field.name))
         if int(arcpy.GetCount_management(null_view).getOutput(0)) > 0:
-            arcpy.CalculateField_management(null_view, field.name, expression, 'PYTHON_9.3')
+            arcpy.CalculateField_management(null_view, field.name, expression, 'PYTHON')
         arcpy.Delete_management(null_view)
     return fc
 
