@@ -394,7 +394,7 @@ for ABB_tuple in split_dict:
         test_anode = available_anodes[0]
         failed_attempts = 0
         for test_bnode in available_bnodes:
-            ABB_synth = str(test_anode) + '-' + str(test_bnode) + '-' + str(baselink)
+            ABB_synth = '{0}-{1}-{2}'.format(test_anode, test_bnode, baselink)
             if ABB_synth in new_ABB_values:
                 split_miles = new_ABB_values[ABB_synth]['MILES']
                 unordered_ABBs[test_anode] = [test_bnode, baselink, split_miles]
@@ -404,7 +404,7 @@ for ABB_tuple in split_dict:
             else:
                 failed_attempts += 1
                 if failed_attempts == len(available_bnodes):
-                    MHN.die('Problem identifying split arc ABB values between ANODE {0} and BNODE {1}! Were any of them flipped?'.format(str(anode), str(bnode)))
+                    MHN.die('Problem identifying split arc ABB values between ANODE {0} and BNODE {1}! Were any of them flipped?'.format(anode, bnode))
                     raise arcpy.ExecuteError
     total_miles = sum([unordered_ABBs[split_ABB][2] for split_ABB in unordered_ABBs])
     for split_ABB in unordered_ABBs:
@@ -419,7 +419,7 @@ for ABB_tuple in split_dict:
             bnode = dict[anode_seed][0]
             baselink = dict[anode_seed][1]
             length_ratio = dict[anode_seed][2]
-            ABB = '-'.join([str(anode), str(bnode), str(baselink)])
+            ABB = '{0}-{1}-{2}'.format(anode, bnode, baselink)
             list.append([ABB, length_ratio])
             return order_ABBs(dict, bnode, list)
     ordered_ABBs = order_ABBs(unordered_ABBs, anode)  # A list of tuples: (ABB, length_ratio)
@@ -494,29 +494,45 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
             baselink = 0
         if ABB not in new_ABB_values:
             if (anode,bnode,baselink) in split_dict_ABB:  # If ABB is invalid because it was split, find new ABB values
-                for split_ABB in split_dict_ABB[(anode,bnode,baselink)]:
+                itin_a = itin_dict[OID]['ITIN_A']
+                itin_b = itin_dict[OID]['ITIN_B']
+                if itin_b == anode or itin_a == bnode:
+                    backwards = True
+                    ordered_segments = split_dict_ABB[(anode,bnode,baselink)][:]  # Make a copy of the ordered segments to reverse
+                    ordered_segments.reverse()
+                else:
+                    backwards = False
+                    ordered_segments = split_dict_ABB[(anode,bnode,baselink)]
+                for split_ABB in ordered_segments:
                     split_anode = int(split_ABB[0].split('-')[0])
                     split_bnode = int(split_ABB[0].split('-')[1])
                     split_baselink = int(split_ABB[0].split('-')[2])
-                    split_index = split_ABB[1]
-                    split_start_ratio = split_ABB[2]
                     split_length_ratio = split_ABB[3]
                     max_itin_OID += 1
                     split_itin_dict[max_itin_OID] = itin_dict[OID].copy()
                     split_itin_dict[max_itin_OID]['ABB'] = split_ABB[0]
 
                     if order_field:
+                        if backwards:
+                            split_itin_a = split_bnode
+                            split_itin_b = split_anode
+                            split_start_ratio = 1 - split_ABB[2]
+                        else:
+                            split_itin_a = split_anode
+                            split_itin_b = split_bnode
+                            split_start_ratio = split_ABB[2]
+
                         # Adjust itinerary nodes and order:
-                        split_itin_dict[max_itin_OID]['ITIN_A'] = split_anode
-                        split_itin_dict[max_itin_OID]['ITIN_B'] = split_bnode
-                        if split_anode != anode:  # First split segment receives the same order as the original
+                        split_itin_dict[max_itin_OID]['ITIN_A'] = split_itin_a
+                        split_itin_dict[max_itin_OID]['ITIN_B'] = split_itin_b
+                        if split_itin_a != itin_a:  # First split segment receives the same order as the original
                             order_bump += 1
                         split_itin_dict[max_itin_OID][order_field] += order_bump
 
                         # Adjust variables that only apply to original link's BNODE:
-                        if split_itin_dict[max_itin_OID]['LAYOVER'] > 0 and split_bnode != bnode:
+                        if split_itin_dict[max_itin_OID]['LAYOVER'] > 0 and split_itin_b != itin_b:
                             split_itin_dict[max_itin_OID]['LAYOVER'] = 0
-                        if split_itin_dict[max_itin_OID]['DWELL_CODE'] > 0 and split_bnode != bnode:
+                        if split_itin_dict[max_itin_OID]['DWELL_CODE'] > 0 and split_itin_b != itin_b:
                             split_itin_dict[max_itin_OID]['DWELL_CODE'] = 0
 
                         # Apportion length-dependent variables:
@@ -532,13 +548,13 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
                             DEP_TIME = split_itin_dict[max_itin_OID]['DEP_TIME']
                             ARR_TIME = split_itin_dict[max_itin_OID]['ARR_TIME']
                             time_diff = ARR_TIME - DEP_TIME
-                        if split_anode != anode:
+                        if split_itin_a != itin_a:
                             split_itin_dict[max_itin_OID]['F_MEAS'] += meas_diff * split_start_ratio
                             if not future:
                                 split_itin_dict[max_itin_OID]['DEP_TIME'] += time_diff * split_start_ratio
                         else:
                             pass  # F_MEAS & DEP_TIME are already correct for the anode
-                        if split_bnode != bnode:
+                        if split_itin_b != itin_b:
                             split_itin_dict[max_itin_OID]['T_MEAS'] = F_MEAS + meas_diff * (split_start_ratio + split_length_ratio)
                             if not future:
                                 split_itin_dict[max_itin_OID]['ARR_TIME'] = DEP_TIME + time_diff * (split_start_ratio + split_length_ratio)
