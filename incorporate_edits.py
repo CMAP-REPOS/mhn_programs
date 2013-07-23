@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 4/29/13
+    Revised: 7/22/13
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -48,19 +48,19 @@ arcpy.CopyFeatures_management(MHN.arc, temp_arcs)
 MHN.set_nulls_to_zero(temp_arcs, ['ANODE','BNODE','DIRECTIONS','TYPE1','TYPE2','THRULANES1','THRULANES2',
                                   'THRULANEWIDTH1','THRULANEWIDTH2','AMPM1','AMPM2','MODES','POSTEDSPEED1',
                                   'POSTEDSPEED2','PARKLANES1','PARKLANES2','SIGIC','CLTL','RRGRADECROSS',
-                                  'TOLLSYS','TOLLDOLLARS','NHSIC','CHIBLVD','TRUCKRTE','TRUCKRES','VCLEARANCE'])
+                                  'TOLLSYS','TOLLDOLLARS','NHSIC','CHIBLVD','TRUCKRTE','TRUCKRES','VCLEARANCE','MESO'])
 MHN.set_nulls_to_space(temp_arcs, ['BASELINK','ROADNAME','PARKRES1','PARKRES2','SRA','TRUCKRES_UPDATED'])
 
 # Update existing ABB values.
 # -- Arcs with ANODE, BNODE and BASELINK:
 arcs_with_ABB_lyr = 'arcs_with_ABB_lyr'
 arcpy.MakeFeatureLayer_management(temp_arcs, arcs_with_ABB_lyr, '"ANODE" <> 0 AND "BNODE" <> 0 AND "BASELINK" <> \' \'')
-arcpy.CalculateField_management(arcs_with_ABB_lyr, 'ABB', 'str(!ANODE!) + "-" + str(!BNODE!) + "-" + str(!BASELINK!)', 'PYTHON_9.3')
+arcpy.CalculateField_management(arcs_with_ABB_lyr, 'ABB', '"{0}-{1}-{2}".format(!ANODE!, !BNODE!, !BASELINK!)', 'PYTHON')
 arcpy.Delete_management(arcs_with_ABB_lyr)
 # -- Arcs missing ANODE, BNODE or BASELINK:
 arcs_without_ABB_lyr = 'arcs_without_ABB_lyr'
 arcpy.MakeFeatureLayer_management(temp_arcs, arcs_without_ABB_lyr, '"ANODE" = 0 OR "BNODE" = 0 OR "BASELINK" = \' \'')
-arcpy.CalculateField_management(arcs_without_ABB_lyr, 'ABB', "' '", 'PYTHON_9.3')
+arcpy.CalculateField_management(arcs_without_ABB_lyr, 'ABB', "' '", 'PYTHON')
 arcpy.Delete_management(arcs_without_ABB_lyr)
 
 # Check for problems with other fields.
@@ -239,7 +239,7 @@ else:
 # -----------------------------------------------------------------------------
 xy_freq_table = MHN.mem + '/xy_freq'
 xy_freq_view = 'xy_freq_view'
-arcpy.Frequency_analysis(new_nodes_view, xy_freq_table, ['POINT_X','POINT_Y'])
+arcpy.Frequency_analysis(new_nodes_view, xy_freq_table, ['POINT_X', 'POINT_Y'])
 arcpy.MakeTableView_management(xy_freq_table, xy_freq_view, '"FREQUENCY" > 1')
 overlap_count = int(arcpy.GetCount_management(xy_freq_view).getOutput(0))
 if overlap_count == 0:
@@ -353,13 +353,13 @@ arcpy.Delete_management(bnodes_id)
 arcpy.AddMessage('-- Arc ANODE & BNODE fields recalculated')
 
 # Calculate arc ABB values.
-arcpy.CalculateField_management(temp_arcs, 'ABB', 'str(!ANODE!) + "-" + str(!BNODE!) + "-" + str(!BASELINK!)', 'PYTHON_9.3')
+arcpy.CalculateField_management(temp_arcs, 'ABB', '"{0}-{1}-{2}".format(!ANODE!, !BNODE!, !BASELINK!)', 'PYTHON')
 arcpy.AddMessage('-- Arc ABB field recalculated')
 
 # Calculate arc MILES values.
 miles_update_lyr = 'miles_update_lyr'
 arcpy.MakeFeatureLayer_management(temp_arcs, miles_update_lyr, "\"TYPE1\" NOT IN ('6','7') OR \"MILES\" IS NULL OR \"MILES\" = 0")
-arcpy.CalculateField_management(miles_update_lyr, 'MILES', '!shape.length@miles!', 'PYTHON_9.3')
+arcpy.CalculateField_management(miles_update_lyr, 'MILES', '!shape.length@miles!', 'PYTHON')
 arcpy.AddMessage('-- Arc MILES field recalculated')
 
 # Calculate arc BEARING values.

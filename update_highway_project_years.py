@@ -2,7 +2,7 @@
 '''
     update_highway_project_years.py
     Author: npeterson
-    Revised: 7/10/13
+    Revised: 7/12/13
     ---------------------------------------------------------------------------
     This script updates the completion years of projects to be included in
     Conformity analyses. The final completion year file is received from the
@@ -78,7 +78,9 @@ MHN.delete_if_exists(in_mhn_not_year_txt)
 # -----------------------------------------------------------------------------
 with open(hwyproj_all_csv, 'w') as merged:
     with open(hwyproj_year_csv, 'r') as conformed:
-        merged.write(conformed.read())
+        for line in conformed:
+            if int(line.split(',')[1]) > MHN.base_year:
+                merged.write(line)
     with open(hwyproj_exempt_csv, 'r') as exempt:
         merged.write(exempt.read())
 
@@ -118,9 +120,9 @@ elif os.path.exists(sas1_lst):
 else:
     os.remove(sas1_log)
     os.remove(hwyproj_all_csv)
-    os.remove(future_rail_dbf)
-    os.remove(people_mover_dbf)
-    os.remove(future_bus_dbf)
+    arcpy.Delete_management(future_rail_dbf)
+    arcpy.Delete_management(people_mover_dbf)
+    arcpy.Delete_management(future_bus_dbf)
 
 
 # -----------------------------------------------------------------------------
@@ -153,28 +155,30 @@ with open(uncodable_hwyproj_csv, 'r') as no_code:
 # -----------------------------------------------------------------------------
 #  Check for inappropriately coded projects.
 # -----------------------------------------------------------------------------
-# Select projects in MHN but not in year.csv:
 hwyproj_view = 'hwyproj_view'
+arcpy.MakeTableView_management(MHN.hwyproj, hwyproj_view)
+
+# Select projects in MHN but not in year.csv:
 unmatched_hwyproj_query = '"{0}" NOT IN (\'{1}\')'.format(common_id_field, "','".join(hwyproj_years.keys()))
-arcpy.MakeTableView_management(MHN.hwyproj, hwyproj_view, unmatched_hwyproj_query)
+arcpy.SelectLayerByAttribute_management(hwyproj_view, selection_type='NEW_SELECTION', where_clause=unmatched_hwyproj_query)
 
 # Ignore out-of-region projects:
 out_of_region_query = '"{0}" LIKE \'14______\''.format(common_id_field)
-arcpy.SelectLayerByAttribute_management(hwyproj_view, 'REMOVE_FROM_SELECTION', out_of_region_query)
+arcpy.SelectLayerByAttribute_management(hwyproj_view, selection_type='REMOVE_FROM_SELECTION', where_clause=out_of_region_query)
 
 # Ignore projects not being conformed:
 not_conformed_query = '"COMPLETION_YEAR" > {0}'.format(MHN.max_year)
-arcpy.SelectLayerByAttribute_management(hwyproj_view, 'REMOVE_FROM_SELECTION', not_conformed_query)
+arcpy.SelectLayerByAttribute_management(hwyproj_view, selection_type='REMOVE_FROM_SELECTION', where_clause=not_conformed_query)
 
-# Update COMPLETION_YEAR values for MHN projects in year.csv, and report those that aren't.
+# Report any MHN projects not in year lists:
 if int(arcpy.GetCount_management(hwyproj_view).getOutput(0)) == 0:
-    arcpy.AddMessage('{0}All in-region, conformed projects coded in MHN exist in {1}!'.format('\n', hwyproj_year_csv))
+    arcpy.AddMessage('{0}All in-region, conformed projects coded in MHN are listed in {1} or {2}!'.format('\n', hwyproj_year_csv, hwyproj_exempt_csv))
 else:
     with open(in_mhn_not_year_txt, 'w') as miscoded_output:
         with arcpy.da.SearchCursor(hwyproj_view, [common_id_field, 'COMPLETION_YEAR']) as cursor:
             for row in cursor:
                 miscoded_output.write('{0},{1}\n'.format(row[0], row[1]))
-    arcpy.AddWarning('{0}WARNING: Some projects coded in MHN are not coded in {1}. See {2} for details.'.format('\n', hwyproj_year_csv, in_mhn_not_year_txt))
+    arcpy.AddWarning('{0}WARNING: Some in-region, conformed projects coded in MHN are not listed in {1} or {2}. See {3} for details.'.format('\n', hwyproj_year_csv, hwyproj_exempt_csv, in_mhn_not_year_txt))
 
 
 # -----------------------------------------------------------------------------
@@ -182,14 +186,17 @@ else:
 # -----------------------------------------------------------------------------
 coded_hwyproj = MHN.make_attribute_dict(MHN.hwyproj, common_id_field, []).keys()
 uncoded_hwyproj = [hwyproj_id for hwyproj_id in hwyproj_years if hwyproj_id not in coded_hwyproj and hwyproj_id not in uncodable_hwyproj]
-with open(in_year_not_mhn_txt, 'w') as uncoded_output:
-    for hwyproj_id in sorted(uncoded_hwyproj):
-        uncoded_output.write('{0}\n'.format(hwyproj_id))
-arcpy.AddWarning('{0}WARNING: Some projects in {1} and not {2} are not yet coded in MHN. See {3} for details.'.format('\n', hwyproj_year_csv, uncodable_hwyproj_csv, in_year_not_mhn_txt))
+if len(uncoded_hwyproj) == 0:
+    arcpy.AddMessage('{0}All projects listed in {1} and {2} are coded in MHN!'.format('\n', hwyproj_year_csv, hwyproj_exempt_csv))
+else:
+    with open(in_year_not_mhn_txt, 'w') as uncoded_output:
+        for hwyproj_id in sorted(uncoded_hwyproj):
+            uncoded_output.write('{0}\n'.format(hwyproj_id))
+    arcpy.AddWarning('{0}WARNING: Some projects in {1} or {2} but not {3} are not yet coded in MHN. See {4} for details.'.format('\n', hwyproj_year_csv, hwyproj_exempt_csv, uncodable_hwyproj_csv, in_year_not_mhn_txt))
 
 
 # -----------------------------------------------------------------------------
-#  Update completion years of MHN projects found in year.csv.
+#  Update completion years of MHN projects found in year lists.
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('{0}Updating COMPLETION_YEAR values for projects coded in MHN that are listed in {1}...'.format('\n', hwyproj_year_csv))
 edit = arcpy.da.Editor(MHN.gdb)
