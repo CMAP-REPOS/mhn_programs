@@ -21,6 +21,8 @@ import sys
 import arcpy
 import MHN  # Custom library for MHN processing functionality
 
+arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
+
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
@@ -494,14 +496,15 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
             baselink = 0
         if ABB not in new_ABB_values:
             if (anode,bnode,baselink) in split_dict_ABB:  # If ABB is invalid because it was split, find new ABB values
-                itin_a = itin_dict[OID]['ITIN_A']
-                itin_b = itin_dict[OID]['ITIN_B']
-                if itin_b == anode or itin_a == bnode:
-                    backwards = True
-                    ordered_segments = split_dict_ABB[(anode,bnode,baselink)][::-1]  # Make a reversed copy of the ordered segments
-                else:
-                    backwards = False
-                    ordered_segments = split_dict_ABB[(anode,bnode,baselink)]
+                ordered_segments = split_dict_ABB[(anode,bnode,baselink)]
+                if order_field:
+                    itin_a = itin_dict[OID]['ITIN_A']
+                    itin_b = itin_dict[OID]['ITIN_B']
+                    if itin_b == anode or itin_a == bnode:
+                        backwards = True
+                        ordered_segments = ordered_segments[::-1]  # Make a reversed copy of the ordered segments
+                    else:
+                        backwards = False
                 for split_ABB in ordered_segments:
                     split_anode = int(split_ABB[0].split('-')[0])
                     split_bnode = int(split_ABB[0].split('-')[1])
@@ -528,11 +531,9 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
                             order_bump += 1
                         split_itin_dict[max_itin_OID][order_field] += order_bump
 
-                        # Adjust variables that only apply to original link's BNODE:
+                        # Adjust variables that only apply to original link's itin_b:
                         if split_itin_dict[max_itin_OID]['LAYOVER'] > 0 and split_itin_b != itin_b:
                             split_itin_dict[max_itin_OID]['LAYOVER'] = 0
-                        if split_itin_dict[max_itin_OID]['DWELL_CODE'] > 0 and split_itin_b != itin_b:
-                            split_itin_dict[max_itin_OID]['DWELL_CODE'] = 0
 
                         # Apportion length-dependent variables:
                         split_itin_dict[max_itin_OID]['LINE_SERV_TIME'] *= split_length_ratio
@@ -552,13 +553,13 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
                             if not future:
                                 split_itin_dict[max_itin_OID]['DEP_TIME'] += time_diff * split_start_ratio
                         else:
-                            pass  # F_MEAS & DEP_TIME are already correct for the anode
+                            pass  # F_MEAS & DEP_TIME are already correct for itin_a
                         if split_itin_b != itin_b:
                             split_itin_dict[max_itin_OID]['T_MEAS'] = F_MEAS + meas_diff * (split_start_ratio + split_length_ratio)
                             if not future:
                                 split_itin_dict[max_itin_OID]['ARR_TIME'] = DEP_TIME + time_diff * (split_start_ratio + split_length_ratio)
                         else:
-                            pass  # T_MEAS & ARR_TIME are already correct for the bnode
+                            pass  # T_MEAS & ARR_TIME are already correct for itin_b
 
             bad_itin_OIDs.append(OID)
         else:
@@ -634,7 +635,7 @@ for route_system in MHN.route_systems:
 timestamp = MHN.timestamp()
 backup_gdb = MHN.gdb[:-4] + '_' + timestamp + '.gdb'
 arcpy.Copy_management(MHN.gdb, backup_gdb)
-arcpy.AddMessage('\nGeodatabase temporarily backed up to {0}. (If update fails for any reason, replace {1} with this.)'.format(backup_gdb, MHN.gdb))
+arcpy.AddWarning('\nGeodatabase temporarily backed up to {0}. (If update fails for any reason, replace {1} with this.)'.format(backup_gdb, MHN.gdb))
 
 arcpy.AddMessage('\nSaving changes to disk...')
 # Replace route system tables and line FCs.
@@ -689,3 +690,4 @@ arcpy.Compact_management(MHN.gdb)
 arcpy.Delete_management(MHN.mem)
 arcpy.Delete_management(backup_gdb)
 arcpy.AddMessage('\nChanges successfully applied!\n')
+arcpy.RefreshActiveView()
