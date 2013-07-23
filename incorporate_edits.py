@@ -486,9 +486,14 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
             if order == 1:
                 order_bump = 0
         ABB = itin_dict[OID]['ABB']
-        anode = int(ABB.split('-')[0])
-        bnode = int(ABB.split('-')[1])
-        baselink = int(ABB.split('-')[2])
+        if ABB != None:
+            anode = int(ABB.split('-')[0])
+            bnode = int(ABB.split('-')[1])
+            baselink = int(ABB.split('-')[2])
+        else:
+            anode = 0
+            bnode = 0
+            baselink = 0
         if ABB not in new_ABB_values:
             if not order_field:  # For hwyproj, all deleted links should be removed from coding. Split links will be replaced.
                 bad_itin_OIDs.append(OID)
@@ -598,7 +603,7 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
     arcpy.CreateFeatureclass_management(header_updated_path, header_updated_name, 'POLYLINE', header)
     with arcpy.da.InsertCursor(header_updated, ['SHAPE@', common_id_field]) as routes_cursor:
         for common_id in common_id_list:
-            route_vertices = arcpy.Array([vertices_comprising[abb] for abb in arcs_traversed_by[common_id]])
+            route_vertices = arcpy.Array([vertices_comprising[abb] for abb in arcs_traversed_by[common_id] if abb in vertices_comprising])
             route = arcpy.Polyline(route_vertices)
             routes_cursor.insertRow([route, common_id])
 
