@@ -21,6 +21,8 @@ import sys
 import arcpy
 import MHN  # Custom library for MHN processing functionality
 
+arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
+
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
@@ -635,7 +637,7 @@ for route_system in MHN.route_systems:
 timestamp = MHN.timestamp()
 backup_gdb = MHN.gdb[:-4] + '_' + timestamp + '.gdb'
 arcpy.Copy_management(MHN.gdb, backup_gdb)
-arcpy.AddMessage('\nGeodatabase temporarily backed up to {0}. (If update fails for any reason, replace {1} with this.)'.format(backup_gdb, MHN.gdb))
+arcpy.AddWarning('\nGeodatabase temporarily backed up to {0}. (If update fails for any reason, replace {1} with this.)'.format(backup_gdb, MHN.gdb))
 
 arcpy.AddMessage('\nSaving changes to disk...')
 # Replace route system tables and line FCs.
@@ -690,3 +692,4 @@ arcpy.Compact_management(MHN.gdb)
 arcpy.Delete_management(MHN.mem)
 arcpy.Delete_management(backup_gdb)
 arcpy.AddMessage('\nChanges successfully applied!\n')
+arcpy.RefreshActiveView()
