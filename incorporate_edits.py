@@ -498,8 +498,7 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
                 itin_b = itin_dict[OID]['ITIN_B']
                 if itin_b == anode or itin_a == bnode:
                     backwards = True
-                    ordered_segments = split_dict_ABB[(anode,bnode,baselink)][:]  # Make a copy of the ordered segments to reverse
-                    ordered_segments.reverse()
+                    ordered_segments = split_dict_ABB[(anode,bnode,baselink)][::-1]  # Make a reversed copy of the ordered segments
                 else:
                     backwards = False
                     ordered_segments = split_dict_ABB[(anode,bnode,baselink)]
