@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 7/22/13
+    Revised: 7/23/13
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -426,7 +426,7 @@ for ABB_tuple in split_dict:
     for ABB_list in ordered_ABBs:
         index = ordered_ABBs.index(ABB_list)
         start_ratio = sum([ordered_ABBs[i][1] for i in xrange(index)])
-        ABB_list.append(start_ratio)  # Append start_ratio to track "how far along" each segment begins
+        ABB_list.append(start_ratio)  # Append start_ratio to track "how far along" each segment begins...
     for ABB, length_ratio, start_ratio in ordered_ABBs:
         index = ordered_ABBs.index([ABB, length_ratio, start_ratio])
         if ABB_tuple in split_dict_ABB:  # Check if key exists yet or not
@@ -516,7 +516,7 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
                         if backwards:
                             split_itin_a = split_bnode
                             split_itin_b = split_anode
-                            split_start_ratio = 1 - split_ABB[2]
+                            split_start_ratio = 1 - (split_ABB[2] + split_length_ratio)
                         else:
                             split_itin_a = split_anode
                             split_itin_b = split_bnode
