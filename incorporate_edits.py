@@ -486,18 +486,16 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
             if order == 1:
                 order_bump = 0
         ABB = itin_dict[OID]['ABB']
-        if ABB != None:
-            anode = int(ABB.split('-')[0])
-            bnode = int(ABB.split('-')[1])
-            baselink = int(ABB.split('-')[2])
-        else:
-            anode = 0
-            bnode = 0
-            baselink = 0
+        anode = int(ABB.split('-')[0])
+        bnode = int(ABB.split('-')[1])
+        baselink = int(ABB.split('-')[2])
         if ABB not in new_ABB_values:
+            if not order_field:  # For hwyproj, all deleted links should be removed from coding. Split links will be replaced.
+                bad_itin_OIDs.append(OID)
             if (anode,bnode,baselink) in split_dict_ABB:  # If ABB is invalid because it was split, find new ABB values
                 ordered_segments = split_dict_ABB[(anode,bnode,baselink)]
                 if order_field:
+                    bad_itin_OIDs.append(OID)  # For bus routes, only split links should be removed (and replaced).
                     itin_a = itin_dict[OID]['ITIN_A']
                     itin_b = itin_dict[OID]['ITIN_B']
                     if itin_b == anode or itin_a == bnode:
@@ -560,8 +558,6 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
                                 split_itin_dict[max_itin_OID]['ARR_TIME'] = DEP_TIME + time_diff * (split_start_ratio + split_length_ratio)
                         else:
                             pass  # T_MEAS & ARR_TIME are already correct for itin_b
-
-            bad_itin_OIDs.append(OID)
         else:
             if order_field:
                 itin_dict[OID][order_field] += order_bump
