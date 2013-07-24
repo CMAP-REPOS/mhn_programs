@@ -103,6 +103,9 @@ with arcpy.da.InsertCursor(temp_coding_table, coding_fields) as cursor:
     os.remove(projects_csv)
 
 # Generate project features one at a time.
+# (Note: not using the MHN.build_geometry_dict() method for hwyproj, because
+#  the time saved in construction is lost in dict-building for small coding
+#  tables.)
 for project_id in project_arcs.keys():
 
     # Get project completion year, if already in MHN.

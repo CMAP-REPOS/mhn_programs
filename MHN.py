@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 7/22/13
+    Revised: 7/24/13
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -137,6 +137,25 @@ def break_path(fullpath):
         extension = ''
         filename_extension = filename
     return {'dir': directory, 'name': filename, 'ext': extension, 'name_ext': filename_extension}
+
+
+def build_geometry_dict(lyr, key_field):
+    ''' For an input layer and a key field, returns a dictionary whose values
+        are the arcpy geometry objects for the corresponding key. These objects
+        can then be fetched by key and strung into a new array -- much faster
+        than querying-and-dissolving if creating a large number of features,
+        but some time is lost in the creation of this dict, so there is a
+        definite trade-off. '''
+    geom_dict = {}
+    with arcpy.da.SearchCursor(lyr, [key_field,'SHAPE@']) as cursor:
+        for row in cursor:
+            key = row[0]
+            geom = row[1]
+            geom_dict[key] = arcpy.Array()
+            for part in geom:
+                for point in part:
+                    geom_dict[key].add(point)
+    return geom_dict
 
 
 def calculate_itin_measures(itin_table):

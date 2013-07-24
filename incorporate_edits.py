@@ -441,15 +441,7 @@ for ABB_tuple in split_dict:
 #  Update route systems.
 # -----------------------------------------------------------------------------
 # Build dict to store all arc geometries for mix-and-match route-building.
-vertices_comprising = {}
-with arcpy.da.SearchCursor(temp_arcs, ['ABB','SHAPE@']) as arcs_cursor:
-    for arc in arcs_cursor:
-        abb = arc[0]
-        geom = arc[1]
-        vertices_comprising[abb] = arcpy.Array()
-        for part in geom:
-            for point in part:
-                vertices_comprising[abb].add(point)
+vertices_comprising = MHN.build_geometry_dict(temp_arcs, 'ABB')
 
 arcpy.AddMessage('\nRebuilding route systems (in memory):')
 
