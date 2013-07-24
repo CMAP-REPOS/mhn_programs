@@ -487,9 +487,12 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
             bnode = 0
             baselink = 0
         if ABB not in new_ABB_values:
+            if not order_field:  # For hwyproj, all deleted links should be removed from coding. Split links will be replaced.
+                bad_itin_OIDs.append(OID)
             if (anode,bnode,baselink) in split_dict_ABB:  # If ABB is invalid because it was split, find new ABB values
                 ordered_segments = split_dict_ABB[(anode,bnode,baselink)]
                 if order_field:
+                    bad_itin_OIDs.append(OID)  # For bus routes, only split links should be removed (and replaced).
                     itin_a = itin_dict[OID]['ITIN_A']
                     itin_b = itin_dict[OID]['ITIN_B']
                     if itin_b == anode or itin_a == bnode:
@@ -552,8 +555,6 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
                                 split_itin_dict[max_itin_OID]['ARR_TIME'] = DEP_TIME + time_diff * (split_start_ratio + split_length_ratio)
                         else:
                             pass  # T_MEAS & ARR_TIME are already correct for itin_b
-
-            bad_itin_OIDs.append(OID)
         else:
             if order_field:
                 itin_dict[OID][order_field] += order_bump
@@ -594,7 +595,7 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
     arcpy.CreateFeatureclass_management(header_updated_path, header_updated_name, 'POLYLINE', header)
     with arcpy.da.InsertCursor(header_updated, ['SHAPE@', common_id_field]) as routes_cursor:
         for common_id in common_id_list:
-            route_vertices = arcpy.Array([vertices_comprising[abb] for abb in arcs_traversed_by[common_id]])
+            route_vertices = arcpy.Array([vertices_comprising[abb] for abb in arcs_traversed_by[common_id] if abb in vertices_comprising])
             route = arcpy.Polyline(route_vertices)
             routes_cursor.insertRow([route, common_id])
 
