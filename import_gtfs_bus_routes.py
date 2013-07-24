@@ -183,22 +183,27 @@ os.remove(itin_csv)
 # Update itinerary F_MEAS & T_MEAS.
 MHN.calculate_itin_measures(temp_itin_table)
 
-# Generate route features one at a time.
-for route_id in sorted(route_arcs.keys()):
+# Build dict to store all arc geometries for mix-and-match route-building.
+vertices_comprising = MHN.build_geometry_dict(MHN.arc, 'ABB')
 
-    # Dissolve route arcs into a single route feature, and append to temp FC.
-    route_arc_ids = route_arcs[route_id]
-    route_arcs_lyr = 'route_arcs_lyr'
-    route_arcs_query = '"ABB" IN (\'' + "','".join(route_arc_ids) + "')"
-    arcpy.MakeFeatureLayer_management(MHN.arc, route_arcs_lyr, route_arcs_query)
-    route_dissolved = '/'.join((MHN.mem, 'route_dissolved'))
-    arcpy.Dissolve_management(route_arcs_lyr, route_dissolved)
-    arcpy.AddField_management(route_dissolved, common_id_field, 'TEXT', field_length=10)
-    with arcpy.da.UpdateCursor(route_dissolved, [common_id_field]) as cursor:
-        for row in cursor:
-            row[0] = route_id
-            cursor.updateRow(row)
-    arcpy.Append_management(route_dissolved, temp_routes_fc, 'NO_TEST')
+# Generate route features one at a time.
+arcs_traversed_by = {}
+field_list = ['ABB', common_id_field]
+with arcpy.da.SearchCursor(temp_itin_table, field_list) as itin_cursor:
+    for row in itin_cursor:
+        abb = row[0]
+        common_id = row[1]
+        if common_id in arcs_traversed_by:
+            arcs_traversed_by[common_id].append(abb)
+        else:
+            arcs_traversed_by[common_id] = [abb]
+
+common_id_list = sorted(route_arcs.keys())
+with arcpy.da.InsertCursor(temp_routes_fc, ['SHAPE@', common_id_field]) as routes_cursor:
+    for common_id in common_id_list:
+        route_vertices = arcpy.Array([vertices_comprising[abb] for abb in arcs_traversed_by[common_id] if abb in vertices_comprising])
+        route = arcpy.Polyline(route_vertices)
+        routes_cursor.insertRow([route, common_id])
 
 # Fill other fields with data from future_route_csv.
 header_attr = {}
