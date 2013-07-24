@@ -487,10 +487,12 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
             bnode = 0
             baselink = 0
         if ABB not in new_ABB_values:
-            bad_itin_OIDs.append(OID)
+            if not order_field:  # For hwyproj, all deleted links should be removed from coding. Split links will be replaced.
+                bad_itin_OIDs.append(OID)
             if (anode,bnode,baselink) in split_dict_ABB:  # If ABB is invalid because it was split, find new ABB values
                 ordered_segments = split_dict_ABB[(anode,bnode,baselink)]
                 if order_field:
+                    bad_itin_OIDs.append(OID)  # For bus routes, only split links should be removed (and replaced).
                     itin_a = itin_dict[OID]['ITIN_A']
                     itin_b = itin_dict[OID]['ITIN_B']
                     if itin_b == anode or itin_a == bnode:
