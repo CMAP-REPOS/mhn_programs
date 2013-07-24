@@ -148,6 +148,9 @@ os.remove(future_itin_csv)
 MHN.calculate_itin_measures(temp_itin_table)
 
 # Generate route features one at a time.
+# (Note: not using the MHN.build_geometry_dict() method for bus_future, because
+#  the time saved in construction is lost in dict-building for small coding
+#  tables.)
 for route_id in sorted(route_arcs.keys()):
 
     # Dissolve route arcs into a single route feature, and append to temp FC.
