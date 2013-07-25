@@ -349,7 +349,7 @@ def submit_sas(sas_file, sas_log, sas_lst, arg_list=None):
     if not arg_list:
         arg_str = ''
     else:
-        arg_str = '$'.join(arg_list)
+        arg_str = '$'.join((str(arg) for arg in arg_list))
     from subprocess import call
     bat = prog_dir + '/sasrun.bat'
     cmd = [bat, sas_file, arg_str, sas_log, sas_lst]
