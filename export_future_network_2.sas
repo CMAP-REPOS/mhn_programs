@@ -183,7 +183,7 @@ options pagesize=50 linesize=125;
  data modify; set temp(where=(action=1));
 
  data replace(keep=repanode repbnode abb action); set temp(where=(action=2));
-        proc sort; by repanode repbnode;
+   proc sort; by repanode repbnode;
 
        * - - - - - - - - - - - - - - - - - - - - - - - - - - *;
        **VERIFY THAT REPLACE NODES HAVE A CORRESPONDING LINK**;
@@ -242,10 +242,14 @@ options pagesize=50 linesize=125;
 /* end of macro */
 
 
+data attr; set network;
+  action=max(action,0);
+  if action in (1,2,4) then baselink=1;
+  if action=3 then baselink=0;
+
 data attr;
- set network (keep=abb type1 type2 toll ampm1 ampm2 sigic posted1 posted2 thruln1 thruln2
-                   parkln1 parkln2 cltl thruft1 thruft2 directn modes action);
- action=max(action,0);
+ set attr (keep=abb type1 type2 toll ampm1 ampm2 sigic posted1 posted2 thruln1 thruln2
+                parkln1 parkln2 cltl thruft1 thruft2 directn modes baselink action);
  label abb='ABB'
        type1='TYPE1'
        type2='TYPE2'
@@ -264,6 +268,7 @@ data attr;
        thruft2='THRULANEWIDTH2'
        directn='DIRECTIONS'
        modes='MODES'
+       baselink='BASELINK'
        action='ACTION_CODE';
    proc sort; by abb;
    proc export outfile=out1 dbms=csv label replace;
