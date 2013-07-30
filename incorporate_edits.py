@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 7/23/13
+    Revised: 7/26/13
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -42,6 +42,8 @@ MHN.delete_if_exists(overlapping_nodes_shp)
 # -----------------------------------------------------------------------------
 #  Check arcs for all required attributes.
 # -----------------------------------------------------------------------------
+arcpy.AddMessage('\nValidating edits:')
+
 # Make a copy of the unmodified arcs.
 temp_arcs = MHN.mem + '/temp_arcs'
 arcpy.CopyFeatures_management(MHN.arc, temp_arcs)
@@ -82,7 +84,7 @@ if bad_arcs_count > 0:
     raise arcpy.ExecuteError
 else:
     arcpy.Delete_management(bad_arcs_lyr)
-    arcpy.AddMessage('\nAll arcs have all required attributes.')
+    arcpy.AddMessage('-- All arcs have all required attributes')
 
 
 # -----------------------------------------------------------------------------
@@ -159,7 +161,7 @@ if split_count == 0:
     arcpy.Delete_management(abb_freq_view)
     arcpy.Delete_management(abb_freq_table)
     arcpy.Delete_management(new_nodes_ABB)
-    arcpy.AddMessage('\nNo existing arcs were split.')
+    arcpy.AddMessage('-- No existing arcs were split')
 else:
     with arcpy.da.SearchCursor(abb_freq_view, ['ABB']) as split_arcs_cursor:
         for split_arc in split_arcs_cursor:
@@ -196,7 +198,7 @@ else:
     arcpy.Delete_management(abb_freq_view)
     arcpy.Delete_management(abb_freq_table)
     arcpy.Delete_management(new_nodes_ABB)
-    arcpy.AddMessage('\nNew node values have been assigned for split arcs.')
+    arcpy.AddMessage('-- New node values have been assigned for split arcs')
 
 
 # -----------------------------------------------------------------------------
@@ -223,7 +225,7 @@ duplicate_count = int(arcpy.GetCount_management(id_freq_view).getOutput(0))
 if duplicate_count == 0:
     arcpy.Delete_management(id_freq_view)
     arcpy.Delete_management(id_freq_table)
-    arcpy.AddMessage('\nNo nodes have duplicate IDs.')
+    arcpy.AddMessage('--No nodes have duplicate IDs')
 else:
     duplicates = [duplicate[0] for duplicate in arcpy.da.SearchCursor(id_freq_view, ['NODE'])]
     duplicate_query = ' OR '.join(['"NODE" = ' + str(id) for id in duplicates])
@@ -247,7 +249,7 @@ overlap_count = int(arcpy.GetCount_management(xy_freq_view).getOutput(0))
 if overlap_count == 0:
     arcpy.Delete_management(xy_freq_view)
     arcpy.Delete_management(xy_freq_table)
-    arcpy.AddMessage('\nNo nodes overlap each other.')
+    arcpy.AddMessage('-- No nodes overlap each other')
 else:
     # Create PointGeometry array containing overlaps, buffer by 3" and select overlapping nodes for export to shapefile.
     overlaps = []
