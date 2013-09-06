@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 7/24/13
+    Revised: 9/6/13
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -48,11 +48,11 @@ route_systems = {
 }
 
 zone_gdb = root_dir + '/zone_systems.gdb'
-zone = zone_gdb + '/Zones09'
+zone = zone_gdb + '/zonesys09/zones09'
 zone_attr = 'Zone09'
-subzone = zone_gdb + '/Subzones09'
+subzone = zone_gdb + '/zonesys09/subzones09'
 subzone_attr = 'Subzone09'
-capzone = zone_gdb + '/CapacityZones09'
+capzone = zone_gdb + '/zonesys09/capzones09'
 capzone_attr = 'CapacityZone09'
 
 arcpy.Delete_management(mem)  # Clear memory before doing anything else
