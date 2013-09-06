@@ -225,7 +225,7 @@ duplicate_count = int(arcpy.GetCount_management(id_freq_view).getOutput(0))
 if duplicate_count == 0:
     arcpy.Delete_management(id_freq_view)
     arcpy.Delete_management(id_freq_table)
-    arcpy.AddMessage('--No nodes have duplicate IDs')
+    arcpy.AddMessage('-- No nodes have duplicate IDs')
 else:
     duplicates = [duplicate[0] for duplicate in arcpy.da.SearchCursor(id_freq_view, ['NODE'])]
     duplicate_query = ' OR '.join(['"NODE" = ' + str(id) for id in duplicates])
