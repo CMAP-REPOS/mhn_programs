@@ -30,10 +30,6 @@
          network (if the initial processing network is out of sync with the
          current MHN).
        - Iterate through list of itinerary gaps to find shortest path.
-           * write_dictionary.sas - Creates a Python dictionary of MHN links
-             and their length. The node coordinates of the itinerary segment
-             being analyzed are used to make a bounding box to limit the MHN
-             links processed.
            * shortest_path.py - A Python script that finds the shortest path
              between the nodes identifying the itinerary gap. This script uses
              brute force so limiting the MHN being analyzed greatly increased
