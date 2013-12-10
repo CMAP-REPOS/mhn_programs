@@ -93,6 +93,8 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
 # -----------------------------------------------------------------------------
 #  Perform QC tests to filter out unlikely matches.
 # -----------------------------------------------------------------------------
+arcpy.AddMessage('\nRunning QC tests on potential matches...')
+
 # Create dictionaries of attributes (road name, rte number) for any matched MHN
 # and IRIS links.
 matched_mhn_ids = (str(mhn_id) for mhn_id in match_dict)
@@ -103,16 +105,104 @@ matched_iris_ids = (str(match_dict[mhn_id]) for mhn_id in match_dict)
 arcpy.SelectLayerByAttribute_management(iris_arts_lyr, 'SUBSET_SELECTION', ''' "{0}" IN ({1}) '''.format(iris_id_field, ','.join(matched_iris_ids))
 iris_attr_dict = MHN.make_attribute_dict(iris_arts_lyr, iris_id_field, ['ROAD_NAME', 'MARKED_RT'])
 
+# Define some cleaning functions for MHN/IRIS road names & rte numbers.
+def clean_name(in_name):
+    ''' Remove punctuation, cardinal directions, and suffixes '''
+    out_name = in_name.upper()
+    # Ignore ramps (mostly in IRIS):
+    if ' TO ' not in out_name:
+        # Replace punctuation and misc. keywords:
+        for string, rep in [('-', ' '), ('/', ' '), ('(', ''), (')', ''), ('.', ''), ("'", ""), ('MARTIN LUTHER KING', 'MLK')]:
+            out_name = out_name.replace(string, rep)
+        # Remove cardinal directions:
+        for cdir in ('N', 'S', 'E', 'W'):
+            if out_name.startswith(cdir + ' '):
+                out_name = out_name[len(cdir):].strip()
+            if out_name.endswith(' ' + cdir):
+                out_name = out_name[:-len(cdir)].strip()
+        # Remove suffixes (road types):
+        for suf in ('AVE', 'AV', 'BLVD', 'CT', 'DR', 'EXPY', 'HWY', 'LN', 'PKWY', 'PKY', 'PL', 'RD', 'ST', 'TR', 'WAY'):
+            if out_name.endswith(' ' + suf):
+                out_name = out_name[:-len(suf)].strip()
+        # Find longest remaining "word":
+        out_name = max(out_name.split(' '), key=len)
+    else:
+        out_name = None
+    return out_name
+
+def clean_rte(in_rte):
+    ''' Convert IRIS format into probable MHN format '''
+    if rte.startswith('S'):
+        out_rte = 'IL {0}'.format(rte[1:].lstrip('0'))
+    elif rte.startswith('U'):
+        out_rte = 'US {0}'.format(rte[1:].lstrip('0'))
+    else:
+        out_rte = None
+    return out_rte
+
+
 # Iterate through all potential matches and apply QC tests before writing
 # successful matches to a list.
 qc_matches = []
 for mhn_id in match_dict:
     iris_id = match_dict[mhn_id]
     mhn_name = mhn_attr_dict[mhn_id]['ROADNAME']
+    mhn_name_base = clean_name(mhn_name)
     iris_name = iris_attr_dict[iris_id]['ROAD_NAME']
-    iris_rte = iris_attr_dict[iris_id]['MARKED_RT']
+    iris_name_base = clean_name(iris_name)
+    iris_rte = clean_rte(iris_attr_dict[iris_id]['MARKED_RT'])
+
+    match = False  # Assume no match
+
+    # Compare names/route numbers for match:
+    if mhn_name_base:
+        if iris_name_base:
+            if mhn_name_base == iris_name_base:
+                match = True
+            elif iris_name_base in mhn_name:
+                match = True
+            elif mhn_name_base in iris_name:
+                match = True
+        elif iris_rte and iris_rte in mhn_name:
+            match = True
+
+    # Exclude any mistakenly matched 'upper'/'lower' roads:
+    if match:
+        if 'LOWER' in mhn_name and 'LOWER' not in iris_name:
+            match = False
+        elif 'LOWER' not in mhn_name and 'LOWER' in iris_name:
+            match = False
+        elif 'UPPER' in mhn_name and 'UPPER' not in iris_name:
+            match = False
+        elif 'UPPER' not in mhn_name and 'UPPER' in iris_name:
+            match = False
+
+    # If matched, add to list:
+    if match:
+        qc_matches.append((mhn_id, iris_id))
 
 
 # -----------------------------------------------------------------------------
-#  Write final table to MHN geodatabase.
+#  Create final table in memory and then write it to MHN geodatabase.
 # -----------------------------------------------------------------------------
+arcpy.AddMessage('\nWriting match table...')
+match_table = MHN.mem + '/mhn_iris_match'
+match_mhn_field = near_mhn_field
+match_iris_field = near_iris_field
+
+arcpy.CreateTable_management(MHN.break_path(match_table)['dir'], MHN.break_path(match_table)['name'])
+arcpy.AddField_management(match_table, match_mhn_field, 'TEXT', field_length=13)
+arcpy.AddField_management(match_table, match_iris_field, 'LONG')
+with arcpy.da.InsertCursor(match_table, [match_mhn_field, match_iris_field]) as cursor:
+    for mhn_id, iris_id in qc_matches:
+        cursor.insertRow([mhn_id, iris_id])
+
+MHN.delete_if_exists(MHN.mhn2iris)
+arcpy.CopyRows_management(match_table, MHN.mhn2iris)
+
+
+# -----------------------------------------------------------------------------
+#  Clean up.
+# -----------------------------------------------------------------------------
+arcpy.Delete_management(MHN.mem)
+arcpy.AddMessage('\nAll done!\n')
