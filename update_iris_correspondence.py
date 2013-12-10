@@ -31,7 +31,7 @@ min_match_count = 5  # Minimum number of vertex matches to consider line match
 arcpy.AddMessage('\nGenerating dense MHN vertices...')
 mhn_arts_fc = MHN.mem + '/mhn_arts'
 mhn_arts_vertices_fc = MHN.mem + '/mhn_arts_vertices'
-mhn_arts_fields = [mhn_id_field, 'ROADNAME']
+mhn_arts_fields = ['ABB', 'ROADNAME']
 mhn_arts_query = ''' "TYPE1" = '1' '''
 mhn_arts_lyr = MHN.make_skinny_feature_layer(MHN.arc, 'mhn_arts_lyr', mhn_arts_fields, mhn_arts_query)
 arcpy.CopyFeatures_management(mhn_arts_lyr, mhn_arts_fc)
@@ -93,7 +93,24 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
 # -----------------------------------------------------------------------------
 #  Perform QC tests to filter out unlikely matches.
 # -----------------------------------------------------------------------------
+# Create dictionaries of attributes (road name, rte number) for any matched MHN
+# and IRIS links.
+matched_mhn_ids = (str(mhn_id) for mhn_id in match_dict)
+arcpy.SelectLayerByAttribute_management(mhn_arts_lyr, 'SUBSET_SELECTION', ''' "ABB" IN ('{0}') '''.format("','".join(matched_mhn_ids))
+mhn_attr_dict = MHN.make_attribute_dict(mhn_arts_lyr, 'ABB', ['ROADNAME'])
 
+matched_iris_ids = (str(match_dict[mhn_id]) for mhn_id in match_dict)
+arcpy.SelectLayerByAttribute_management(iris_arts_lyr, 'SUBSET_SELECTION', ''' "{0}" IN ({1}) '''.format(iris_id_field, ','.join(matched_iris_ids))
+iris_attr_dict = MHN.make_attribute_dict(iris_arts_lyr, iris_id_field, ['ROAD_NAME', 'MARKED_RT'])
+
+# Iterate through all potential matches and apply QC tests before writing
+# successful matches to a list.
+qc_matches = []
+for mhn_id in match_dict:
+    iris_id = match_dict[mhn_id]
+    mhn_name = mhn_attr_dict[mhn_id]['ROADNAME']
+    iris_name = iris_attr_dict[iris_id]['ROAD_NAME']
+    iris_rte = iris_attr_dict[iris_id]['MARKED_RT']
 
 
 # -----------------------------------------------------------------------------
