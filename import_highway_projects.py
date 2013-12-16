@@ -2,7 +2,7 @@
 '''
     import_highway_projects.py
     Author: npeterson
-    Revised: 5/20/2013
+    Revised: 12/16/2013
     ---------------------------------------------------------------------------
     Import highway project coding from an Excel spreadsheet. SAS can currently
     only handle .xls and not .xlsx.
@@ -159,7 +159,7 @@ arcpy.Merge_management((unaltered_coding_view, temp_coding_table), updated_codin
 # -----------------------------------------------------------------------------
 backup_gdb = MHN.gdb[:-4] + '_' + MHN.timestamp() + '.gdb'
 arcpy.Copy_management(MHN.gdb, backup_gdb)
-arcpy.AddMessage('{0}Geodatabase temporarily backed up to {1}. (If import fails for any reason, replace {2} with this.)'.format('\n',backup_gdb, MHN.gdb))
+arcpy.AddWarning('{0}Geodatabase temporarily backed up to {1}. (If import fails for any reason, replace {2} with this.)'.format('\n',backup_gdb, MHN.gdb))
 
 arcpy.AddMessage('{0}Saving changes to disk...'.format('\n'))
 

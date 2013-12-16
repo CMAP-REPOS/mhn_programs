@@ -2,7 +2,7 @@
 '''
     import_gtfs_bus_routes.py
     Author: npeterson
-    Revised: 6/3/2013
+    Revised: 12/16/2013
     ---------------------------------------------------------------------------
     This program is used to update the itineraries of bus routes, with data
     from specified header & itinerary coding CSVs.
@@ -236,7 +236,7 @@ with arcpy.da.UpdateCursor(temp_routes_fc, route_fields) as cursor:
 # -----------------------------------------------------------------------------
 backup_gdb = MHN.gdb[:-4] + '_' + MHN.timestamp() + '.gdb'
 arcpy.Copy_management(MHN.gdb, backup_gdb)
-arcpy.AddMessage('{0}Geodatabase temporarily backed up to {1}. (If import fails for any reason, replace {2} with this.)'.format('\n',backup_gdb, MHN.gdb))
+arcpy.AddWarning('{0}Geodatabase temporarily backed up to {1}. (If import fails for any reason, replace {2} with this.)'.format('\n',backup_gdb, MHN.gdb))
 
 arcpy.AddMessage('\nSaving changes to disk...')
 
