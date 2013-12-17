@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 7/18/13
+    Revised: 12/17/13
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -214,6 +214,30 @@ for scen in scen_list:
     scen_tran_path = '/'.join((tran_path, scen))
     if not os.path.exists(scen_tran_path):
         MHN.die("{0} contains no {1} folder! Please run the Master Rail Network's Create Emme Scenario Files tool for this scenario first.".format(tran_path, scen))
+
+    # -------------------------------------------------------------------------
+    # Merge scenario highway and rail linkshape files into linkshape_X00.in.
+    # -------------------------------------------------------------------------
+    linkshape_hwy = scen_hwy_path + '/highway.linkshape'
+    linkshape_rail = scen_rail_path + '/rail.linkshape'
+    linkshape_in = root_path + '/linkshape_{0}.in'.format(scen)
+
+    w = open(linkshape_in, 'w')
+    w.write('c HIGHWAY & RAIL LINK SHAPE FILE FOR SCENARIO {0}\n'.format(scen))
+    w.write('c {0}\n'.format(MHN.timestamp('%d%b%y').upper()))
+    w.write('t linkvertices\n')
+
+    with open(linkshape_hwy, 'r') as r:
+        for line in r:
+            if line.startswith('a ') or line.startswith('r '):
+                w.write(line)
+
+    with open(linkshape_rail, 'r') as r:
+        for line in r:
+            if line.startswith('a ') or line.startswith('r '):
+                w.write(line)
+
+    w.close()
 
     # -------------------------------------------------------------------------
     # Iterate through scenario's TOD periods and write transit batchin files.
