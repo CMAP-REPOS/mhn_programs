@@ -2,22 +2,22 @@
 '''
     update_highway_project_years.py
     Author: npeterson
-    Revised: 7/12/13
+    Revised: 12/18/13
     ---------------------------------------------------------------------------
     This script updates the completion years of projects to be included in
     Conformity analyses. The final completion year file is received from the
     TIP division after all project changes have been processed.
 
     Input files (pre-requisites for running this script):
-    1. CSV containing TIPIDs & completion years of conformed projects.
-    2. CSV containing TIPIDs & completion years of coded exempt projects.
-    3. CSV containing TIPIDs of conformed projects deemed uncodable.
+    1. CSV containing TIPIDs & completion years of codable Conformed projects.
+    2. CSV containing TIPIDs & completion years of codable Exempt projects.
+    3. CSV containing TIPIDs of Conformed or Exempt projects deemed uncodable.
 
     Output files, if errors encountered:
     1. Output/in_year_not_mhn.txt: projects in hwyproj_year.csv but not in
-       MHN.hwyproj (excluding those in uncodable_hwyproj.csv).
+       MHN.hwyproj (excluding those in uncodable CSV).
     2. Output/in_mhn_not_year.txt: projects coded in MHN.hwyproj with
-       COMPLETION_YEAR != 9999 that are not to be included in Conformity.
+       COMPLETION_YEAR != 9999 that should not be included in Conformity.
 
 '''
 import os
@@ -74,7 +74,7 @@ MHN.delete_if_exists(in_mhn_not_year_txt)
 
 
 # -----------------------------------------------------------------------------
-#  Merge conformed project years with coded exempt project years.
+#  Merge codable Conformed project years with codable Exempt project years.
 # -----------------------------------------------------------------------------
 with open(hwyproj_all_csv, 'w') as merged:
     with open(hwyproj_year_csv, 'r') as conformed:
