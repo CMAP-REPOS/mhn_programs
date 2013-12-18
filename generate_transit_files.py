@@ -6,7 +6,17 @@
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
-    the script as arguments from the ArcGIS tool.
+    the script as arguments from the tool. Creates access.network,
+    bus.itinerary, bus.network, and busnode.extatt files for all TOD periods.
+
+    Rail batchin files (generated from the Master Rail Network) must already
+    exist in a folder called 'transit' contained within the root folder
+    specified by this tool.
+
+    Additionally, this tool will merge the separate highway and rail linkshape
+    files for the specified scenario(s) into a new one, located in
+    {root folder}/linkshape. This file will allow correct link geometry to be
+    viewed in Emme, after the scenario has been initialized.
 
 '''
 import os
