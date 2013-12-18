@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 6/26/13
+    Revised: 12/17/13
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -189,9 +189,9 @@ for scen in scen_list:
 
     # Create linkshape.in.
     def generate_linkshape(arcs, output_dir):
-        linkshape = output_dir.rstrip('/') + '/linkshape.in'
+        linkshape = output_dir.rstrip('/') + '/highway.linkshape'
         w = open(linkshape, 'w')
-        w.write('c HIGHWAY SHAPE LINK FILE FOR SCENARIO {0}\n'.format(scen))
+        w.write('c HIGHWAY LINK SHAPE FILE FOR SCENARIO {0}\n'.format(scen))
         w.write('c {0}\n'.format(MHN.timestamp('%d%b%y').upper()))
         w.write('t linkvertices\n')
 
@@ -235,4 +235,4 @@ for scen in scen_list:
 
     scen_linkshape = generate_linkshape(hwy_network_lyr, scen_path)
     arcpy.Delete_management(hwy_network_lyr)
-    arcpy.AddMessage('-- Scenario {0} linkshape.in generated successfully.\n'.format(scen))
+    arcpy.AddMessage('-- Scenario {0} highway.linkshape generated successfully.\n'.format(scen))
