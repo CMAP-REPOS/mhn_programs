@@ -2,12 +2,12 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 12/17/13
+    Revised: 12/18/13
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
     the script as arguments from the tool. Creates l1, l2, n1, n2 files for all
-    TOD periods.
+    TOD periods, as well as highway.linkshape.
 
 '''
 import os
