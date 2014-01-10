@@ -28,9 +28,13 @@ min_match_count = 5  # Minimum number of vertex matches to consider line match
 # -----------------------------------------------------------------------------
 #  Create temporary (dense) road features and points of their vertices.
 # -----------------------------------------------------------------------------
+temp_gdb = MHN.temp_dir + '/iris_temp.gdb'
+MHN.delete_if_exists(temp_gdb)
+arcpy.CreateFileGDB_management(MHN.break_path(temp_gdb)['dir'], MHN.break_path(temp_gdb)['name'], 'CURRENT')
+
 arcpy.AddMessage('\nGenerating dense MHN vertices...')
-mhn_arts_fc = MHN.mem + '/mhn_arts'
-mhn_arts_vertices_fc = MHN.mem + '/mhn_arts_vertices'
+mhn_arts_fc = temp_gdb + '/mhn_arts'
+mhn_arts_vertices_fc = temp_gdb + '/mhn_arts_vertices'
 mhn_arts_fields = ['ABB', 'ROADNAME']
 mhn_arts_query = ''' "TYPE1" = '1' '''
 mhn_arts_lyr = MHN.make_skinny_feature_layer(MHN.arc, 'mhn_arts_lyr', mhn_arts_fields, mhn_arts_query)
@@ -39,8 +43,8 @@ arcpy.Densify_edit(mhn_arts_fc, distance=densify_distance)
 arcpy.FeatureVerticesToPoints_management(mhn_arts_fc, mhn_arts_vertices_fc, 'ALL')
 
 arcpy.AddMessage('\nGenerating dense IRIS vertices...')
-iris_arts_fc = MHN.mem + '/iris_arts'
-iris_arts_vertices_fc = MHN.mem + '/iris_arts_vertices'
+iris_arts_fc = temp_gdb + '/iris_arts'
+iris_arts_vertices_fc = temp_gdb + '/iris_arts_vertices'
 iris_arts_fields = [iris_id_field, 'ROAD_NAME', 'MARKED_RT']
 iris_arts_query = ''' "FCNAME" NOT IN ('Freeway and Expressway','Interstate') AND "COUNTY_NAM" IN ('Boone','Cook','DeKalb','DuPage','Grundy','Kane','Kankakee','Kendall','LaSalle','Lake','Lee','McHenry','Ogle','Will','Winnebago') '''
 iris_arts_lyr = MHN.make_skinny_feature_layer(iris_fc, 'iris_arts_lyr', iris_arts_fields, iris_arts_query)
@@ -54,7 +58,7 @@ arcpy.FeatureVerticesToPoints_management(iris_arts_fc, iris_arts_vertices_fc, 'A
 #  the most-matched IRIS link for each MHN link.
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('\nGenerating MHN-IRIS vertex near table...')
-mhn_near_iris_table = MHN.mem + '/mhn_near_iris'
+mhn_near_iris_table = temp_gdb + '/mhn_near_iris'
 arcpy.GenerateNearTable_analysis(mhn_arts_vertices_fc, iris_arts_vertices_fc, mhn_near_iris_table, near_distance)
 
 arcpy.AddMessage('\nIdentifying most-matched IRIS link for each MHN link...')
@@ -73,7 +77,7 @@ with arcpy.da.UpdateCursor(mhn_near_iris_freq_table, ['IN_FID', 'NEAR_FID', near
         iris_id = row[1]
         cursor.updateRow([mhn_id, iris_id, mhn_vertices_abb_dict[mhn_id]['ABB'], iris_vertices_oid_dict[iris_id][iris_id_field]])
 
-mhn_near_iris_freq_table = MHN.mem + '/mhn_near_iris_freq'
+mhn_near_iris_freq_table = temp_gdb + '/mhn_near_iris_freq'
 arcpy.Frequency_analysis(mhn_near_iris_table, mhn_near_iris_freq_table, [near_mhn_field, near_iris_field])
 arcpy.Delete_management(mhn_near_iris_table)
 del mhn_near_iris_table, mhn_vertices_abb_dict, iris_vertices_oid_dict
@@ -186,7 +190,7 @@ for mhn_id in match_dict:
 #  Create final table in memory and then write it to MHN geodatabase.
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('\nWriting match table...')
-match_table = MHN.mem + '/mhn_iris_match'
+match_table = temp_gdb + '/mhn_iris_match'
 match_mhn_field = near_mhn_field
 match_iris_field = near_iris_field
 
@@ -204,5 +208,5 @@ arcpy.CopyRows_management(match_table, MHN.mhn2iris)
 # -----------------------------------------------------------------------------
 #  Clean up.
 # -----------------------------------------------------------------------------
-arcpy.Delete_management(MHN.mem)
+#arcpy.Delete_management(MHN.mem)
 arcpy.AddMessage('\nAll done!\n')
