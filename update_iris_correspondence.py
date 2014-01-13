@@ -71,7 +71,7 @@ arcpy.AddField_management(mhn_near_iris_table, near_iris_field, 'LONG')
 mhn_vertices_abb_dict = MHN.make_attribute_dict(mhn_arts_vertices_fc, MHN.determine_OID_fieldname(mhn_arts_vertices_fc), ['ABB'])
 iris_vertices_oid_dict = MHN.make_attribute_dict(iris_arts_vertices_fc, MHN.determine_OID_fieldname(iris_arts_vertices_fc), [iris_id_field])
 
-with arcpy.da.UpdateCursor(mhn_near_iris_freq_table, ['IN_FID', 'NEAR_FID', near_mhn_field, near_iris_field]) as cursor:
+with arcpy.da.UpdateCursor(mhn_near_iris_table, ['IN_FID', 'NEAR_FID', near_mhn_field, near_iris_field]) as cursor:
     for row in cursor:
         mhn_id = row[0]
         iris_id = row[1]
