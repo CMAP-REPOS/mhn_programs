@@ -2,7 +2,7 @@
 '''
     update_iris_correspondence.py
     Author: npeterson
-    Revised: 12/10/2013
+    Revised: 1/15/2014
     ---------------------------------------------------------------------------
     Re-generate the MHN2IRIS table with updated correspondences between
     arterial roads. Useful after extensive geometric updates or network
@@ -13,6 +13,8 @@ import os
 import sys
 import arcpy
 import MHN
+
+arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
 
 # -----------------------------------------------------------------------------
 #  Set parameters.
@@ -93,7 +95,6 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
         elif mhn_id in match_dict and freq > match_dict[mhn_id][1]:
             match_dict[mhn_id] = (iris_id, freq)
 
-
 # -----------------------------------------------------------------------------
 #  Perform QC tests to filter out unlikely matches.
 # -----------------------------------------------------------------------------
@@ -102,11 +103,11 @@ arcpy.AddMessage('\nRunning QC tests on potential matches...')
 # Create dictionaries of attributes (road name, rte number) for any matched MHN
 # and IRIS links.
 matched_mhn_ids = (str(mhn_id) for mhn_id in match_dict)
-arcpy.SelectLayerByAttribute_management(mhn_arts_lyr, 'SUBSET_SELECTION', ''' "ABB" IN ('{0}') '''.format("','".join(matched_mhn_ids)))
+arcpy.SelectLayerByAttribute_management(mhn_arts_lyr, 'NEW_SELECTION', ''' "ABB" IN ('{0}') '''.format("','".join(matched_mhn_ids)))
 mhn_attr_dict = MHN.make_attribute_dict(mhn_arts_lyr, 'ABB', ['ROADNAME'])
 
-matched_iris_ids = (str(match_dict[mhn_id]) for mhn_id in match_dict)
-arcpy.SelectLayerByAttribute_management(iris_arts_lyr, 'SUBSET_SELECTION', ''' "{0}" IN ({1}) '''.format(iris_id_field, ','.join(matched_iris_ids)))
+matched_iris_ids = (str(match_dict[mhn_id][0]) for mhn_id in match_dict)
+arcpy.SelectLayerByAttribute_management(iris_arts_lyr, 'NEW_SELECTION', ''' "{0}" IN ({1}) '''.format(iris_id_field, ','.join(matched_iris_ids)))
 iris_attr_dict = MHN.make_attribute_dict(iris_arts_lyr, iris_id_field, ['ROAD_NAME', 'MARKED_RT'])
 
 # Define some cleaning functions for MHN/IRIS road names & rte numbers.
@@ -149,7 +150,7 @@ def clean_rte(in_rte):
 # successful matches to a list.
 qc_matches = []
 for mhn_id in match_dict:
-    iris_id = match_dict[mhn_id]
+    iris_id = match_dict[mhn_id][0]
     mhn_name = mhn_attr_dict[mhn_id]['ROADNAME']
     mhn_name_base = clean_name(mhn_name)
     iris_name = iris_attr_dict[iris_id]['ROAD_NAME']
