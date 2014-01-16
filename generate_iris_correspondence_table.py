@@ -11,7 +11,7 @@
 import os
 import sys
 import arcpy
-import MHN
+import MHN  # Custom library for MHN processing functionality
 
 arcpy.AddWarning('\nCurrently generating IRIS correspondence for {0}.'.format(MHN.gdb))
 
@@ -35,22 +35,29 @@ temp_gdb = MHN.temp_dir + '/iris_temp.gdb'
 MHN.delete_if_exists(temp_gdb)
 arcpy.CreateFileGDB_management(MHN.break_path(temp_gdb)['dir'], MHN.break_path(temp_gdb)['name'], 'CURRENT')
 
+# Create a layer of the modeled extent of Illinois, for clipping the MHN and IRIS links:
+illinois_lyr = MHN.make_skinny_feature_layer(MHN.zone, 'illinois_lyr', where_clause=''' "COUNTY" LIKE '17%' ''')
+
 arcpy.AddMessage('\nGenerating dense MHN vertices...')
+mhn_clipped = MHN.mem + '/mhn_clipped'
+arcpy.Clip_analysis(MHN.arc, illinois_lyr, mhn_clipped)
 mhn_arts_fc = temp_gdb + '/mhn_arts'
 mhn_arts_vertices_fc = temp_gdb + '/mhn_arts_vertices'
 mhn_arts_fields = ['ABB', 'ROADNAME']
 mhn_arts_query = ''' "TYPE1" = '1' '''
-mhn_arts_lyr = MHN.make_skinny_feature_layer(MHN.arc, 'mhn_arts_lyr', mhn_arts_fields, mhn_arts_query)
+mhn_arts_lyr = MHN.make_skinny_feature_layer(mhn_clipped, 'mhn_arts_lyr', mhn_arts_fields, mhn_arts_query)
 arcpy.CopyFeatures_management(mhn_arts_lyr, mhn_arts_fc)
 arcpy.Densify_edit(mhn_arts_fc, distance=densify_distance)
 arcpy.FeatureVerticesToPoints_management(mhn_arts_fc, mhn_arts_vertices_fc, 'ALL')
 
 arcpy.AddMessage('\nGenerating dense IRIS vertices...')
+iris_clipped = MHN.mem + '/iris_clipped'
+arcpy.Clip_analysis(iris_fc, illinois_lyr, iris_clipped)
 iris_arts_fc = temp_gdb + '/iris_arts'
 iris_arts_vertices_fc = temp_gdb + '/iris_arts_vertices'
 iris_arts_fields = [iris_id_field, 'ROAD_NAME', 'MARKED_RT']
-iris_arts_query = ''' "FCNAME" NOT IN ('Freeway and Expressway','Interstate') AND "COUNTY_NAM" IN ('Boone','Cook','DeKalb','DuPage','Grundy','Kane','Kankakee','Kendall','LaSalle','Lake','Lee','McHenry','Ogle','Will','Winnebago') '''
-iris_arts_lyr = MHN.make_skinny_feature_layer(iris_fc, 'iris_arts_lyr', iris_arts_fields, iris_arts_query)
+iris_arts_query = ''' "FCNAME" NOT IN ('Freeway and Expressway','Interstate') ''' # AND "COUNTY_NAM" IN ('Boone','Cook','DeKalb','DuPage','Grundy','Kane','Kankakee','Kendall','LaSalle','Lake','Lee','McHenry','Ogle','Will','Winnebago')
+iris_arts_lyr = MHN.make_skinny_feature_layer(iris_clipped, 'iris_arts_lyr', iris_arts_fields, iris_arts_query)
 arcpy.CopyFeatures_management(iris_arts_lyr, iris_arts_fc)
 arcpy.Densify_edit(iris_arts_fc, distance=densify_distance)
 arcpy.FeatureVerticesToPoints_management(iris_arts_fc, iris_arts_vertices_fc, 'ALL')
@@ -209,5 +216,6 @@ output_table = arcpy.TableToTable_conversion(match_table, out_workspace, table_n
 # -----------------------------------------------------------------------------
 #  Clean up.
 # -----------------------------------------------------------------------------
+arcpy.Delete_management(MHN.mem)
 arcpy.Delete_management(temp_gdb)
 arcpy.AddMessage('\nAll done! Correspondence table successfully written to {0}\n'.format(output_table))
