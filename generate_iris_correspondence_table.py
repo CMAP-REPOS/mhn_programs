@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 '''
-    update_iris_correspondence.py
+    generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 1/15/2014
+    Revised: 1/16/2014
     ---------------------------------------------------------------------------
-    Re-generate the MHN2IRIS table with updated correspondences between
-    arterial roads. Useful after extensive geometric updates or network
-    expansion.
+    Generate an "mhn2iris" correspondence table from the current MHN. Useful
+    after extensive geometric updates or network expansion.
 
 '''
 import os
@@ -21,6 +20,8 @@ arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
 # -----------------------------------------------------------------------------
 iris_fc = arcpy.GetParameterAsText(0)  # Full path to IRIS shapefile
 iris_id_field = arcpy.GetParameterAsText(1)  # IRIS field containing unique ID
+out_workspace = arcpy.GetParameterAsText(2).replace('\\','/').rstrip('/') + '/'  # Output directory
+table_name = 'mhn2iris_{0}'.format(MHN.timestamp(%Y%m%d))
 
 densify_distance = 30  # Minimum distance (ft) between road vertices
 near_distance = 50  # Maximum distance (ft) between MHN/IRIS vertices to consider match
@@ -202,12 +203,11 @@ with arcpy.da.InsertCursor(match_table, [match_mhn_field, match_iris_field]) as 
     for mhn_id, iris_id in qc_matches:
         cursor.insertRow([mhn_id, iris_id])
 
-MHN.delete_if_exists(MHN.mhn2iris)
-arcpy.CopyRows_management(match_table, MHN.mhn2iris)
+output_table = arcpy.TableToTable_conversion(match_table, out_workspace, table_name)
 
 
 # -----------------------------------------------------------------------------
 #  Clean up.
 # -----------------------------------------------------------------------------
-#arcpy.Delete_management(MHN.mem)
-arcpy.AddMessage('\nAll done!\n')
+arcpy.Delete_management(temp_gdb)
+arcpy.AddMessage('\nAll done! Correspondence table successfully written to {0}\n'.format(output_table))
