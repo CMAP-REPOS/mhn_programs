@@ -13,7 +13,7 @@ import sys
 import arcpy
 import MHN
 
-arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
+arcpy.AddWarning('\nCurrently generating IRIS correspondence for {0}.'.format(MHN.gdb))
 
 # -----------------------------------------------------------------------------
 #  Set parameters.
