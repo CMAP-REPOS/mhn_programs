@@ -21,7 +21,7 @@ arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
 iris_fc = arcpy.GetParameterAsText(0)  # Full path to IRIS shapefile
 iris_id_field = arcpy.GetParameterAsText(1)  # IRIS field containing unique ID
 out_workspace = arcpy.GetParameterAsText(2).replace('\\','/').rstrip('/') + '/'  # Output directory
-table_name = 'mhn2iris_{0}'.format(MHN.timestamp(%Y%m%d))
+table_name = 'mhn2iris_{0}'.format(MHN.timestamp('%Y%m%d'))
 
 densify_distance = 30  # Minimum distance (ft) between road vertices
 near_distance = 50  # Maximum distance (ft) between MHN/IRIS vertices to consider match
