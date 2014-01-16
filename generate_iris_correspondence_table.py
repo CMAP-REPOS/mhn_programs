@@ -56,7 +56,7 @@ arcpy.Clip_analysis(iris_fc, illinois_lyr, iris_clipped)
 iris_arts_fc = temp_gdb + '/iris_arts'
 iris_arts_vertices_fc = temp_gdb + '/iris_arts_vertices'
 iris_arts_fields = [iris_id_field, 'ROAD_NAME', 'MARKED_RT']
-iris_arts_query = ''' "FCNAME" NOT IN ('Freeway and Expressway','Interstate') ''' # AND "COUNTY_NAM" IN ('Boone','Cook','DeKalb','DuPage','Grundy','Kane','Kankakee','Kendall','LaSalle','Lake','Lee','McHenry','Ogle','Will','Winnebago')
+iris_arts_query = ''' "FCNAME" NOT IN ('Freeway and Expressway','Interstate') '''
 iris_arts_lyr = MHN.make_skinny_feature_layer(iris_clipped, 'iris_arts_lyr', iris_arts_fields, iris_arts_query)
 arcpy.CopyFeatures_management(iris_arts_lyr, iris_arts_fc)
 arcpy.Densify_edit(iris_arts_fc, distance=densify_distance)
