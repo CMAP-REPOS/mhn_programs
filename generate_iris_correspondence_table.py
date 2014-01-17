@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 1/16/2014
+    Revised: 1/17/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -89,8 +89,7 @@ with arcpy.da.UpdateCursor(mhn_near_iris_table, ['IN_FID', 'NEAR_FID', near_mhn_
 
 mhn_near_iris_freq_table = temp_gdb + '/mhn_near_iris_freq'
 arcpy.Frequency_analysis(mhn_near_iris_table, mhn_near_iris_freq_table, [near_mhn_field, near_iris_field])
-arcpy.Delete_management(mhn_near_iris_table)
-del mhn_near_iris_table, mhn_vertices_abb_dict, iris_vertices_oid_dict
+del mhn_vertices_abb_dict, iris_vertices_oid_dict
 
 match_dict = {}
 with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_field, 'FREQUENCY']) as cursor:
@@ -102,6 +101,7 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
             match_dict[mhn_id] = (iris_id, freq)
         elif mhn_id in match_dict and freq > match_dict[mhn_id][1]:
             match_dict[mhn_id] = (iris_id, freq)
+
 
 # -----------------------------------------------------------------------------
 #  Perform QC tests to filter out unlikely matches.
