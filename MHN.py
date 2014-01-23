@@ -21,7 +21,7 @@ arcpy.env.OverwriteOutput = True
 # -----------------------------------------------------------------------------
 #  1. DIRECTORIES & FILES
 # -----------------------------------------------------------------------------
-gdb = 'C:/MHN/mhn_MCP.gdb'
+gdb = 'C:/MHN/mhn.gdb'
 
 root_dir = os.path.dirname(gdb)
 imp_dir = root_dir + '/import'
