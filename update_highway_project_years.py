@@ -2,22 +2,22 @@
 '''
     update_highway_project_years.py
     Author: npeterson
-    Revised: 7/12/13
+    Revised: 12/18/13
     ---------------------------------------------------------------------------
     This script updates the completion years of projects to be included in
     Conformity analyses. The final completion year file is received from the
     TIP division after all project changes have been processed.
 
     Input files (pre-requisites for running this script):
-    1. CSV containing TIPIDs & completion years of conformed projects.
-    2. CSV containing TIPIDs & completion years of coded exempt projects.
-    3. CSV containing TIPIDs of conformed projects deemed uncodable.
+    1. CSV containing TIPIDs & completion years of codable Conformed projects.
+    2. CSV containing TIPIDs & completion years of codable Exempt projects.
+    3. CSV containing TIPIDs of Conformed or Exempt projects deemed uncodable.
 
     Output files, if errors encountered:
     1. Output/in_year_not_mhn.txt: projects in hwyproj_year.csv but not in
-       MHN.hwyproj (excluding those in uncodable_hwyproj.csv).
+       MHN.hwyproj (excluding those in uncodable CSV).
     2. Output/in_mhn_not_year.txt: projects coded in MHN.hwyproj with
-       COMPLETION_YEAR != 9999 that are not to be included in Conformity.
+       COMPLETION_YEAR != 9999 that should not be included in Conformity.
 
 '''
 import os
@@ -29,7 +29,7 @@ import MHN
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
-hwyproj_year_csv = arcpy.GetParameterAsText(0).replace('\\','/')
+hwyproj_conformed_csv = arcpy.GetParameterAsText(0).replace('\\','/')
 hwyproj_exempt_csv = arcpy.GetParameterAsText(1).replace('\\','/')
 uncodable_hwyproj_csv = arcpy.GetParameterAsText(2).replace('\\','/')
 mrn_gdb = arcpy.GetParameterAsText(3).replace('\\','/')
@@ -43,8 +43,8 @@ if not arcpy.Exists(mrn_future_fc):
     MHN.die("{0} doesn't exist!".format(mrn_future_fc))
 if not arcpy.Exists(people_mover_table):
     MHN.die("{0} doesn't exist!".format(people_mover_table))
-if not os.path.exists(hwyproj_year_csv):
-    MHN.die("{0} doesn't exist!".format(hwyproj_year_csv))
+if not os.path.exists(hwyproj_conformed_csv):
+    MHN.die("{0} doesn't exist!".format(hwyproj_conformed_csv))
 if not os.path.exists(hwyproj_exempt_csv):
     MHN.die("{0} doesn't exist!".format(hwyproj_exempt_csv))
 if not os.path.exists(uncodable_hwyproj_csv):
@@ -74,10 +74,10 @@ MHN.delete_if_exists(in_mhn_not_year_txt)
 
 
 # -----------------------------------------------------------------------------
-#  Merge conformed project years with coded exempt project years.
+#  Merge codable Conformed project years with codable Exempt project years.
 # -----------------------------------------------------------------------------
 with open(hwyproj_all_csv, 'w') as merged:
-    with open(hwyproj_year_csv, 'r') as conformed:
+    with open(hwyproj_conformed_csv, 'r') as conformed:
         for line in conformed:
             if int(line.split(',')[1]) > MHN.base_year:
                 merged.write(line)
@@ -142,7 +142,7 @@ with open(sas1_output, 'r') as year_adj:
         else:
             hwyproj_years[hwyproj_id] = completion_year
 if duplicates:
-    MHN.die('Duplicate TIPID(s) in "{0}" and/or "{1}": {2}!'.format(hwyproj_year_csv, hwyproj_exempt_csv, ', '.join(duplicates)))
+    MHN.die('Duplicate TIPID(s) in "{0}" and/or "{1}": {2}!'.format(hwyproj_conformed_csv, hwyproj_exempt_csv, ', '.join(duplicates)))
 
 uncodable_hwyproj = []
 with open(uncodable_hwyproj_csv, 'r') as no_code:
@@ -172,13 +172,13 @@ arcpy.SelectLayerByAttribute_management(hwyproj_view, selection_type='REMOVE_FRO
 
 # Report any MHN projects not in year lists:
 if int(arcpy.GetCount_management(hwyproj_view).getOutput(0)) == 0:
-    arcpy.AddMessage('{0}All in-region, conformed projects coded in MHN are listed in {1} or {2}!'.format('\n', hwyproj_year_csv, hwyproj_exempt_csv))
+    arcpy.AddMessage('{0}All in-region, conformed projects coded in MHN are listed in {1} or {2}!'.format('\n', hwyproj_conformed_csv, hwyproj_exempt_csv))
 else:
     with open(in_mhn_not_year_txt, 'w') as miscoded_output:
         with arcpy.da.SearchCursor(hwyproj_view, [common_id_field, 'COMPLETION_YEAR']) as cursor:
             for row in cursor:
                 miscoded_output.write('{0},{1}\n'.format(row[0], row[1]))
-    arcpy.AddWarning('{0}WARNING: Some in-region, conformed projects coded in MHN are not listed in {1} or {2}. See {3} for details.'.format('\n', hwyproj_year_csv, hwyproj_exempt_csv, in_mhn_not_year_txt))
+    arcpy.AddWarning('{0}WARNING: Some in-region, conformed projects coded in MHN are not listed in {1} or {2}. See {3} for details.'.format('\n', hwyproj_conformed_csv, hwyproj_exempt_csv, in_mhn_not_year_txt))
 
 
 # -----------------------------------------------------------------------------
@@ -187,18 +187,18 @@ else:
 coded_hwyproj = MHN.make_attribute_dict(MHN.hwyproj, common_id_field, []).keys()
 uncoded_hwyproj = [hwyproj_id for hwyproj_id in hwyproj_years if hwyproj_id not in coded_hwyproj and hwyproj_id not in uncodable_hwyproj]
 if len(uncoded_hwyproj) == 0:
-    arcpy.AddMessage('{0}All projects listed in {1} and {2} are coded in MHN!'.format('\n', hwyproj_year_csv, hwyproj_exempt_csv))
+    arcpy.AddMessage('{0}All projects listed in {1} and {2} are coded in MHN!'.format('\n', hwyproj_conformed_csv, hwyproj_exempt_csv))
 else:
     with open(in_year_not_mhn_txt, 'w') as uncoded_output:
         for hwyproj_id in sorted(uncoded_hwyproj):
             uncoded_output.write('{0}\n'.format(hwyproj_id))
-    arcpy.AddWarning('{0}WARNING: Some projects in {1} or {2} but not {3} are not yet coded in MHN. See {4} for details.'.format('\n', hwyproj_year_csv, hwyproj_exempt_csv, uncodable_hwyproj_csv, in_year_not_mhn_txt))
+    arcpy.AddWarning('{0}WARNING: Some projects in {1} or {2} but not {3} are not yet coded in MHN. See {4} for details.'.format('\n', hwyproj_conformed_csv, hwyproj_exempt_csv, uncodable_hwyproj_csv, in_year_not_mhn_txt))
 
 
 # -----------------------------------------------------------------------------
 #  Update completion years of MHN projects found in year lists.
 # -----------------------------------------------------------------------------
-arcpy.AddMessage('{0}Updating COMPLETION_YEAR values for projects coded in MHN that are listed in {1}...'.format('\n', hwyproj_year_csv))
+arcpy.AddMessage('{0}Updating COMPLETION_YEAR values for projects coded in MHN that are listed in {1} or {2}...'.format('\n', hwyproj_conformed_csv, hwyproj_exempt_csv))
 edit = arcpy.da.Editor(MHN.gdb)
 edit.startEditing()
 with arcpy.da.UpdateCursor(MHN.hwyproj, [common_id_field, 'COMPLETION_YEAR']) as cursor:

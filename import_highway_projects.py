@@ -2,7 +2,7 @@
 '''
     import_highway_projects.py
     Author: npeterson
-    Revised: 12/16/2013
+    Revised: 12/20/2013
     ---------------------------------------------------------------------------
     Import highway project coding from an Excel spreadsheet. SAS can currently
     only handle .xls and not .xlsx.
@@ -108,13 +108,15 @@ with arcpy.da.InsertCursor(temp_coding_table, coding_fields) as cursor:
 #  tables.)
 for project_id in project_arcs.keys():
 
-    # Get project completion year, if already in MHN.
-    completion_year = None
+    # Set COMPLETION_YEAR & MCP_ID to defaults, or existing values if applicable.
+    completion_year = 9999  # default 9999 (i.e. not conformed)
+    mcp_id = ' '            # default blank (i.e. not an MCP)
     existing_project_query = '"{0}" = \'{1}\''.format(common_id_field, project_id)
-    existing_project_lyr = MHN.make_skinny_table_view(MHN.hwyproj, 'existing_project_lyr', ['COMPLETION_YEAR'], existing_project_query)
+    existing_project_lyr = MHN.make_skinny_table_view(MHN.hwyproj, 'existing_project_lyr', ['COMPLETION_YEAR', 'MCP_ID'], existing_project_query)
     existing_project_count = int(arcpy.GetCount_management(existing_project_lyr).getOutput(0))
     if existing_project_count > 0:
         completion_year = [attr[0] for attr in arcpy.da.SearchCursor(existing_project_lyr, ['COMPLETION_YEAR'])][0]
+        mcp_id = [attr[0] for attr in arcpy.da.SearchCursor(existing_project_lyr, ['MCP_ID'])][0]
 
     # Dissolve project arcs into a single project feature, and append to temp FC.
     project_arc_ids = project_arcs[project_id]
@@ -125,11 +127,14 @@ for project_id in project_arcs.keys():
     arcpy.Dissolve_management(project_arcs_lyr, project_dissolved)
     arcpy.AddField_management(project_dissolved, common_id_field, 'TEXT', field_length=10)
     arcpy.AddField_management(project_dissolved, 'COMPLETION_YEAR', 'SHORT')  # Make types/lengths dynamic?
-    with arcpy.da.UpdateCursor(project_dissolved, [common_id_field, 'COMPLETION_YEAR']) as cursor:
+    arcpy.AddField_management(project_dissolved, 'MCP_ID', 'TEXT', field_length=6)
+    with arcpy.da.UpdateCursor(project_dissolved, [common_id_field, 'COMPLETION_YEAR', 'MCP_ID']) as cursor:
         for row in cursor:
             row[0] = project_id
             if completion_year:
                 row[1] = completion_year
+            if mcp_id:
+                row[2] = mcp_id
             cursor.updateRow(row)
     arcpy.Append_management(project_dissolved, temp_projects_fc, 'NO_TEST')
 
