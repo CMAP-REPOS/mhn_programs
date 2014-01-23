@@ -358,7 +358,7 @@ def make_skinny_table_view(table, view, keep_fields_list=None, where_clause=''):
 
 
 def set_nulls(value, fc, fields):
-    ''' Recaluclate all null values in a list of specified fields to a
+    ''' Recalculate all null values in a list of specified fields to a
         specified replacement value. '''
     if type(value) is str:
         valid_types = ['String']
