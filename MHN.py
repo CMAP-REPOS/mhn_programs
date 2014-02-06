@@ -21,38 +21,38 @@ arcpy.env.OverwriteOutput = True
 # -----------------------------------------------------------------------------
 #  1. DIRECTORIES & FILES
 # -----------------------------------------------------------------------------
-gdb = 'C:/MHN/mhn.gdb'
+gdb = 'C:\\MHN\\mhn.gdb'
 
 root_dir = os.path.dirname(gdb)
-imp_dir = root_dir + '/import'
-out_dir = root_dir + '/output'
-temp_dir = root_dir + '/temp'
+imp_dir = os.path.join(root_dir, 'import')
+out_dir = os.path.join(root_dir, 'output')
+temp_dir = os.path.join(root_dir, 'temp')
 prog_dir = sys.path[0]  # Directory containing this module
 mem = 'in_memory'
 
 hwynet_name = 'hwynet'
-hwynet = gdb + '/' + hwynet_name
+hwynet = os.path.join(gdb, hwynet_name)
 arc_name = 'hwynet_arc'
-arc = hwynet + '/' + arc_name
+arc = os.path.join(hwynet, arc_name)
 node_name = 'hwynet_node'
-node = hwynet + '/' + node_name
-hwyproj = hwynet + '/hwyproj'
-bus_base = hwynet + '/bus_base'
-bus_current = hwynet + '/bus_current'
-bus_future = hwynet + '/bus_future'
+node = os.path.join(hwynet, node_name)
+hwyproj = os.path.join(hwynet, 'hwyproj')
+bus_base = os.path.join(hwynet, 'bus_base')
+bus_current = os.path.join(hwynet, 'bus_current')
+bus_future = os.path.join(hwynet, 'bus_future')
 route_systems = {
-    hwyproj: (gdb + '/hwyproj_coding', 'TIPID', ''),
-    bus_base: (gdb + '/bus_base_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 0),
-    bus_current: (gdb + '/bus_current_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
-    bus_future: (gdb + '/bus_future_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
+    hwyproj: (os.path.join(gdb, 'hwyproj_coding'), 'TIPID', ''),
+    bus_base: (os.path.join(gdb, 'bus_base_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 0),
+    bus_current: (os.path.join(gdb, 'bus_current_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
+    bus_future: (os.path.join(gdb, 'bus_future_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
 }
 
-zone_gdb = root_dir + '/zone_systems.gdb'
-zone = zone_gdb + '/zonesys09/zones09'
+zone_gdb = root_dir, 'zone_systems.gdb')
+zone = os.path.join(zone_gdb, 'zonesys09', 'zones09')
 zone_attr = 'Zone09'
-subzone = zone_gdb + '/zonesys09/subzones09'
+subzone = os.path.join(zone_gdb, 'zonesys09', 'subzones09')
 subzone_attr = 'Subzone09'
-capzone = zone_gdb + '/zonesys09/capzones09'
+capzone = os.path.join(zone_gdb, 'zonesys09', 'capzones09')
 capzone_attr = 'CapacityZone09'
 
 arcpy.Delete_management(mem)  # Clear memory before doing anything else
