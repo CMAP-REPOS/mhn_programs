@@ -2,7 +2,7 @@
 '''
     import_future_bus_routes.py
     Author: npeterson
-    Revised: 5/21/2013
+    Revised: 2/6/14
     ---------------------------------------------------------------------------
     Import future bus route coding from an Excel spreadsheet, with "header" and
     "itinerary" worksheets. SAS can currently only handle .xls and not .xlsx.
@@ -24,13 +24,13 @@ sas1_name = 'import_future_bus_routes_2'
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
-sas1_log = ''.join((MHN.temp_dir, '/', sas1_name, '.log'))
-sas1_lst = ''.join((MHN.temp_dir, '/', sas1_name, '.lst'))
-year_csv = '/'.join((MHN.temp_dir, 'year.csv'))
-transact_csv = '/'.join((MHN.temp_dir, 'transact.csv'))
-network_csv = '/'.join((MHN.temp_dir, 'network.csv'))
-future_itin_csv = '/'.join((MHN.temp_dir, 'future_itin.csv'))
-future_route_csv = '/'.join((MHN.temp_dir, 'future_route.csv'))
+sas1_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas1_name))
+sas1_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas1_name))
+year_csv = os.path.join(MHN.temp_dir, 'year.csv')
+transact_csv = os.path.join(MHN.temp_dir, 'transact.csv')
+network_csv = os.path.join(MHN.temp_dir, 'network.csv')
+future_itin_csv = os.path.join(MHN.temp_dir, 'future_itin.csv')
+future_route_csv = os.path.join(MHN.temp_dir, 'future_route.csv')
 
 
 # -----------------------------------------------------------------------------
@@ -68,7 +68,7 @@ arcpy.Delete_management(year_view)
 
 # Export coding for valid projects.
 transact_attr = (hwyproj_id_field, 'ABB', 'ACTION_CODE', 'NEW_DIRECTIONS')
-transact_query = '"{0}" IN (\'{1}\')'.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in projects)))
+transact_query = ''' "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in projects)))
 transact_view = MHN.make_skinny_table_view(MHN.route_systems[MHN.hwyproj][0], 'transact_view', transact_attr, transact_query)
 MHN.write_attribute_csv(transact_view, transact_csv, transact_attr)
 project_arcs = MHN.make_attribute_dict(transact_view, 'ABB', attr_list=[])
@@ -81,7 +81,7 @@ network_attr = (
     'THRULANEWIDTH1', 'THRULANEWIDTH2', 'PARKLANES1', 'PARKLANES2',
     'SIGIC', 'CLTL', 'RRGRADECROSS', 'TOLLDOLLARS', 'MODES', 'MILES'
 )
-network_query = '"BASELINK" = \'1\' OR "ABB" IN (\'{0}\')'.format("','".join((arc_id for arc_id in project_arcs if arc_id[-1] != '1')))
+network_query = ''' "BASELINK" = '1' OR "ABB" IN ('{0}') '''.format("','".join((arc_id for arc_id in project_arcs if arc_id[-1] != '1')))
 network_view = MHN.make_skinny_table_view(MHN.arc, 'network_view', network_attr, network_query)
 MHN.write_attribute_csv(network_view, network_csv, network_attr)
 arcpy.Delete_management(network_view)
@@ -92,7 +92,7 @@ arcpy.Delete_management(network_view)
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('{0}Validating coding in {1}...'.format('\n', xls))
 
-sas1_sas = ''.join((MHN.prog_dir + '/', sas1_name,'.sas'))
+sas1_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas1_name))
 sas1_args = [xls, MHN.temp_dir, future_itin_csv, future_route_csv, str(MHN.max_poe), sas1_lst]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
@@ -112,11 +112,11 @@ else:
 arcpy.AddMessage('{0}Building updated route & itin table in memory...'.format('\n'))
 
 temp_routes_name = 'temp_routes_fc'
-temp_routes_fc = '/'.join((MHN.mem, temp_routes_name))
+temp_routes_fc = os.path.join(MHN.mem, temp_routes_name)
 arcpy.CreateFeatureclass_management(MHN.mem, temp_routes_name, 'POLYLINE', MHN.bus_future)
 
 temp_itin_name = 'temp_itin_table'
-temp_itin_table = '/'.join((MHN.mem, temp_itin_name))
+temp_itin_table = os.path.join(MHN.mem, temp_itin_name)
 arcpy.CreateTable_management(MHN.mem, temp_itin_name, MHN.route_systems[MHN.bus_future][0])
 
 # Update itin table directly from CSV, while determining coded arcs' IDs.
@@ -156,9 +156,9 @@ for route_id in sorted(route_arcs.keys()):
     # Dissolve route arcs into a single route feature, and append to temp FC.
     route_arc_ids = route_arcs[route_id]
     route_arcs_lyr = 'route_arcs_lyr'
-    route_arcs_query = '"ABB" IN (\'' + "','".join(route_arc_ids) + "')"
+    route_arcs_query = ''' "ABB" IN ('{0}') '''.format("','".join(route_arc_ids))
     arcpy.MakeFeatureLayer_management(MHN.arc, route_arcs_lyr, route_arcs_query)
-    route_dissolved = '/'.join((MHN.mem, 'route_dissolved'))
+    route_dissolved = os.path.join(MHN.mem, 'route_dissolved')
     arcpy.Dissolve_management(route_arcs_lyr, route_dissolved)
     arcpy.AddField_management(route_dissolved, common_id_field, 'TEXT', field_length=10)
     with arcpy.da.UpdateCursor(route_dissolved, [common_id_field]) as cursor:
@@ -197,16 +197,16 @@ with arcpy.da.UpdateCursor(temp_routes_fc, route_fields) as cursor:
 # -----------------------------------------------------------------------------
 #  Merge temp routes with unaltered ones.
 # -----------------------------------------------------------------------------
-unaltered_routes_query = '"{0}" NOT IN (\'{1}\')'.format(common_id_field, "','".join(route_arcs.keys()))
+unaltered_routes_query = ''' "{0}" NOT IN ('{1}') '''.format(common_id_field, "','".join(route_arcs.keys()))
 
 unaltered_routes_lyr = 'unaltered_routes_lyr'
 arcpy.MakeFeatureLayer_management(MHN.bus_future, unaltered_routes_lyr, unaltered_routes_query)
-updated_routes_fc = '/'.join((MHN.mem, 'updated_routes_fc'))
+updated_routes_fc = os.path.join(MHN.mem, 'updated_routes_fc')
 arcpy.Merge_management((unaltered_routes_lyr, temp_routes_fc), updated_routes_fc)
 
 unaltered_itin_view = 'unaltered_itin_view'
 arcpy.MakeTableView_management(MHN.route_systems[MHN.bus_future][0], unaltered_itin_view, unaltered_routes_query)
-updated_itin_table = '/'.join((MHN.mem, 'updated_itin_table'))
+updated_itin_table = os.path.join(MHN.mem, 'updated_itin_table')
 arcpy.Merge_management((unaltered_itin_view, temp_itin_table), updated_itin_table)
 
 
@@ -240,8 +240,8 @@ arcpy.Delete_management(updated_itin_table)
 arcpy.AddMessage('{0}Rebuilding relationship classes...'.format('\n'))
 bus_future_name = MHN.break_path(MHN.bus_future)['name']
 itin_table_name = MHN.break_path(itin_table)['name']
-rel_arcs = MHN.gdb + '/rel_arcs_to_' + itin_table_name
-rel_sys = MHN.gdb + '/rel_' + itin_table_name.rsplit('_',1)[0] + '_to_' + itin_table_name.rsplit('_',1)[1]
+rel_arcs = os.path.join(MHN.gdb, 'rel_arcs_to_{0}'.format(itin_table_name))
+rel_sys = os.path.join(MHN.gdb, 'rel_{0}_to_{1}'.format(itin_table_name.rsplit('_',1)[0], itin_table_name.rsplit('_',1)[1]))
 arcpy.CreateRelationshipClass_management(MHN.arc, itin_table, rel_arcs, 'SIMPLE', itin_table_name, MHN.arc_name, 'NONE', 'ONE_TO_MANY', 'NONE', 'ABB', 'ABB')
 arcpy.CreateRelationshipClass_management(MHN.bus_future, itin_table, rel_sys, 'COMPOSITE', itin_table_name, bus_future_name, 'FORWARD', 'ONE_TO_MANY', 'NONE', common_id_field, common_id_field)
 
