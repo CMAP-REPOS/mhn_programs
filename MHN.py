@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 9/6/13
+    Revised: 2/6/14
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -59,7 +59,7 @@ arcpy.Delete_management(mem)  # Clear memory before doing anything else
 
 
 # -----------------------------------------------------------------------------
-#  3. MISCELLANEOUS PARAMETERS
+#  2. MISCELLANEOUS PARAMETERS
 # -----------------------------------------------------------------------------
 base_year = 2010  # BASELINK=1 network year, not necessarily scenario 100 (i.e. base_year was recently 2009, while scenario 100 was 2010)
 
@@ -120,23 +120,18 @@ tod_periods = {
 
 
 # -----------------------------------------------------------------------------
-#  2. METHODS
+#  3. METHODS
 # -----------------------------------------------------------------------------
 def break_path(fullpath):
     ''' Splits a full-path string into a dictionary, containing 'dir', 'name'
         and 'ext' values. '''
-    split1 = fullpath.rsplit('/', 1)
+    split1 = os.path.split(fullpath)
     directory = split1[0]
-    if '.' in split1[1]:
-        split2 = split1[1].rsplit('.', 1)
-        filename = split2[0]
-        extension = '.' + split2[1]
-        filename_extension = '.'.join((filename, extension))
-    else:
-        filename = split1[1]
-        extension = ''
-        filename_extension = filename
-    return {'dir': directory, 'name': filename, 'ext': extension, 'name_ext': filename_extension}
+    filename_ext = split1[1]
+    split2 = os.path.splitext(split1[1])
+    filename = split2[0]
+    extension = split2[1]
+    return {'dir': directory, 'name': filename, 'ext': extension, 'name_ext': filename_ext}
 
 
 def build_geometry_dict(lyr, key_field):
@@ -324,7 +319,7 @@ def make_attribute_dict(fc, key_field, attr_list=['*']):
 def make_path(directory, filename, extension=''):
     ''' Combines a directory, name and optional extension to create a full-path
         string for a file. '''
-    fullpath = directory.rstrip('/') + '/' + filename
+    fullpath = os.path.join(directory, filename)
     if extension != '':
         fullpath += '.' + extension.lstrip('.')  # Guarantee 1 (and only 1) '.' in front of extension
     return fullpath
