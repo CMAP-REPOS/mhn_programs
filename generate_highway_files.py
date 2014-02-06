@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 12/18/13
+    Revised: 2/6/14
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -18,11 +18,11 @@ import MHN  # Custom library for MHN processing functionality
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
-scen_code = arcpy.GetParameterAsText(0)                                      # String, default = '100'
-root_path = arcpy.GetParameterAsText(1).replace('\\','/').rstrip('/') + '/'  # String, no default
-create_tollsys_flag = arcpy.GetParameter(2)                                  # Boolean, default = True
+scen_code = arcpy.GetParameterAsText(0)      # String, default = '100'
+root_path = arcpy.GetParameterAsText(1)      # String, no default
+create_tollsys_flag = arcpy.GetParameter(2)  # Boolean, default = True
 if os.path.exists(root_path):
-    hwy_path = MHN.ensure_dir(root_path + 'highway/')
+    hwy_path = MHN.ensure_dir(os.path.join(root_path, 'highway'))
 else:
     MHN.die("{0} doesn't exist!".format(root_path))
 sas1_name = 'coding_overlap'
@@ -32,11 +32,11 @@ sas2_name = 'generate_highway_files_2'
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
-sas1_log = ''.join((MHN.temp_dir, '/', sas1_name, '.log'))
-sas1_lst = ''.join((MHN.temp_dir, '/', sas1_name, '.lst'))
-overlap_year_csv = '/'.join((MHN.temp_dir, 'overlap_year.csv'))
-overlap_transact_csv = '/'.join((MHN.temp_dir, 'overlap_transact.csv'))
-overlap_network_csv = '/'.join((MHN.temp_dir, 'overlap_network.csv'))
+sas1_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas1_name))
+sas1_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas1_name))
+overlap_year_csv = os.path.join(MHN.temp_dir, 'overlap_year.csv')
+overlap_transact_csv = os.path.join(MHN.temp_dir, 'overlap_transact.csv')
+overlap_network_csv = os.path.join(MHN.temp_dir, 'overlap_network.csv')
 # sas2_log & sas2_lst are scenario-dependent, defined below
 
 
@@ -55,8 +55,8 @@ MHN.delete_if_exists(overlap_network_csv)
 # -----------------------------------------------------------------------------
 if create_tollsys_flag:
     arcpy.AddMessage('\nGenerating tollsys.flag file...')
-    tollsys_flag = ''.join((hwy_path, 'tollsys.flag'))
-    MHN.write_arc_flag_file(tollsys_flag, ''' "TOLLSYS" = 1 ''')
+    tollsys_flag = os.path.join(hwy_path, 'tollsys.flag')
+    MHN.write_arc_flag_file(tollsys_flag, '"TOLLSYS" = 1')
 
 
 # -----------------------------------------------------------------------------
@@ -77,7 +77,7 @@ arcpy.Delete_management(overlap_year_view)
 overlap_transact_attr = [hwyproj_id_field,'ACTION_CODE','NEW_DIRECTIONS','NEW_TYPE1','NEW_TYPE2','NEW_AMPM1','NEW_AMPM2','NEW_POSTEDSPEED1',
                          'NEW_POSTEDSPEED2','NEW_THRULANES1','NEW_THRULANES2','NEW_THRULANEWIDTH1','NEW_THRULANEWIDTH2','ADD_PARKLANES1',
                          'ADD_PARKLANES2','ADD_SIGIC','ADD_CLTL','ADD_RRGRADECROSS','NEW_TOLLDOLLARS','NEW_MODES','ABB','REP_ANODE','REP_BNODE']
-overlap_transact_query = '"{0}" IN (\'{1}\')'.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in overlap_projects)))
+overlap_transact_query = ''' "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in overlap_projects)))
 overlap_transact_view = MHN.make_skinny_table_view(MHN.route_systems[MHN.hwyproj][0], 'overlap_transact_view', overlap_transact_attr, overlap_transact_query)
 MHN.write_attribute_csv(overlap_transact_view, overlap_transact_csv, overlap_transact_attr)
 overlap_project_arcs = MHN.make_attribute_dict(overlap_transact_view, 'ABB', attr_list=[])
@@ -86,7 +86,7 @@ arcpy.Delete_management(overlap_transact_view)
 # Export base year arc attributes.
 overlap_network_attr = ['ANODE','BNODE','ABB','DIRECTIONS','TYPE1','TYPE2','AMPM1','AMPM2','POSTEDSPEED1','POSTEDSPEED2','THRULANES1','THRULANES2',
                         'THRULANEWIDTH1','THRULANEWIDTH2','PARKLANES1','PARKLANES2','SIGIC','CLTL','RRGRADECROSS','TOLLDOLLARS','MODES','MILES']
-overlap_network_query = '"BASELINK" = \'1\' OR "ABB" IN (\'{0}\')'.format("','".join((arc_id for arc_id in overlap_project_arcs if arc_id[-1] != '1')))
+overlap_network_query = ''' "BASELINK" = '1' OR "ABB" IN ('{0}') '''.format("','".join((arc_id for arc_id in overlap_project_arcs if arc_id[-1] != '1')))
 overlap_network_view = MHN.make_skinny_table_view(MHN.arc, 'overlap_network_view', overlap_network_attr, overlap_network_query)
 MHN.write_attribute_csv(overlap_network_view, overlap_network_csv, overlap_network_attr)
 arcpy.Delete_management(overlap_network_view)
@@ -117,13 +117,13 @@ else:
 for scen in scen_list:
     # Set scenario-specific parameters.
     scen_year = MHN.scenario_years[scen]
-    scen_path = MHN.ensure_dir(hwy_path + scen + '/')
-    sas2_log = ''.join((hwy_path, sas2_name, '_', scen, '.log'))
-    sas2_lst = ''.join((hwy_path, sas2_name, '_', scen, '.lst'))
-    hwy_year_csv = scen_path + 'year.csv'
-    hwy_transact_csv = scen_path + 'transact.csv'
-    hwy_network_csv = scen_path + 'network.csv'
-    hwy_nodes_csv = scen_path + 'nodes.csv'
+    scen_path = MHN.ensure_dir(os.path.join(hwy_path, scen))
+    sas2_log = os.path.join(hwy_path, '{0}_{1}.log'.format(sas2_name, scen))
+    sas2_lst = os.path.join(hwy_path, '{0}_{1}.lst'.format(sas2_name, scen))
+    hwy_year_csv = os.path.join(scen_path, 'year.csv')
+    hwy_transact_csv = os.path.join(scen_path, 'transact.csv')
+    hwy_network_csv = os.path.join(scen_path, 'network.csv')
+    hwy_nodes_csv = os.path.join(scen_path, 'nodes.csv')
 
     MHN.delete_if_exists(sas2_log)
     MHN.delete_if_exists(sas2_lst)
@@ -145,7 +145,7 @@ for scen in scen_list:
     hwy_transact_attr = [hwyproj_id_field,'ACTION_CODE','NEW_DIRECTIONS','NEW_TYPE1','NEW_TYPE2','NEW_AMPM1','NEW_AMPM2','NEW_POSTEDSPEED1',
                          'NEW_POSTEDSPEED2','NEW_THRULANES1','NEW_THRULANES2','NEW_THRULANEWIDTH1','NEW_THRULANEWIDTH2','ADD_PARKLANES1',
                          'ADD_PARKLANES2','ADD_SIGIC','ADD_CLTL','ADD_RRGRADECROSS','NEW_TOLLDOLLARS','NEW_MODES','TOD','ABB','REP_ANODE','REP_BNODE']
-    hwy_transact_query = '"{0}" IN (\'{1}\')'.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in hwy_projects)))
+    hwy_transact_query = ''' "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in hwy_projects)))
     hwy_transact_view = MHN.make_skinny_table_view(MHN.route_systems[MHN.hwyproj][0], 'hwy_transact_view', hwy_transact_attr, hwy_transact_query)
     MHN.write_attribute_csv(hwy_transact_view, hwy_transact_csv, hwy_transact_attr)
     hwy_abb = MHN.make_attribute_dict(hwy_transact_view, 'ABB', attr_list=[])
@@ -156,7 +156,7 @@ for scen in scen_list:
     hwy_network_attr = ['ANODE','BNODE','ABB','DIRECTIONS','TYPE1','TYPE2','AMPM1','AMPM2','POSTEDSPEED1','POSTEDSPEED2','THRULANES1','THRULANES2',
                         'THRULANEWIDTH1','THRULANEWIDTH2','PARKLANES1','PARKLANES2','PARKRES1','PARKRES2','SIGIC','CLTL','RRGRADECROSS','TOLLDOLLARS',
                         'MODES','CHIBLVD','TRUCKRES','VCLEARANCE','MILES']
-    hwy_network_query = '"BASELINK" = \'1\' OR "ABB" IN (\'{0}\')'.format("','".join((abb for abb in hwy_abb if abb[-1] != '1')))
+    hwy_network_query = ''' "BASELINK" = '1' OR "ABB" IN ('{0}') '''.format("','".join((abb for abb in hwy_abb if abb[-1] != '1')))
     hwy_network_lyr = MHN.make_skinny_feature_layer(MHN.arc, 'hwy_network_lyr', hwy_network_attr, hwy_network_query)
     MHN.write_attribute_csv(hwy_network_lyr, hwy_network_csv, hwy_network_attr)
     hwy_abb_2 = MHN.make_attribute_dict(hwy_network_lyr, 'ABB', attr_list=[])
@@ -171,11 +171,11 @@ for scen in scen_list:
     arcpy.Delete_management(hwy_nodes_view)
 
     # Process attribute tables with generate_highway_files_2.sas.
-    sas2_sas = ''.join((MHN.prog_dir, '/', sas2_name, '.sas'))
+    sas2_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas2_name))
     sas2_args = [hwy_path, scen, str(MHN.max_poe), str(MHN.base_year)]
     MHN.submit_sas(sas2_sas, sas2_log, sas2_lst, sas2_args)
     if not os.path.exists(sas2_log):
-        MHN.die(sas2_sas + ' did not run!')
+        MHN.die('{0} did not run!'.format(sas2_sas))
     elif 'errorlevel=' in open(sas2_lst).read():
         MHN.die('Errors during SAS processing. Please see {0}.'.format(sas2_log))
     else:
@@ -189,7 +189,7 @@ for scen in scen_list:
 
     # Create linkshape.in.
     def generate_linkshape(arcs, output_dir):
-        linkshape = output_dir.rstrip('/') + '/highway.linkshape'
+        linkshape = os.path.join(output_dir, 'highway.linkshape')
         w = open(linkshape, 'w')
         w.write('c HIGHWAY LINK SHAPE FILE FOR SCENARIO {0}\n'.format(scen))
         w.write('c {0}\n'.format(MHN.timestamp('%d%b%y').upper()))
@@ -217,13 +217,13 @@ for scen in scen_list:
                                 vertex = part.next()
             return None
 
-        arcs_mem = MHN.mem + '/arcs'
+        arcs_mem = os.path.join(MHN.mem, 'arcs')
         arcpy.CopyFeatures_management(arcs, arcs_mem)
         write_vertices(arcs_mem, w)
 
-        arcs_mem_flipped = MHN.mem + '/arcs_flipped'
+        arcs_mem_flipped = os.path.join(MHN.mem, 'arcs_flipped')
         arcs_2dir_lyr = 'arcs_2dir'
-        arcpy.MakeFeatureLayer_management(arcs_mem, arcs_2dir_lyr, '"DIRECTIONS" <> \'1\'')
+        arcpy.MakeFeatureLayer_management(arcs_mem, arcs_2dir_lyr, ''' "DIRECTIONS" <> '1' ''')
         arcpy.CopyFeatures_management(arcs_2dir_lyr, arcs_mem_flipped)
         arcpy.FlipLine_edit(arcs_mem_flipped)
         write_vertices(arcs_mem_flipped, w, reversed=True)
