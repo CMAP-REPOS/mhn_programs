@@ -2,7 +2,7 @@
 '''
     import_highway_projects.py
     Author: npeterson
-    Revised: 12/20/2013
+    Revised: 2/6/14
     ---------------------------------------------------------------------------
     Import highway project coding from an Excel spreadsheet. SAS can currently
     only handle .xls and not .xlsx.
@@ -24,10 +24,10 @@ sas1_name = 'import_highway_projects_2'
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
-sas1_log = ''.join((MHN.temp_dir, '/', sas1_name, '.log'))
-sas1_lst = ''.join((MHN.temp_dir, '/', sas1_name, '.lst'))
-mhn_links_csv = ''.join((MHN.temp_dir, '/mhn_links.csv'))
-projects_csv = ''.join((MHN.temp_dir, '/projects.csv'))
+sas1_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas1_name))
+sas1_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas1_name))
+mhn_links_csv = os.path.join(MHN.temp_dir, 'mhn_links.csv')
+projects_csv = os.path.join(MHN.temp_dir, 'projects.csv')
 
 
 # -----------------------------------------------------------------------------
@@ -44,11 +44,11 @@ MHN.delete_if_exists(projects_csv)
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('{0}Validating coding in {1}...'.format('\n', xls))
 mhn_links_attr = ['ANODE', 'BNODE', 'BASELINK']
-mhn_links_query = '"BASELINK" IN (\'0\', \'1\')'  # Ignore BASELINK > 1
+mhn_links_query = ''' "BASELINK" IN ('0', '1') '''  # Ignore BASELINK > 1
 mhn_links_view = MHN.make_skinny_table_view(MHN.arc, 'mhn_links_view', mhn_links_attr, mhn_links_query)
 MHN.write_attribute_csv(mhn_links_view, mhn_links_csv, mhn_links_attr)
 
-sas1_sas = ''.join((MHN.prog_dir + '/', sas1_name,'.sas'))
+sas1_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas1_name))
 sas1_args = [xls, mhn_links_csv, projects_csv, sas1_lst]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
@@ -68,11 +68,11 @@ else:
 arcpy.AddMessage('{0}Building updated coding table & feature class in memory...'.format('\n'))
 
 temp_projects_name = 'temp_routes_fc'
-temp_projects_fc = '/'.join((MHN.mem, temp_projects_name))
+temp_projects_fc = os.path.join(MHN.mem, temp_projects_name)
 arcpy.CreateFeatureclass_management(MHN.mem, temp_projects_name, 'POLYLINE', MHN.hwyproj)
 
 temp_coding_name = 'temp_coding_table'
-temp_coding_table = '/'.join((MHN.mem, temp_coding_name))
+temp_coding_table = os.path.join(MHN.mem, temp_coding_name)
 arcpy.CreateTable_management(MHN.mem, temp_coding_name, MHN.route_systems[MHN.hwyproj][0])
 
 # Update coding table directly from CSV, while determining coded arcs' IDs.
@@ -111,7 +111,7 @@ for project_id in project_arcs.keys():
     # Set COMPLETION_YEAR & MCP_ID to defaults, or existing values if applicable.
     completion_year = 9999  # default 9999 (i.e. not conformed)
     mcp_id = ' '            # default blank (i.e. not an MCP)
-    existing_project_query = '"{0}" = \'{1}\''.format(common_id_field, project_id)
+    existing_project_query = ''' "{0}" = '{1}' '''.format(common_id_field, project_id)
     existing_project_lyr = MHN.make_skinny_table_view(MHN.hwyproj, 'existing_project_lyr', ['COMPLETION_YEAR', 'MCP_ID'], existing_project_query)
     existing_project_count = int(arcpy.GetCount_management(existing_project_lyr).getOutput(0))
     if existing_project_count > 0:
@@ -121,9 +121,9 @@ for project_id in project_arcs.keys():
     # Dissolve project arcs into a single project feature, and append to temp FC.
     project_arc_ids = project_arcs[project_id]
     project_arcs_lyr = 'project_arcs_lyr'
-    project_arcs_query = '"ABB" IN (\'' + "','".join(project_arc_ids) + "')"
+    project_arcs_query = ''' "ABB" IN ('{0}') '''.format("','".join(project_arc_ids))
     arcpy.MakeFeatureLayer_management(MHN.arc, project_arcs_lyr, project_arcs_query)
-    project_dissolved = '/'.join((MHN.mem, 'project_dissolved'))
+    project_dissolved = os.path.join(MHN.mem, 'project_dissolved')
     arcpy.Dissolve_management(project_arcs_lyr, project_dissolved)
     arcpy.AddField_management(project_dissolved, common_id_field, 'TEXT', field_length=10)
     arcpy.AddField_management(project_dissolved, 'COMPLETION_YEAR', 'SHORT')  # Make types/lengths dynamic?
@@ -143,7 +143,7 @@ for project_id in project_arcs.keys():
 #  Merge updated projects with unaltered projects.
 # -----------------------------------------------------------------------------
 # Copy features and coding of unaltered projects in MHN.
-unaltered_projects_query = '"{0}" NOT IN (\''.format(common_id_field) + "','".join(project_arcs.keys()) + "')"
+unaltered_projects_query = ''' "{0}" NOT IN ('{1}') '''.format(common_id_field, "','".join(project_arcs.keys()))
 
 unaltered_projects_lyr = 'unaltered_projects_lyr'
 arcpy.MakeFeatureLayer_management(MHN.hwyproj, unaltered_projects_lyr, unaltered_projects_query)
@@ -152,10 +152,10 @@ unaltered_coding_view = 'unaltered_coding_view'
 arcpy.MakeTableView_management(MHN.route_systems[MHN.hwyproj][0], unaltered_coding_view, unaltered_projects_query)
 
 # Append features/coding from temp FC/table.
-updated_projects_fc = '/'.join((MHN.mem, 'updated_projects_fc'))
+updated_projects_fc = os.path.join(MHN.mem, 'updated_projects_fc')
 arcpy.Merge_management((unaltered_projects_lyr, temp_projects_fc), updated_projects_fc)
 
-updated_coding_table = '/'.join((MHN.mem, 'updated_coding_table'))
+updated_coding_table = os.path.join(MHN.mem, 'updated_coding_table')
 arcpy.Merge_management((unaltered_coding_view, temp_coding_table), updated_coding_table)
 
 
@@ -189,8 +189,8 @@ arcpy.Delete_management(updated_coding_table)
 arcpy.AddMessage('{0}Rebuilding relationship classes...'.format('\n'))
 hwyproj_name = MHN.break_path(MHN.hwyproj)['name']
 coding_table_name = MHN.break_path(coding_table)['name']
-rel_arcs = MHN.gdb + '/rel_arcs_to_' + coding_table_name
-rel_sys = MHN.gdb + '/rel_' + coding_table_name.rsplit('_',1)[0] + '_to_' + coding_table_name.rsplit('_',1)[1]
+rel_arcs = os.path.join(MHN.gdb, 'rel_arcs_to_{0}'.format(coding_table_name))
+rel_sys = os.path.join(MHN.gdb, 'rel_{0}_to_{1}'.format(coding_table_name.rsplit('_',1)[0], + coding_table_name.rsplit('_',1)[1]))
 arcpy.CreateRelationshipClass_management(MHN.arc, coding_table, rel_arcs, 'SIMPLE', coding_table_name, MHN.arc_name, 'NONE', 'ONE_TO_MANY', 'NONE', 'ABB', 'ABB')
 arcpy.CreateRelationshipClass_management(MHN.hwyproj, coding_table, rel_sys, 'COMPOSITE', coding_table_name, hwyproj_name, 'FORWARD', 'ONE_TO_MANY', 'NONE', common_id_field, common_id_field)
 

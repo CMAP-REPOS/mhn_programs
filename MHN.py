@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 9/6/13
+    Revised: 2/6/14
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -21,46 +21,46 @@ arcpy.env.OverwriteOutput = True
 # -----------------------------------------------------------------------------
 #  1. DIRECTORIES & FILES
 # -----------------------------------------------------------------------------
-gdb = 'C:/MHN/mhn.gdb'
+gdb = 'C:\\MHN\\mhn.gdb'
 
 root_dir = os.path.dirname(gdb)
-imp_dir = root_dir + '/import'
-out_dir = root_dir + '/output'
-temp_dir = root_dir + '/temp'
+imp_dir = os.path.join(root_dir, 'import')
+out_dir = os.path.join(root_dir, 'output')
+temp_dir = os.path.join(root_dir, 'temp')
 prog_dir = sys.path[0]  # Directory containing this module
 mem = 'in_memory'
 
 hwynet_name = 'hwynet'
-hwynet = gdb + '/' + hwynet_name
+hwynet = os.path.join(gdb, hwynet_name)
 arc_name = 'hwynet_arc'
-arc = hwynet + '/' + arc_name
+arc = os.path.join(hwynet, arc_name)
 node_name = 'hwynet_node'
-node = hwynet + '/' + node_name
-hwyproj = hwynet + '/hwyproj'
-bus_base = hwynet + '/bus_base'
-bus_current = hwynet + '/bus_current'
-bus_future = hwynet + '/bus_future'
+node = os.path.join(hwynet, node_name)
+hwyproj = os.path.join(hwynet, 'hwyproj')
+bus_base = os.path.join(hwynet, 'bus_base')
+bus_current = os.path.join(hwynet, 'bus_current')
+bus_future = os.path.join(hwynet, 'bus_future')
 route_systems = {
-    hwyproj: (gdb + '/hwyproj_coding', 'TIPID', ''),
-    bus_base: (gdb + '/bus_base_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 0),
-    bus_current: (gdb + '/bus_current_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
-    bus_future: (gdb + '/bus_future_itin', 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
+    hwyproj: (os.path.join(gdb, 'hwyproj_coding'), 'TIPID', ''),
+    bus_base: (os.path.join(gdb, 'bus_base_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 0),
+    bus_current: (os.path.join(gdb, 'bus_current_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
+    bus_future: (os.path.join(gdb, 'bus_future_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
 }
 mhn2iris = gdb + '/mhn2iris'
 
-zone_gdb = root_dir + '/zone_systems.gdb'
-zone = zone_gdb + '/zonesys09/zones09'
+zone_gdb = root_dir, 'zone_systems.gdb')
+zone = os.path.join(zone_gdb, 'zonesys09', 'zones09')
 zone_attr = 'Zone09'
-subzone = zone_gdb + '/zonesys09/subzones09'
+subzone = os.path.join(zone_gdb, 'zonesys09', 'subzones09')
 subzone_attr = 'Subzone09'
-capzone = zone_gdb + '/zonesys09/capzones09'
+capzone = os.path.join(zone_gdb, 'zonesys09', 'capzones09')
 capzone_attr = 'CapacityZone09'
 
 arcpy.Delete_management(mem)  # Clear memory before doing anything else
 
 
 # -----------------------------------------------------------------------------
-#  3. MISCELLANEOUS PARAMETERS
+#  2. MISCELLANEOUS PARAMETERS
 # -----------------------------------------------------------------------------
 base_year = 2010  # BASELINK=1 network year, not necessarily scenario 100 (i.e. base_year was recently 2009, while scenario 100 was 2010)
 
@@ -121,23 +121,18 @@ tod_periods = {
 
 
 # -----------------------------------------------------------------------------
-#  2. METHODS
+#  3. METHODS
 # -----------------------------------------------------------------------------
 def break_path(fullpath):
     ''' Splits a full-path string into a dictionary, containing 'dir', 'name'
         and 'ext' values. '''
-    split1 = fullpath.rsplit('/', 1)
+    split1 = os.path.split(fullpath)
     directory = split1[0]
-    if '.' in split1[1]:
-        split2 = split1[1].rsplit('.', 1)
-        filename = split2[0]
-        extension = '.' + split2[1]
-        filename_extension = '.'.join((filename, extension))
-    else:
-        filename = split1[1]
-        extension = ''
-        filename_extension = filename
-    return {'dir': directory, 'name': filename, 'ext': extension, 'name_ext': filename_extension}
+    filename_ext = split1[1]
+    split2 = os.path.splitext(split1[1])
+    filename = split2[0]
+    extension = split2[1]
+    return {'dir': directory, 'name': filename, 'ext': extension, 'name_ext': filename_ext}
 
 
 def build_geometry_dict(lyr, key_field):
@@ -325,7 +320,7 @@ def make_attribute_dict(fc, key_field, attr_list=['*']):
 def make_path(directory, filename, extension=''):
     ''' Combines a directory, name and optional extension to create a full-path
         string for a file. '''
-    fullpath = directory.rstrip('/') + '/' + filename
+    fullpath = os.path.join(directory, filename)
     if extension != '':
         fullpath += '.' + extension.lstrip('.')  # Guarantee 1 (and only 1) '.' in front of extension
     return fullpath

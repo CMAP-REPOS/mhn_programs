@@ -2,7 +2,7 @@
 '''
     import_gtfs_bus_routes.py
     Author: npeterson
-    Revised: 12/16/2013
+    Revised: 2/6/14
     ---------------------------------------------------------------------------
     This program is used to update the itineraries of bus routes, with data
     from specified header & itinerary coding CSVs.
@@ -26,18 +26,18 @@ sas1_name = 'import_gtfs_bus_routes_2'
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
-sas1_log = ''.join((MHN.temp_dir, '/', sas1_name, '.log'))
-sas1_lst = ''.join((MHN.temp_dir, '/', sas1_name, '.lst'))
-transact_csv = '/'.join((MHN.temp_dir, 'transact.csv'))
-network_csv = '/'.join((MHN.temp_dir, 'network.csv'))
-nodes_csv = '/'.join((MHN.temp_dir, 'nodes.csv'))
-header_csv = '/'.join((MHN.temp_dir, 'header.csv'))
-itin_csv = '/'.join((MHN.temp_dir, 'itin.csv'))
-link_dict_txt = ''.join((MHN.out_dir, '/link_dictionary.txt'))  # shortest_path.py input file (called by import_gtfs_bus_routes_2.sas)
-short_path_txt = ''.join((MHN.out_dir, '/short_path.txt'))      # shortest_path.py output file
-hold_check_csv = ''.join((MHN.out_dir, '/hold_check.csv'))
-hold_times_csv = ''.join((MHN.out_dir, '/hold_times.csv'))
-routes_processed_csv = ''.join((MHN.out_dir, '/routes_processed.csv'))
+sas1_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas1_name))
+sas1_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas1_name))
+transact_csv = os.path.join(MHN.temp_dir, 'transact.csv')
+network_csv = os.path.join(MHN.temp_dir, 'network.csv')
+nodes_csv = os.path.join(MHN.temp_dir, 'nodes.csv')
+header_csv = os.path.join(MHN.temp_dir, 'header.csv')
+itin_csv = os.path.join(MHN.temp_dir, 'itin.csv')
+link_dict_txt = os.path.join(MHN.out_dir, 'link_dictionary.txt')  # shortest_path.py input file (called by import_gtfs_bus_routes_2.sas)
+short_path_txt = os.path.join(MHN.out_dir, 'short_path.txt')      # shortest_path.py output file
+hold_check_csv = os.path.join(MHN.out_dir, 'hold_check.csv')
+hold_times_csv = os.path.join(MHN.out_dir, 'hold_times.csv')
+routes_processed_csv = os.path.join(MHN.out_dir, 'routes_processed.csv')
 
 
 # -----------------------------------------------------------------------------
@@ -99,7 +99,7 @@ arcpy.Delete_management(year_view)
 
 # Export coding for identified projects.
 transact_attr = (hwyproj_id_field, 'ABB', 'ACTION_CODE', 'NEW_POSTEDSPEED1', 'NEW_POSTEDSPEED2', 'NEW_DIRECTIONS')
-transact_query = '"{0}" IN (\'{1}\')'.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in projects)))
+transact_query = ''' "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in projects)))
 transact_view = MHN.make_skinny_table_view(MHN.route_systems[MHN.hwyproj][0], 'transact_view', transact_attr, transact_query)
 MHN.write_attribute_csv(transact_view, transact_csv, transact_attr[1:])
 project_arcs = MHN.make_attribute_dict(transact_view, 'ABB', attr_list=[])
@@ -107,7 +107,7 @@ arcpy.Delete_management(transact_view)
 
 # Export arc attributes for bus year network.
 network_attr = ('ANODE', 'BNODE', 'BASELINK', 'ABB', 'DIRECTIONS', 'TYPE1', 'TYPE2', 'POSTEDSPEED1', 'POSTEDSPEED2', 'MILES')
-network_query = '"BASELINK" = \'1\' OR "ABB" IN (\'{0}\')'.format("','".join((arc_id for arc_id in project_arcs if arc_id[-1] != '1')))
+network_query = ''' "BASELINK" = '1' OR "ABB" IN ('{0}') '''.format("','".join((arc_id for arc_id in project_arcs if arc_id[-1] != '1')))
 network_view = MHN.make_skinny_table_view(MHN.arc, 'network_view', network_attr, network_query)
 MHN.write_attribute_csv(network_view, network_csv, network_attr)
 arcpy.Delete_management(network_view)
@@ -124,7 +124,7 @@ arcpy.Delete_management(nodes_view)
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('{0}Validating coding in {1} & {2}...'.format('\n', raw_header_csv, raw_itin_csv))
 
-sas1_sas = ''.join((MHN.prog_dir + '/', sas1_name,'.sas'))
+sas1_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas1_name))
 sas1_args = [raw_header_csv, raw_itin_csv, transact_csv, network_csv, nodes_csv,
              MHN.prog_dir, header_csv, itin_csv, link_dict_txt, short_path_txt,
              hold_check_csv, hold_times_csv, routes_processed_csv,
@@ -147,11 +147,11 @@ else:
 arcpy.AddMessage('{0}Building updated route & itin table in memory...'.format('\n'))
 
 temp_routes_name = 'temp_routes_fc'
-temp_routes_fc = '/'.join((MHN.mem, temp_routes_name))
+temp_routes_fc = os.path.join(MHN.mem, temp_routes_name)
 arcpy.CreateFeatureclass_management(MHN.mem, temp_routes_name, 'POLYLINE', routes_fc)
 
 temp_itin_name = 'temp_itin_table'
-temp_itin_table = '/'.join((MHN.mem, temp_itin_name))
+temp_itin_table = os.path.join(MHN.mem, temp_itin_name)
 arcpy.CreateTable_management(MHN.mem, temp_itin_name, MHN.route_systems[routes_fc][0])
 
 # Update itin table directly from CSV, while determining coded arcs' IDs.
@@ -261,8 +261,8 @@ arcpy.Delete_management(temp_itin_table)
 arcpy.AddMessage('{0}Rebuilding relationship classes...'.format('\n'))
 bus_future_name = MHN.break_path(routes_fc)['name']
 itin_table_name = MHN.break_path(itin_table)['name']
-rel_arcs = MHN.gdb + '/rel_arcs_to_' + itin_table_name
-rel_sys = MHN.gdb + '/rel_' + itin_table_name.rsplit('_',1)[0] + '_to_' + itin_table_name.rsplit('_',1)[1]
+rel_arcs = os.path.join(MHN.gdb, 'rel_arcs_to_{0}'.format(itin_table_name))
+rel_sys = os.path.join(MHN.gdb, 'rel_{0}_to_{1}'.format(itin_table_name.rsplit('_',1)[0], itin_table_name.rsplit('_',1)[1]))
 arcpy.CreateRelationshipClass_management(MHN.arc, itin_table, rel_arcs, 'SIMPLE', itin_table_name, MHN.arc_name, 'NONE', 'ONE_TO_MANY', 'NONE', 'ABB', 'ABB')
 arcpy.CreateRelationshipClass_management(routes_fc, itin_table, rel_sys, 'COMPOSITE', itin_table_name, bus_future_name, 'FORWARD', 'ONE_TO_MANY', 'NONE', common_id_field, common_id_field)
 

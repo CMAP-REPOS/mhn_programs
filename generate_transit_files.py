@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 12/18/13
+    Revised: 2/6/14
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -29,16 +29,16 @@ import MHN  # Custom library for MHN processing functionality
 # -----------------------------------------------------------------------------
 arcpy.env.qualifiedFieldNames = False  # Joined attributes will not have fc name prefix
 
-scen_code = arcpy.GetParameterAsText(0)                                # String, default = '100'
-root_path = arcpy.GetParameterAsText(1).replace('\\','/').rstrip('/')  # String, no default
-ct_ramp = arcpy.GetParameter(2)                                        # Boolean, default = False
+scen_code = arcpy.GetParameterAsText(0)  # String, default = '100'
+root_path = arcpy.GetParameterAsText(1)  # String, no default
+ct_ramp = arcpy.GetParameter(2)          # Boolean, default = False
 
 if not os.path.exists(root_path):
     MHN.die("{0} doesn't exist!".format(root_path))
-hwy_path = ''.join((root_path, '/highway'))
+hwy_path = os.path.join(root_path, 'highway')
 if not os.path.exists(hwy_path):
     MHN.die('{0} contains no highway folder! Please run the Generate Highway Files tool first.'.format(root_path))
-tran_path = ''.join((root_path, '/transit'))
+tran_path = os.path.join(root_path, 'transit')
 if not os.path.exists(tran_path):
     MHN.die("{0} contains no transit folder! Please run the Master Rail Network's Create Emme Scenario Files tool first.".format(root_path))
 
@@ -51,22 +51,22 @@ sas4_name = 'generate_transit_files_4'
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
-sas1_log = ''.join((MHN.temp_dir, '/', sas1_name, '.log'))
-sas1_lst = ''.join((MHN.temp_dir, '/', sas1_name, '.lst'))
-sas2_log = ''.join((MHN.temp_dir, '/', sas2_name, '.log'))
-sas2_lst = ''.join((MHN.temp_dir, '/', sas2_name, '.lst'))
-sas3_log = ''.join((MHN.temp_dir, '/', sas3_name, '.log'))
-sas3_lst = ''.join((MHN.temp_dir, '/', sas3_name, '.lst'))
-sas4_log = ''.join((MHN.temp_dir, '/', sas4_name, '.log'))
-sas4_lst = ''.join((MHN.temp_dir, '/', sas4_name, '.lst'))
-bus_route_csv = ''.join((MHN.temp_dir, '/bus_route.csv'))
-bus_itin_csv = ''.join((MHN.temp_dir, '/bus_itin.csv'))
-oneline_itin_txt = ''.join((MHN.temp_dir, '/oneline_itin.txt'))  # gtfs_collapse_routes.py input file (called by gtfs_reformat_feed.sas)
-feed_groups_txt = ''.join((MHN.temp_dir, '/feed_groups.txt'))    # gtfs_collapse_routes.py output file
-missing_links_csv = ''.join((MHN.out_dir, '/missing_bus_links.csv'))
-link_dict_txt = ''.join((MHN.out_dir, '/link_dictionary.txt'))  # shortest_path.py input file (called by generate_transit_files_2.sas)
-short_path_txt = ''.join((MHN.out_dir, '/short_path.txt'))      # shortest_path.py output file
-path_errors_txt = ''.join((MHN.temp_dir, '/path_errors.txt'))
+sas1_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas1_name))
+sas1_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas1_name))
+sas2_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas2_name))
+sas2_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas2_name))
+sas3_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas3_name))
+sas3_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas3_name))
+sas4_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas4_name))
+sas4_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas4_name))
+bus_route_csv = os.path.join(MHN.temp_dir, 'bus_route.csv')
+bus_itin_csv = os.path.join(MHN.temp_dir, 'bus_itin.csv')
+oneline_itin_txt = os.path.join(MHN.temp_dir, 'oneline_itin.txt')  # gtfs_collapse_routes.py input file (called by gtfs_reformat_feed.sas)
+feed_groups_txt = os.path.join(MHN.temp_dir, 'feed_groups.txt')    # gtfs_collapse_routes.py output file
+missing_links_csv = os.path.join(MHN.out_dir, 'missing_bus_links.csv')
+link_dict_txt = os.path.join(MHN.out_dir, 'link_dictionary.txt')  # shortest_path.py input file (called by generate_transit_files_2.sas)
+short_path_txt = os.path.join(MHN.out_dir, 'short_path.txt')      # shortest_path.py output file
+path_errors_txt = os.path.join(MHN.temp_dir, 'path_errors.txt')
 
 
 # -----------------------------------------------------------------------------
@@ -98,7 +98,7 @@ MHN.make_skinny_table_view(MHN.arc, arc_miles_view, ['ABB', 'MILES'])
 
 node_oid_field = MHN.determine_OID_fieldname(MHN.node)
 centroid_lyr = MHN.make_skinny_feature_layer(MHN.node, 'centroid_lyr', [node_oid_field, 'NODE'], '"NODE" <= {0}'.format(max(MHN.centroid_ranges['MHN'])))
-centroid_fc = ''.join((MHN.mem, '/centroid_fc'))
+centroid_fc = os.path.join(MHN.mem, 'centroid_fc')
 arcpy.CopyFeatures_management(centroid_lyr, centroid_fc)
 
 zone_lyr = MHN.make_skinny_feature_layer(MHN.zone, 'zone_lyr', [MHN.zone_attr])
@@ -141,21 +141,21 @@ for bus_fc in bus_fc_dict:
         # Export itineraries for selected runs.
         bus_order_field = MHN.route_systems[bus_fc][2]
         bus_itin_attr = [bus_id_field, 'ITIN_A', 'ITIN_B', bus_order_field, 'LAYOVER', 'DWELL_CODE', 'ZONE_FARE', 'LINE_SERV_TIME', 'TTF']
-        bus_itin_query = '"{0}" IN (\'{1}\')'.format(bus_id_field, "','".join((bus_id for bus_id in selected_bus_routes)))
+        bus_itin_query = ''' "{0}" IN ('{1}') '''.format(bus_id_field, "','".join((bus_id for bus_id in selected_bus_routes)))
         bus_itin_view = MHN.make_skinny_table_view(MHN.route_systems[bus_fc][0], 'bus_itin_view', bus_itin_attr, bus_itin_query)
         MHN.write_attribute_csv(bus_itin_view, bus_itin_csv, bus_itin_attr)
         arcpy.Delete_management(bus_itin_view)
 
         # Process exported route & itin tables with gtfs_reformat_feed.sas.
-        sas1_sas = ''.join((MHN.prog_dir, '/', sas1_name, '.sas'))
-        sas1_output = ''.join((MHN.temp_dir, '/bus_', which_bus, '_runs_', tod, '.csv'))
+        sas1_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas1_name))
+        sas1_output = os.path.join(MHN.temp_dir, 'bus_{0}_runs_{1}.csv'.format(which_bus, tod))
         sas1_args = [MHN.prog_dir, bus_route_csv, bus_itin_csv, oneline_itin_txt, feed_groups_txt, sas1_output, tod]
         MHN.delete_if_exists(sas1_output)
         MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
         if not os.path.exists(sas1_log):
             MHN.die('{0} did not run!'.format(sas1_sas))
         elif not os.path.exists(feed_groups_txt):
-            MHN.die('{0}/gtfs_collapse_routes.py did not run! (Called by {1}.)'.format(MHN.prog_dir, sas1_sas))
+            MHN.die('{0} did not run! (Called by {1}.)'.format(os.path.join(MHN.prog_dir, 'gtfs_collapse_routes.py'), sas1_sas))
         elif os.path.exists(sas1_lst) or not os.path.exists(sas1_output):
             MHN.die('{0} did not run successfully. Please review {1}.'.format(sas1_sas, sas1_log))
         else:
@@ -180,7 +180,7 @@ for bus_fc in bus_fc_dict:
     all_runs_itin_view = 'all_runs_itin_view'
     arcpy.MakeTableView_management(MHN.route_systems[bus_fc][0], all_runs_itin_view)
     arcpy.AddJoin_management(all_runs_itin_view, 'ABB', arc_miles_view, 'ABB', 'KEEP_ALL')
-    all_runs_itin_miles = MHN.mem + '/all_runs_itin_miles_' + which_bus
+    all_runs_itin_miles = os.path.join(MHN.mem, 'all_runs_itin_miles_{0}'.format(which_bus))
     arcpy.CopyRows_management(all_runs_itin_view, all_runs_itin_miles)
     arcpy.RemoveJoin_management(all_runs_itin_view)
     arcpy.Delete_management(all_runs_itin_view)
@@ -192,7 +192,7 @@ if scen_code != '100':
     future_runs_itin_view = 'future_runs_itin_view'
     arcpy.MakeTableView_management(MHN.route_systems[MHN.bus_future][0], future_runs_itin_view)
     arcpy.AddJoin_management(future_runs_itin_view, 'ABB', arc_miles_view, 'ABB', 'KEEP_ALL')
-    future_runs_itin_miles = MHN.mem + '/all_runs_itin_miles_future'
+    future_runs_itin_miles = os.path.join(MHN.mem, 'all_runs_itin_miles_future')
     arcpy.CopyRows_management(future_runs_itin_view, future_runs_itin_miles)
     arcpy.RemoveJoin_management(future_runs_itin_view)
     arcpy.Delete_management(future_runs_itin_view)
@@ -218,10 +218,10 @@ for scen in scen_list:
         bus_fc = MHN.bus_current
         which_bus = 'current'
 
-    scen_hwy_path = '/'.join((hwy_path, scen))
+    scen_hwy_path = os.path.join(hwy_path, scen)
     if not os.path.exists(scen_hwy_path):
         MHN.die('{0} contains no {1} folder! Please run the Generate Highway Files tool for this scenario first.'.format(hwy_path, scen))
-    scen_tran_path = '/'.join((tran_path, scen))
+    scen_tran_path = os.path.join(tran_path, scen)
     if not os.path.exists(scen_tran_path):
         MHN.die("{0} contains no {1} folder! Please run the Master Rail Network's Create Emme Scenario Files tool for this scenario first.".format(tran_path, scen))
 
@@ -233,27 +233,27 @@ for scen in scen_list:
     for tod in sorted(MHN.tod_periods.keys()):
         arcpy.AddMessage('-- TOD {0}...'.format(tod.upper()))
 
-        rail_itin = ''.join((scen_tran_path, '/rail.itinerary_', tod))
-        rail_net = ''.join((scen_tran_path, '/rail.network_', tod))
-        rail_node = ''.join((scen_tran_path, '/railnode.extatt_', tod))
-        bus_itin = ''.join((scen_tran_path, '/bus.itinerary_', tod))
-        bus_net = ''.join((scen_tran_path, '/bus.network_', tod))
-        bus_node = ''.join((scen_tran_path, '/busnode.extatt_', tod))
-        bus_stop = ''.join((scen_tran_path, '/busstop.pnt'))
-        cta_bus = ''.join((scen_tran_path, '/ctabus.pnt'))
-        pace_bus = ''.join((scen_tran_path, '/pacebus.pnt'))
-        cta_stop = ''.join((scen_tran_path, '/ctastop.pnt'))
-        metra_stop = ''.join((scen_tran_path, '/metrastop.pnt'))
-        itin_final = ''.join((scen_tran_path, '/itin.final'))
+        rail_itin = os.path.join(scen_tran_path, 'rail.itinerary_{0}'.format(tod))
+        rail_net = os.path.join(scen_tran_path, 'rail.network_{0}'.format(tod))
+        rail_node = os.path.join(scen_tran_path, 'railnode.extatt_{0}'.format(tod))
+        bus_itin = os.path.join(scen_tran_path, 'bus.itinerary_{0}'.format(tod))
+        bus_net = os.path.join(scen_tran_path, 'bus.network_{0}'.format(tod))
+        bus_node = os.path.join(scen_tran_path, 'busnode.extatt_{0}'.format(tod))
+        bus_stop = os.path.join(scen_tran_path, 'busstop.pnt')
+        cta_bus = os.path.join(scen_tran_path, 'ctabus.pnt')
+        pace_bus = os.path.join(scen_tran_path, 'pacebus.pnt')
+        cta_stop = os.path.join(scen_tran_path, 'ctastop.pnt')
+        metra_stop = os.path.join(scen_tran_path, 'metrastop.pnt')
+        itin_final = os.path.join(scen_tran_path, 'itin.final')
 
         if tod == 'am':  # Use TOD 3 highways for AM transit
-            hwy_l1 = ''.join((scen_hwy_path, '/', scen, '03.l1'))
-            hwy_n1 = ''.join((scen_hwy_path, '/', scen, '03.n1'))
-            hwy_n2 = ''.join((scen_hwy_path, '/', scen, '03.n2'))
+            hwy_l1 = os.path.join(scen_hwy_path, '{0}03.l1'.format(scen))
+            hwy_n1 = os.path.join(scen_hwy_path, '{0}03.n1'.format(scen))
+            hwy_n2 = os.path.join(scen_hwy_path, '{0}03.n2'.format(scen))
         else:
-            hwy_l1 = ''.join((scen_hwy_path, '/', scen, '0', tod, '.l1'))
-            hwy_n1 = ''.join((scen_hwy_path, '/', scen, '0', tod, '.n1'))
-            hwy_n2 = ''.join((scen_hwy_path, '/', scen, '0', tod, '.n2'))
+            hwy_l1 = os.path.join(scen_hwy_path, '{0}0{1}.l1'.format(scen, tod))
+            hwy_n1 = os.path.join(scen_hwy_path, '{0}0{1}.n1'.format(scen, tod))
+            hwy_n2 = os.path.join(scen_hwy_path, '{0}0{1}.n2'.format(scen, tod))
 
         if not (os.path.exists(rail_itin) and os.path.exists(rail_net) and os.path.exists(rail_node)):
             MHN.die("{0} doesn't contain all required rail batchin files! Please run the Master Rail Network's Create Emme Scenario Files tool for this scenario first.".format(scen_tran_path))
@@ -266,7 +266,7 @@ for scen in scen_list:
         bus_id_field = MHN.route_systems[bus_fc][1]
         rep_runs = rep_runs_dict[which_bus][tod]
         arcpy.AddJoin_management(bus_lyr, bus_id_field, rep_runs, 'TRANSIT_LINE', 'KEEP_COMMON')  # 'KEEP_COMMON' excludes unmatched routes
-        rep_runs_table = ''.join((MHN.mem, '/rep_runs'))
+        rep_runs_table = os.path.join(MHN.mem, 'rep_runs')
         arcpy.CopyRows_management(bus_lyr, rep_runs_table)
         arcpy.RemoveJoin_management(bus_lyr)
         arcpy.Delete_management(bus_lyr)
@@ -278,7 +278,7 @@ for scen in scen_list:
             rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'GROUP_HEADWAY']
         rep_runs_query = MHN.tod_periods[tod][1]
         rep_runs_view = MHN.make_skinny_table_view(rep_runs_table, 'rep_runs_view', rep_runs_attr, rep_runs_query)
-        rep_runs_csv = ''.join((scen_tran_path, '/rep_runs.csv'))
+        rep_runs_csv = os.path.join(scen_tran_path, 'rep_runs.csv')
         MHN.write_attribute_csv(rep_runs_view, rep_runs_csv, rep_runs_attr)
         selected_runs = MHN.make_attribute_dict(rep_runs_view, bus_id_field, attr_list=[])
         arcpy.Delete_management(rep_runs_view)
@@ -287,23 +287,23 @@ for scen in scen_list:
         # Export itineraries for selected runs.
         bus_order_field = MHN.route_systems[bus_fc][2]
         rep_runs_itin_attr = [bus_id_field, 'ITIN_A', 'ITIN_B', bus_order_field, 'LAYOVER', 'DWELL_CODE', 'ZONE_FARE', 'LINE_SERV_TIME', 'TTF', 'F_MEAS', 'T_MEAS', 'MILES']
-        rep_runs_itin_query = '"{0}" IN (\'{1}\')'.format(bus_id_field, "','".join((bus_id for bus_id in selected_runs)))
+        rep_runs_itin_query = ''' "{0}" IN ('{1}') '''.format(bus_id_field, "','".join((bus_id for bus_id in selected_runs)))
         rep_runs_itin_view = MHN.make_skinny_table_view(all_runs_itin_miles_dict[which_bus], 'rep_runs_itin_view', rep_runs_itin_attr, rep_runs_itin_query)
-        rep_runs_itin_csv = ''.join((scen_tran_path, '/rep_runs_itin.csv'))
+        rep_runs_itin_csv = os.path.join(scen_tran_path, 'rep_runs_itin.csv')
         MHN.write_attribute_csv(rep_runs_itin_view, rep_runs_itin_csv, rep_runs_itin_attr)
         arcpy.Delete_management(rep_runs_itin_view)
 
         # Export future coding as necessary.
-        replace_csv = ''.join((scen_tran_path, '/replace.csv'))
+        replace_csv = os.path.join(scen_tran_path, 'replace.csv')
         if scen != '100':
             # Header data first.
             bus_future_lyr = 'future_lyr'
             arcpy.MakeFeatureLayer_management(MHN.bus_future, bus_future_lyr)
             bus_future_id_field = MHN.route_systems[MHN.bus_future][1]
             bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
-            bus_future_query = '"SCENARIO" LIKE \'%{0}%\''.format(scen[0])  # SCENARIO field contains first character of applicable scenario codes
+            bus_future_query = ''' "SCENARIO" LIKE '%{0}%' '''.format(scen[0])  # SCENARIO field contains first character of applicable scenario codes
             bus_future_view = MHN.make_skinny_table_view(bus_future_lyr, 'bus_future_view', bus_future_attr, bus_future_query)
-            bus_future_csv = ''.join((scen_tran_path, '/bus_future.csv'))
+            bus_future_csv = os.path.join(scen_tran_path, 'bus_future.csv')
             MHN.write_attribute_csv(bus_future_view, bus_future_csv, bus_future_attr, include_headers=False)  # Skip headers for easier appending
             selected_future_runs = MHN.make_attribute_dict(bus_future_view, bus_future_id_field, attr_list=[])
 
@@ -316,9 +316,9 @@ for scen in scen_list:
             # Corresponding itineraries.
             bus_future_order_field = MHN.route_systems[MHN.bus_future][2]
             bus_future_itin_attr = [bus_future_id_field, 'ITIN_A', 'ITIN_B', bus_future_order_field, 'LAYOVER', 'DWELL_CODE', 'ZONE_FARE', 'LINE_SERV_TIME', 'TTF', 'F_MEAS', 'T_MEAS', 'MILES']
-            bus_future_itin_query = '"{0}" IN (\'{1}\')'.format(bus_future_id_field, "','".join((bus_future_id for bus_future_id in selected_future_runs)))
+            bus_future_itin_query = ''' "{0}" IN ('{1}') '''.format(bus_future_id_field, "','".join((bus_future_id for bus_future_id in selected_future_runs)))
             bus_future_itin_view = MHN.make_skinny_table_view(all_runs_itin_miles_dict['future'], 'bus_future_itin_view', bus_future_itin_attr, bus_future_itin_query)
-            bus_future_itin_csv = ''.join((scen_tran_path, '/bus_future_itin.csv'))
+            bus_future_itin_csv = os.path.join(scen_tran_path, 'bus_future_itin.csv')
             MHN.write_attribute_csv(bus_future_itin_view, bus_future_itin_csv, bus_future_itin_attr, include_headers=False)  # Skip headers for easier appending
             arcpy.Delete_management(bus_future_itin_view)
 
@@ -377,7 +377,7 @@ for scen in scen_list:
                 arcpy.GenerateNearTable_analysis(missing_node_lyr, scen_nodes_lyr, closest_node_table)  # Defaults to single closest feature
                 with arcpy.da.SearchCursor(closest_node_table, ['NEAR_FID']) as cursor:
                     for row in cursor:
-                        closest_node_query = '"{0}" = {1}'.format(node_oid_field, str(row[0]))
+                        closest_node_query = '"{0}" = {1}'.format(node_oid_field, row[0])
                         closest_node_layer = arcpy.MakeFeatureLayer_management(MHN.node, 'closest_node_lyr', closest_node_query)
                         replacements[node] = [str(row[0]) for row in arcpy.da.SearchCursor(closest_node_layer, ['NODE'])][0]
                 arcpy.Delete_management(closest_node_table)
@@ -410,8 +410,8 @@ for scen in scen_list:
             rep_runs_itin_csv = rep_runs_itin_fixed_csv
 
         # Call generate_transit_files_2.sas -- creates bus batchin files.
-        sas2_sas = ''.join((MHN.prog_dir, '/', sas2_name, '.sas'))
-        sas2_output = ''.join((tran_path, '/', sas2_name, '_', scen, '.txt'))
+        sas2_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas2_name))
+        sas2_output = os.path.join(tran_path, '{0}_{1}.txt'.format(sas2_name, scen))
         sas2_args = (scen_tran_path, scen_hwy_path, rep_runs_csv, rep_runs_itin_csv, replace_csv, scen,
                      tod, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])),
                      str(MHN.max_poe), min(MHN.scenario_years.keys()), MHN.prog_dir, missing_links_csv,
@@ -432,7 +432,7 @@ for scen in scen_list:
             MHN.delete_if_exists(replace_csv)
 
         # Call generate_transit_files_3.sas -- creates rail stop information.
-        sas3_sas = ''.join((MHN.prog_dir, '/', sas3_name, '.sas'))
+        sas3_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas3_name))
         sas3_args = [rail_itin, rail_net, cta_stop, metra_stop]
         MHN.submit_sas(sas3_sas, sas3_log, sas3_lst, sas3_args)
         if not os.path.exists(sas3_log):
@@ -478,9 +478,9 @@ for scen in scen_list:
 
         # Intersect CTA rail, Metra, and bus stop points with zones.
         zone_suffix = '_z'
-        cta_stop_xy_z = ''.join((MHN.mem, os.sep, 'cta_stop_xy', zone_suffix))
-        metra_stop_xy_z = ''.join((MHN.mem, os.sep, 'metra_stop_xy', zone_suffix))
-        bus_stop_xy_z = ''.join((MHN.mem, os.sep, 'bus_stop_xy', zone_suffix))
+        cta_stop_xy_z = os.path.join(MHN.mem, 'cta_stop_xy{0}'.format(zone_suffix))
+        metra_stop_xy_z = os.path.join(MHN.mem, 'metra_stop_xy{0}'.format(zone_suffix))
+        bus_stop_xy_z = os.path.join(MHN.mem, 'bus_stop_xy{0}'.format(zone_suffix))
         arcpy.Intersect_analysis([cta_stop_xy, zone_lyr], cta_stop_xy_z, 'NO_FID')
         arcpy.Intersect_analysis([metra_stop_xy, zone_lyr], metra_stop_xy_z, 'NO_FID')
         arcpy.Intersect_analysis([bus_stop_xy, zone_lyr], bus_stop_xy_z, 'NO_FID')
@@ -494,29 +494,29 @@ for scen in scen_list:
 
         cta_cbd_lyr = 'cta_cbd_lyr'
         arcpy.MakeFeatureLayer_management(cta_stop_xy_z, cta_cbd_lyr, cbd_query)
-        cta_cbd_fc = ''.join((MHN.mem, '/cta_cbd_fc'))
+        cta_cbd_fc = os.path.join(MHN.mem, 'cta_cbd_fc')
         arcpy.CopyFeatures_management(cta_cbd_lyr, cta_cbd_fc)
 
         cta_noncbd_lyr = 'cta_noncdb_lyr'
         arcpy.MakeFeatureLayer_management(cta_stop_xy_z, cta_noncbd_lyr, noncbd_query)
-        cta_noncbd_fc = ''.join((MHN.mem, '/cta_noncbd_fc'))
+        cta_noncbd_fc = os.path.join(MHN.mem, 'cta_noncbd_fc')
         arcpy.CopyFeatures_management(cta_noncbd_lyr, cta_noncbd_fc)
 
         bus_cbd_lyr = 'bus_cbd_lyr'
         arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_cbd_lyr, cbd_query)
-        bus_cbd_fc = ''.join((MHN.mem, '/bus_cbd_fc'))
+        bus_cbd_fc = os.path.join(MHN.mem, 'bus_cbd_fc')
         arcpy.CopyFeatures_management(bus_cbd_lyr, bus_cbd_fc)
 
         bus_noncbd_lyr = 'bus_noncdb_lyr'
         arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_noncbd_lyr, noncbd_query)
-        bus_noncbd_fc = ''.join((MHN.mem, '/bus_noncbd_fc'))
+        bus_noncbd_fc = os.path.join(MHN.mem, 'bus_noncbd_fc')
         arcpy.CopyFeatures_management(bus_noncbd_lyr, bus_noncbd_fc)
 
         # Perform distance calculations
         def calculate_distances(pts_1, pts_1_field, pts_2, pts_2_field, dist_limit, out_csv):
             ''' Create a CSV of all pairs of points in pts_1 & pts_2 within dist_limit
                 feet of each other. Inputs cannot be layers; must be FCs. '''
-            near_table = os.sep.join((MHN.mem, 'near_table'))
+            near_table = os.path.join(MHN.mem, 'near_table')
             arcpy.GenerateNearTable_analysis(pts_1, pts_2, near_table, dist_limit, closest='ALL')
             near_view = 'near_view'
             arcpy.MakeTableView_management(near_table, near_view)
@@ -544,30 +544,30 @@ for scen in scen_list:
             return out_csv
 
         # -- Mode c: 1/8 mile inside CBD; 1/2 mile outside CBD.
-        cbddist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_cbd_lyr, 'cta_stop_xy_PNT_ID', 660, ''.join((scen_tran_path, '/cbddist.txt')))
-        ctadist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_noncbd_lyr, 'cta_stop_xy_PNT_ID', 2640, ''.join((scen_tran_path, '/ctadist.txt')))
+        cbddist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_cbd_lyr, 'cta_stop_xy_PNT_ID', 660, os.path.join(scen_tran_path, 'cbddist.txt'))
+        ctadist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_noncbd_lyr, 'cta_stop_xy_PNT_ID', 2640, os.path.join(scen_tran_path, 'ctadist.txt'))
 
         # -- Mode m: 1/4 mile from modes B,E; 0.55 miles from modes P,L,Q.
-        metracta_txt = calculate_distances(cta_bus_xy, 'cta_bus_xy_PNT_ID', metra_stop_xy_z, 'metra_stop_xy_PNT_ID', 1320, ''.join((scen_tran_path, '/metracta.txt')))
-        metrapace_txt = calculate_distances(pace_bus_xy, 'pace_bus_xy_PNT_ID', metra_stop_xy_z, 'metra_stop_xy_PNT_ID', 2904, ''.join((scen_tran_path, '/metrapace.txt')))
+        metracta_txt = calculate_distances(cta_bus_xy, 'cta_bus_xy_PNT_ID', metra_stop_xy_z, 'metra_stop_xy_PNT_ID', 1320, os.path.join(scen_tran_path, 'metracta.txt'))
+        metrapace_txt = calculate_distances(pace_bus_xy, 'pace_bus_xy_PNT_ID', metra_stop_xy_z, 'metra_stop_xy_PNT_ID', 2904, os.path.join(scen_tran_path, 'metrapace.txt'))
 
         # -- Modes u, v, w, x, y & z.
-        busz_txt = calculate_distances(bus_cbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 1320, ''.join((scen_tran_path, '/busz.txt')))
-        busz2_txt = calculate_distances(bus_noncbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, ''.join((scen_tran_path, '/busz2.txt')))
-        ctaz_txt = calculate_distances(cta_cbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, ''.join((scen_tran_path, '/ctaz.txt')))
-        ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, ''.join((scen_tran_path, '/ctaz2.txt')))
-        metraz_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, ''.join((scen_tran_path, '/metraz.txt')))
-        c1z_txt = MHN.write_attribute_csv(cta_cbd_fc, ''.join((scen_tran_path, '/c1z.txt')), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
-        c2z_txt = MHN.write_attribute_csv(cta_noncbd_fc, ''.join((scen_tran_path, '/c2z.txt')), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
-        mz_txt = MHN.write_attribute_csv(metra_stop_xy_z, ''.join((scen_tran_path, '/mz.txt')), ['metra_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
+        busz_txt = calculate_distances(bus_cbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 1320, os.path.join(scen_tran_path, 'busz.txt'))
+        busz2_txt = calculate_distances(bus_noncbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'busz2.txt'))
+        ctaz_txt = calculate_distances(cta_cbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz.txt'))
+        ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz2.txt'))
+        metraz_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'metraz.txt'))
+        c1z_txt = MHN.write_attribute_csv(cta_cbd_fc, os.path.join(scen_tran_path, 'c1z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
+        c2z_txt = MHN.write_attribute_csv(cta_noncbd_fc, os.path.join(scen_tran_path, 'c2z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
+        mz_txt = MHN.write_attribute_csv(metra_stop_xy_z, os.path.join(scen_tran_path, 'mz.txt'), ['metra_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
 
         # Clean up temp point features/layers.
         for fc in (cta_stop_xy_z, metra_stop_xy_z, bus_stop_xy_z, cta_bus_xy, pace_bus_xy, cta_cbd_fc, cta_noncbd_fc, bus_cbd_fc, bus_noncbd_fc):
             arcpy.Delete_management(fc)
 
         # Call generate_transit_files_4.sas -- writes access.network file.
-        sas4_sas = ''.join((MHN.prog_dir, '/', sas4_name, '.sas'))
-        sas4_output = ''.join((scen_tran_path, '/access.network_', tod))
+        sas4_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas4_name))
+        sas4_output = os.path.join(scen_tran_path, 'access.network_{0}'.format(tod))
         sas4_args = [scen_tran_path, scen, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])), tod]
         MHN.submit_sas(sas4_sas, sas4_log, sas4_lst, sas4_args)
         if not os.path.exists(sas4_log):
@@ -597,10 +597,10 @@ for scen in scen_list:
     # -------------------------------------------------------------------------
     arcpy.AddMessage('\nMerging Scenario {0} ({1}) highway & rail linkshape files...'.format(scen, str(scen_year)))
 
-    linkshape_hwy = scen_hwy_path + '/highway.linkshape'
-    linkshape_rail = scen_tran_path + '/rail.linkshape'
-    linkshape_dir = MHN.ensure_dir(root_path + '/linkshape')
-    linkshape_in = linkshape_dir + '/linkshape_{0}.in'.format(scen)
+    linkshape_hwy = os.path.join(scen_hwy_path, 'highway.linkshape')
+    linkshape_rail = os.path.join(scen_tran_path, 'rail.linkshape')
+    linkshape_dir = MHN.ensure_dir(os.path.join(root_path, 'linkshape'))
+    linkshape_in = os.path.join(linkshape_dir, 'linkshape_{0}.in'.format(scen))
 
     w = open(linkshape_in, 'w')
     w.write('c HIGHWAY & RAIL LINK SHAPE FILE FOR SCENARIO {0}\n'.format(scen))
