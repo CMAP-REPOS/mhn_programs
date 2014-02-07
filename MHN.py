@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 2/6/14
+    Revised: 2/7/14
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -41,13 +41,13 @@ bus_base = os.path.join(hwynet, 'bus_base')
 bus_current = os.path.join(hwynet, 'bus_current')
 bus_future = os.path.join(hwynet, 'bus_future')
 route_systems = {
-    hwyproj: (os.path.join(gdb, 'hwyproj_coding'), 'TIPID', ''),
+    hwyproj: (os.path.join(gdb, 'hwyproj_coding'), 'TIPID', '', None),
     bus_base: (os.path.join(gdb, 'bus_base_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 0),
     bus_current: (os.path.join(gdb, 'bus_current_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
     bus_future: (os.path.join(gdb, 'bus_future_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
 }
 
-zone_gdb = root_dir, 'zone_systems.gdb')
+zone_gdb = os.path.join(root_dir, 'zone_systems.gdb')
 zone = os.path.join(zone_gdb, 'zonesys09', 'zones09')
 zone_attr = 'Zone09'
 subzone = os.path.join(zone_gdb, 'zonesys09', 'subzones09')
