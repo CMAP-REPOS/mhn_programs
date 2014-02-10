@@ -190,7 +190,7 @@ arcpy.AddMessage('{0}Rebuilding relationship classes...'.format('\n'))
 hwyproj_name = MHN.break_path(MHN.hwyproj)['name']
 coding_table_name = MHN.break_path(coding_table)['name']
 rel_arcs = os.path.join(MHN.gdb, 'rel_arcs_to_{0}'.format(coding_table_name))
-rel_sys = os.path.join(MHN.gdb, 'rel_{0}_to_{1}'.format(coding_table_name.rsplit('_',1)[0], + coding_table_name.rsplit('_',1)[1]))
+rel_sys = os.path.join(MHN.gdb, 'rel_{0}_to_{1}'.format(coding_table_name.rsplit('_',1)[0], coding_table_name.rsplit('_',1)[1]))
 arcpy.CreateRelationshipClass_management(MHN.arc, coding_table, rel_arcs, 'SIMPLE', coding_table_name, MHN.arc_name, 'NONE', 'ONE_TO_MANY', 'NONE', 'ABB', 'ABB')
 arcpy.CreateRelationshipClass_management(MHN.hwyproj, coding_table, rel_sys, 'COMPOSITE', coding_table_name, hwyproj_name, 'FORWARD', 'ONE_TO_MANY', 'NONE', common_id_field, common_id_field)
 
