@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 2/6/14
+    Revised: 2/12/14
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -447,7 +447,7 @@ vertices_comprising = MHN.build_geometry_dict(temp_arcs, 'ABB')
 
 arcpy.AddMessage('\nRebuilding route systems (in memory):')
 
-def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_ABB_values, common_id_field, order_field=''):
+def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_ABB_values, common_id_field, order_field=None):
     ''' A method for updating any of the MHN's route systems: hwyproj,
         bus_base, bus_current, and bus_future. order_field argument allows for
         separate treatment of hwyproj and the bus routes. '''
