@@ -2,7 +2,7 @@
 '''
     update_highway_project_years.py
     Author: npeterson
-    Revised: 12/18/13
+    Revised: 2/6/14
     ---------------------------------------------------------------------------
     This script updates the completion years of projects to be included in
     Conformity analyses. The final completion year file is received from the
@@ -29,12 +29,12 @@ import MHN
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
-hwyproj_conformed_csv = arcpy.GetParameterAsText(0).replace('\\','/')
-hwyproj_exempt_csv = arcpy.GetParameterAsText(1).replace('\\','/')
-uncodable_hwyproj_csv = arcpy.GetParameterAsText(2).replace('\\','/')
-mrn_gdb = arcpy.GetParameterAsText(3).replace('\\','/')
-mrn_future_fc = ''.join((mrn_gdb, '/railnet/future'))
-people_mover_table = ''.join((mrn_gdb, '/people_mover'))
+hwyproj_conformed_csv = arcpy.GetParameterAsText(0)
+hwyproj_exempt_csv = arcpy.GetParameterAsText(1)
+uncodable_hwyproj_csv = arcpy.GetParameterAsText(2)
+mrn_gdb = arcpy.GetParameterAsText(3)
+mrn_future_fc = os.path.join(mrn_gdb, 'railnet', 'future')
+people_mover_table = os.path.join(mrn_gdb, 'people_mover')
 sas1_name = 'update_highway_project_years_2'
 
 if not arcpy.Exists(mrn_gdb):
@@ -54,12 +54,12 @@ if not os.path.exists(uncodable_hwyproj_csv):
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
-hwyproj_all_csv = ''.join((MHN.temp_dir, '/hwyproj_all.csv'))
-sas1_log = ''.join((MHN.temp_dir, '/', sas1_name, '.log'))
-sas1_lst = ''.join((MHN.temp_dir, '/', sas1_name, '.lst'))
-sas1_output = ''.join((MHN.temp_dir, '/hwyproj_all_adj.csv'))
-in_year_not_mhn_txt = ''.join((MHN.out_dir, '/in_year_not_mhn.txt'))
-in_mhn_not_year_txt = ''.join((MHN.out_dir, '/in_mhn_not_year.txt'))
+hwyproj_all_csv = os.path.join(MHN.temp_dir, 'hwyproj_all.csv')
+sas1_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas1_name))
+sas1_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas1_name))
+sas1_output = os.path.join(MHN.temp_dir, 'hwyproj_all_adj.csv')
+in_year_not_mhn_txt = os.path.join(MHN.out_dir, 'in_year_not_mhn.txt')
+in_mhn_not_year_txt = os.path.join(MHN.out_dir, 'in_mhn_not_year.txt')
 
 
 # -----------------------------------------------------------------------------
@@ -99,16 +99,16 @@ def make_future_transit_dbf(input_table, output_dbf):
             cursor.updateRow(row)
     return output_dbf
 
-future_bus_dbf = '/'.join((MHN.imp_dir, 'future_bus.dbf'))
+future_bus_dbf = os.path.join(MHN.imp_dir, 'future_bus.dbf')
 make_future_transit_dbf(MHN.bus_future, future_bus_dbf)
 
-future_rail_dbf = '/'.join((MHN.imp_dir, 'future_rail.dbf'))
+future_rail_dbf = os.path.join(MHN.imp_dir, 'future_rail.dbf')
 make_future_transit_dbf(mrn_future_fc, future_rail_dbf)
 
-people_mover_dbf = '/'.join((MHN.imp_dir, 'people_mover.dbf'))
+people_mover_dbf = os.path.join(MHN.imp_dir, 'people_mover.dbf')
 make_future_transit_dbf(people_mover_table, people_mover_dbf)
 
-sas1_sas = ''.join((MHN.prog_dir, '/', sas1_name, '.sas'))
+sas1_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas1_name))
 sas1_args = [hwyproj_all_csv, future_rail_dbf, future_bus_dbf, people_mover_dbf, sas1_output]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
@@ -159,11 +159,11 @@ hwyproj_view = 'hwyproj_view'
 arcpy.MakeTableView_management(MHN.hwyproj, hwyproj_view)
 
 # Select projects in MHN but not in year.csv:
-unmatched_hwyproj_query = '"{0}" NOT IN (\'{1}\')'.format(common_id_field, "','".join(hwyproj_years.keys()))
+unmatched_hwyproj_query = ''' "{0}" NOT IN ('{1}') '''.format(common_id_field, "','".join(hwyproj_years.keys()))
 arcpy.SelectLayerByAttribute_management(hwyproj_view, selection_type='NEW_SELECTION', where_clause=unmatched_hwyproj_query)
 
 # Ignore out-of-region projects:
-out_of_region_query = '"{0}" LIKE \'14______\''.format(common_id_field)
+out_of_region_query = ''' "{0}" LIKE '14______' '''.format(common_id_field)
 arcpy.SelectLayerByAttribute_management(hwyproj_view, selection_type='REMOVE_FROM_SELECTION', where_clause=out_of_region_query)
 
 # Ignore projects not being conformed:

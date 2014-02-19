@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 7/26/13
+    Revised: 2/12/14
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -26,9 +26,9 @@ arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
-bad_arcs_shp = MHN.temp_dir + '/bad_arcs.shp'
-duplicate_nodes_shp = MHN.temp_dir + '/duplicate_nodes.shp'
-overlapping_nodes_shp = MHN.temp_dir + '/overlapping_nodes.shp'
+bad_arcs_shp = os.path.join(MHN.temp_dir, 'bad_arcs.shp')
+duplicate_nodes_shp = os.path.join(MHN.temp_dir, 'duplicate_nodes.shp')
+overlapping_nodes_shp = os.path.join(MHN.temp_dir, 'overlapping_nodes.shp')
 
 
 # -----------------------------------------------------------------------------
@@ -45,7 +45,7 @@ MHN.delete_if_exists(overlapping_nodes_shp)
 arcpy.AddMessage('\nValidating edits:')
 
 # Make a copy of the unmodified arcs.
-temp_arcs = MHN.mem + '/temp_arcs'
+temp_arcs = os.path.join(MHN.mem, 'temp_arcs')
 arcpy.CopyFeatures_management(MHN.arc, temp_arcs)
 
 # Set null values to 0 or a space.
@@ -58,29 +58,29 @@ MHN.set_nulls_to_space(temp_arcs, ['BASELINK','ROADNAME','PARKRES1','PARKRES2','
 # Update existing ABB values.
 # -- Arcs with ANODE, BNODE and BASELINK:
 arcs_with_ABB_lyr = 'arcs_with_ABB_lyr'
-arcpy.MakeFeatureLayer_management(temp_arcs, arcs_with_ABB_lyr, '"ANODE" <> 0 AND "BNODE" <> 0 AND "BASELINK" <> \' \'')
+arcpy.MakeFeatureLayer_management(temp_arcs, arcs_with_ABB_lyr, ''' "ANODE" <> 0 AND "BNODE" <> 0 AND "BASELINK" <> ' ' ''')
 arcpy.CalculateField_management(arcs_with_ABB_lyr, 'ABB', '"{0}-{1}-{2}".format(!ANODE!, !BNODE!, !BASELINK!)', 'PYTHON')
 arcpy.Delete_management(arcs_with_ABB_lyr)
 # -- Arcs missing ANODE, BNODE or BASELINK:
 arcs_without_ABB_lyr = 'arcs_without_ABB_lyr'
-arcpy.MakeFeatureLayer_management(temp_arcs, arcs_without_ABB_lyr, '"ANODE" = 0 OR "BNODE" = 0 OR "BASELINK" = \' \'')
+arcpy.MakeFeatureLayer_management(temp_arcs, arcs_without_ABB_lyr, ''' "ANODE" = 0 OR "BNODE" = 0 OR "BASELINK" = ' ' ''')
 arcpy.CalculateField_management(arcs_without_ABB_lyr, 'ABB', "' '", 'PYTHON')
 arcpy.Delete_management(arcs_without_ABB_lyr)
 
 # Check for problems with other fields.
 bad_arcs_lyr = 'bad_arcs_lyr'
 bad_arcs_query = (
-    '"BASELINK" = \' \' OR "DIRECTIONS" = \'0\''
-    ' OR ("BASELINK" = \'1\' AND ("DIRECTIONS" = \'0\' OR "TYPE1" = \'0\' OR "THRULANES1" = 0 OR "THRULANEWIDTH1" = 0 OR "AMPM1" = \'0\' OR "MODES" = \'0\'))'
-    ' OR ("BASELINK" = \'1\' AND "TYPE1" <> \'7\' AND "POSTEDSPEED1" = 0)'
-    ' OR ("BASELINK" = \'1\' AND "DIRECTIONS" = \'3\' AND ("TYPE2" = \'0\' OR "THRULANES2" = 0 OR "THRULANEWIDTH2" = 0 OR "AMPM2" = \'0\'))'
-    ' OR ("BASELINK" = \'1\' AND "DIRECTIONS" = \'3\' AND "TYPE2" <> \'7\' AND "POSTEDSPEED2" = 0)'
+    ''' "BASELINK" = ' ' OR "DIRECTIONS" = '0' '''
+    ''' OR ("BASELINK" = '1' AND ("DIRECTIONS" = '0' OR "TYPE1" = '0' OR "THRULANES1" = 0 OR "THRULANEWIDTH1" = 0 OR "AMPM1" = '0' OR "MODES" = '0')) '''
+    ''' OR ("BASELINK" = '1' AND "TYPE1" <> '7' AND "POSTEDSPEED1" = 0) '''
+    ''' OR ("BASELINK" = '1' AND "DIRECTIONS" = '3' AND ("TYPE2" = '0' OR "THRULANES2" = 0 OR "THRULANEWIDTH2" = 0 OR "AMPM2" = '0')) '''
+    ''' OR ("BASELINK" = '1' AND "DIRECTIONS" = '3' AND "TYPE2" <> '7' AND "POSTEDSPEED2" = 0) '''
 )
 arcpy.MakeFeatureLayer_management(temp_arcs, bad_arcs_lyr, bad_arcs_query)
 bad_arcs_count = int(arcpy.GetCount_management(bad_arcs_lyr).getOutput(0))
 if bad_arcs_count > 0:
     arcpy.CopyFeatures_management(bad_arcs_lyr, bad_arcs_shp)
-    MHN.die('Some arcs are missing required attributes. Check ' + bad_arcs_shp + ' for specific arcs.')
+    MHN.die('Some arcs are missing required attributes. Check {0} for specific arcs.'.format(bad_arcs_shp))
     raise arcpy.ExecuteError
 else:
     arcpy.Delete_management(bad_arcs_lyr)
@@ -97,15 +97,15 @@ current_nodes_dict = MHN.make_attribute_dict(MHN.node, 'NODE', ['POINT_X','POINT
 #  Generate nodes from arcs, to check for changes and errors.
 # -----------------------------------------------------------------------------
 # Generate ANODES, including a copy with no BNODE field.
-anodes = MHN.mem + '/anodes'
-anodes_copy = MHN.mem + '/anodes_copy'
+anodes = os.path.join(MHN.mem, 'anodes')
+anodes_copy = os.path.join(MHN.mem, 'anodes_copy')
 arcpy.FeatureVerticesToPoints_management(temp_arcs, anodes, 'START')
 arcpy.CopyFeatures_management(anodes, anodes_copy)
 arcpy.DeleteField_management(anodes_copy, ['BNODE'])
 
 # Generate BNODES, including a copy with no ANODE field.
-bnodes = MHN.mem + '/bnodes'
-bnodes_copy = MHN.mem + '/bnodes_copy'
+bnodes = os.path.join(MHN.mem, 'bnodes')
+bnodes_copy = os.path.join(MHN.mem, 'bnodes_copy')
 arcpy.FeatureVerticesToPoints_management(temp_arcs, bnodes, 'END')
 arcpy.CopyFeatures_management(bnodes, bnodes_copy)
 arcpy.DeleteField_management(bnodes_copy, ['ANODE'])
@@ -115,7 +115,7 @@ arcpy.DeleteField_management(bnodes_copy, ['ANODE'])
 #  Merge ANODES and BNODES, dissolving to create two sets of points: one with
 #  unique ABB values and another with unique NODE values.
 # -----------------------------------------------------------------------------
-merged_copies = MHN.mem + '/merged_copies'
+merged_copies = os.path.join(MHN.mem, 'merged_copies')
 ab_map = ('NODE "NODE" true true false 4 Long 0 0 ,First,#,{0},ANODE,-1,-1,{1},BNODE,-1,-1;'
           'ABB "ABB" true true false 21 Text 0 0 ,First,#,{0},ABB,-1,-1,{1},ABB,-1,-1').format(anodes_copy, bnodes_copy)
 arcpy.Merge_management([anodes_copy, bnodes_copy], merged_copies, ab_map)
@@ -123,14 +123,14 @@ arcpy.Delete_management(anodes_copy)
 arcpy.Delete_management(bnodes_copy)
 
 # Create unique ABB nodes.
-new_nodes_ABB = MHN.mem + '/new_nodes_ABB'
+new_nodes_ABB = os.path.join(MHN.mem, 'new_nodes_ABB')
 new_nodes_ABB_lyr = 'new_nodes_ABB_lyr'
 arcpy.Dissolve_management(merged_copies, new_nodes_ABB, ['ABB'], multi_part=False)
 arcpy.AddXY_management(new_nodes_ABB)
 arcpy.MakeFeatureLayer_management(new_nodes_ABB, new_nodes_ABB_lyr)
 
 # Create unique NODE nodes.
-new_nodes_NODE = MHN.mem + '/new_nodes_NODE'
+new_nodes_NODE = os.path.join(MHN.mem, 'new_nodes_NODE')
 new_nodes_NODE_lyr = 'new_nodes_NODE_lyr'
 arcpy.Dissolve_management(merged_copies, new_nodes_NODE, ['NODE'], multi_part=False)
 arcpy.AddXY_management(new_nodes_NODE)
@@ -140,7 +140,7 @@ arcpy.MakeFeatureLayer_management(new_nodes_NODE, new_nodes_NODE_lyr)
 # -----------------------------------------------------------------------------
 #  Determine the current highest NODE value.
 # -----------------------------------------------------------------------------
-max_node_table = MHN.mem + '/max_node_table'
+max_node_table = os.path.join(MHN.mem, 'max_node_table')
 arcpy.Statistics_analysis(new_nodes_NODE, max_node_table, [['NODE','MAX']])
 max_node_id = int([max_node[0] for max_node in arcpy.da.SearchCursor(max_node_table, ('MAX_NODE'))][0])
 
@@ -149,11 +149,11 @@ max_node_id = int([max_node[0] for max_node in arcpy.da.SearchCursor(max_node_ta
 #  Identify arcs that have been split, and assign a new NODE value to the
 #  split-point(s).
 # -----------------------------------------------------------------------------
-abb_freq_table = MHN.mem + '/abb_freq'
+abb_freq_table = os.path.join(MHN.mem, 'abb_freq')
 abb_freq_view = 'abb_freq_view'
 split_arc_nodes_view = 'split_arc_nodes_view'
 split_dict = {}
-arcpy.MakeTableView_management(new_nodes_ABB, split_arc_nodes_view, '"ABB" <> \' \'')
+arcpy.MakeTableView_management(new_nodes_ABB, split_arc_nodes_view, ''' "ABB" <> ' ' ''')
 arcpy.Frequency_analysis(split_arc_nodes_view, abb_freq_table, ['ABB'])
 arcpy.MakeTableView_management(abb_freq_table, abb_freq_view, '"FREQUENCY" > 2')
 split_count = int(arcpy.GetCount_management(abb_freq_view).getOutput(0))
@@ -170,9 +170,9 @@ else:
             bnode = int(ABB.split('-')[1])
             baselink = int(ABB.split('-')[2])
             individual_ABB_lyr = 'individual_ABB_lyr'
-            ABB_intersect = MHN.mem + '/ABB_intersect'
-            ABB_int_buffer = MHN.mem + '/ABB_int_buffer'
-            arcpy.MakeFeatureLayer_management(merged_copies, individual_ABB_lyr, '"ABB" = \'{0}\''.format(ABB))
+            ABB_intersect = os.path.join(MHN.mem, 'ABB_intersect')
+            ABB_int_buffer = os.path.join(MHN.mem, 'ABB_int_buffer')
+            arcpy.MakeFeatureLayer_management(merged_copies, individual_ABB_lyr, ''' "ABB" = '{0}' '''.format(ABB))
             arcpy.Intersect_analysis([individual_ABB_lyr], ABB_intersect, join_attributes='ONLY_FID')
             arcpy.Delete_management(individual_ABB_lyr)
             # Select By Location against the now-selected point doesn't seem to work reliably, so create a 1-ft. buffer of split-nodes instead:
@@ -204,7 +204,7 @@ else:
 # -----------------------------------------------------------------------------
 #  Dissolve arc-generated nodes by NODE field only, to eliminate duplicates.
 # -----------------------------------------------------------------------------
-new_nodes = MHN.mem + '/new_nodes'
+new_nodes = os.path.join(MHN.mem, 'new_nodes')
 new_nodes_lyr = 'new_nodes_lyr'
 arcpy.Dissolve_management(new_nodes_NODE, new_nodes, ['NODE'], multi_part=False)
 arcpy.AddXY_management(new_nodes)
@@ -216,7 +216,7 @@ arcpy.Delete_management(new_nodes_NODE)
 #  Check for duplicate node IDs.
 # -----------------------------------------------------------------------------
 new_nodes_view = 'new_nodes_view'
-id_freq_table = MHN.mem + '/id_freq'
+id_freq_table = os.path.join(MHN.mem, 'id_freq')
 id_freq_view = 'id_freq_view'
 arcpy.MakeTableView_management(new_nodes, new_nodes_view, '"NODE" <> 0') #'"NODE" IS NOT NULL AND "NODE" <> 0'
 arcpy.Frequency_analysis(new_nodes_view, id_freq_table, ['NODE'])
@@ -228,9 +228,9 @@ if duplicate_count == 0:
     arcpy.AddMessage('-- No nodes have duplicate IDs')
 else:
     duplicates = [duplicate[0] for duplicate in arcpy.da.SearchCursor(id_freq_view, ['NODE'])]
-    duplicate_query = ' OR '.join(['"NODE" = ' + str(id) for id in duplicates])
+    duplicate_query = ' OR '.join(['"NODE" = {0}'.format(id) for id in duplicates])
     arcpy.SelectLayerByAttribute_management(new_nodes_lyr, 'NEW_SELECTION', duplicate_query)
-    duplicate_nodes_temp = MHN.mem + '/duplicate_nodes'
+    duplicate_nodes_temp = os.path.join(MHN.mem, 'duplicate_nodes')
     arcpy.CopyFeatures_management(new_nodes_lyr, duplicate_nodes_temp)
     arcpy.Dissolve_management(duplicate_nodes_temp, duplicate_nodes_shp, ['NODE'], multi_part=True)
     arcpy.Delete_management(duplicate_nodes_temp)
@@ -241,7 +241,7 @@ else:
 # -----------------------------------------------------------------------------
 #  Check for overlapping nodes.
 # -----------------------------------------------------------------------------
-xy_freq_table = MHN.mem + '/xy_freq'
+xy_freq_table = os.path.join(MHN.mem, 'xy_freq')
 xy_freq_view = 'xy_freq_view'
 arcpy.Frequency_analysis(new_nodes_view, xy_freq_table, ['POINT_X', 'POINT_Y'])
 arcpy.MakeTableView_management(xy_freq_table, xy_freq_view, '"FREQUENCY" > 1')
@@ -264,7 +264,7 @@ else:
         point.Y = coord_pair[1]
         overlap_point = arcpy.PointGeometry(point)
         overlap_points.append(overlap_point)
-    overlap_points_buffer = MHN.mem + '/overlap_points_buffer'
+    overlap_points_buffer = os.path.join(MHN.mem, 'overlap_points_buffer')
     arcpy.Buffer_analysis(overlap_points, overlap_points_buffer, 0.25)
     arcpy.SelectLayerByLocation_management(new_nodes_lyr, 'INTERSECT', overlap_points_buffer, selection_type='NEW_SELECTION')
     arcpy.CopyFeatures_management(new_nodes_lyr, overlapping_nodes_shp)
@@ -283,9 +283,9 @@ with arcpy.da.UpdateCursor(new_nodes, ['OID@','SHAPE@','NODE'], '"NODE" IS NULL 
         OID = null_node[0]
         null_point = null_node[1]
         non_null_nodes_lyr = 'non_null_nodes_lyr'
-        arcpy.MakeFeatureLayer_management(new_nodes, non_null_nodes_lyr, '"{0}" <> {1} AND ("NODE" IS NOT NULL AND "NODE" <> 0)'.format(OID_att, str(OID)))
+        arcpy.MakeFeatureLayer_management(new_nodes, non_null_nodes_lyr, '"{0}" <> {1} AND ("NODE" IS NOT NULL AND "NODE" <> 0)'.format(OID_att, OID))
         # Select By Location against the now-selected point doesn't seem to work reliably, so create a 3" buffer of it instead:
-        null_point_buffer = MHN.mem + '/null_point_buffer'
+        null_point_buffer = os.path.join(MHN.mem, 'null_point_buffer')
         arcpy.Buffer_analysis(null_point, null_point_buffer, 0.25)
         arcpy.SelectLayerByLocation_management(non_null_nodes_lyr, 'INTERSECT', null_point_buffer, selection_type='NEW_SELECTION')
         arcpy.Delete_management(null_point_buffer)
@@ -303,8 +303,8 @@ arcpy.AddMessage('-- New NODE values assigned')
 #  Update node/arc attributes.
 # -----------------------------------------------------------------------------
 # Calculate node ZONE and AREATYPE using Identity tool.
-new_nodes_Z = MHN.mem + '/new_nodes_Z'
-new_nodes_CZ = MHN.mem + '/new_nodes_CZ'
+new_nodes_Z = os.path.join(MHN.mem, 'new_nodes_Z')
+new_nodes_CZ = os.path.join(MHN.mem, 'new_nodes_CZ')
 zone_lyr = MHN.make_skinny_feature_layer(MHN.zone, 'zone_lyr', [MHN.zone_attr])
 arcpy.Identity_analysis(new_nodes, zone_lyr, new_nodes_Z, 'NO_FID')
 capzone_lyr = MHN.make_skinny_feature_layer(MHN.capzone, 'capzone_lyr', [MHN.capzone_attr])
@@ -333,8 +333,8 @@ with arcpy.da.UpdateCursor(new_nodes_CZ, ['NODE', MHN.zone_attr, MHN.capzone_att
 arcpy.AddMessage('-- Node {0} & {1} fields recalculated'.format(MHN.zone_attr, MHN.capzone_attr))
 
 # Calculate arc ANODE and BNODE values.
-anodes_id = MHN.mem + '/anodes_id'
-bnodes_id = MHN.mem + '/bnodes_id'
+anodes_id = os.path.join(MHN.mem, 'anodes_id')
+bnodes_id = os.path.join(MHN.mem, 'bnodes_id')
 arcpy.Identity_analysis(anodes, new_nodes, anodes_id)
 arcpy.Identity_analysis(bnodes, new_nodes, bnodes_id)
 anodes_id_dict = MHN.make_attribute_dict(anodes_id, 'ORIG_FID', ['NODE'])
@@ -362,7 +362,7 @@ arcpy.AddMessage('-- Arc ABB field recalculated')
 
 # Calculate arc MILES values.
 miles_update_lyr = 'miles_update_lyr'
-arcpy.MakeFeatureLayer_management(temp_arcs, miles_update_lyr, "\"TYPE1\" NOT IN ('6','7') OR \"MILES\" IS NULL OR \"MILES\" = 0")
+arcpy.MakeFeatureLayer_management(temp_arcs, miles_update_lyr, ''' "TYPE1" NOT IN ('6','7') OR "MILES" IS NULL OR "MILES" = 0 ''')
 arcpy.CalculateField_management(miles_update_lyr, 'MILES', '!shape.length@miles!', 'PYTHON')
 arcpy.AddMessage('-- Arc MILES field recalculated')
 
@@ -447,7 +447,7 @@ vertices_comprising = MHN.build_geometry_dict(temp_arcs, 'ABB')
 
 arcpy.AddMessage('\nRebuilding route systems (in memory):')
 
-def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_ABB_values, common_id_field, order_field=''):
+def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_ABB_values, common_id_field, order_field=None):
     ''' A method for updating any of the MHN's route systems: hwyproj,
         bus_base, bus_current, and bus_future. order_field argument allows for
         separate treatment of hwyproj and the bus routes. '''
@@ -458,7 +458,7 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
     arcpy.AddMessage('-- ' + header_name + '...')
     itin_copy_path = MHN.mem
     itin_copy_name = itin_name + '_copy'
-    itin_copy = itin_copy_path + '/' + itin_copy_name
+    itin_copy = os.path.join(itin_copy_path, itin_copy_name)
     arcpy.CreateTable_management(itin_copy_path, itin_copy_name, itin)
 
     itin_OID_field = MHN.determine_OID_fieldname(itin)
@@ -572,16 +572,16 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
             coding_cursor.insertRow([itin_dict[OID][field] for field in itin_fields])
 
     # Sort records into a second table in memory.
-    itin_updated = MHN.mem + '/' + header_name + '_itin_updated'
+    itin_updated = os.path.join(MHN.mem, '{0}_itin_updated'.format(header_name))
     if order_field:
-        arcpy.Sort_management(itin_copy, itin_updated, [[common_id_field,'ASCENDING'],[order_field,'ASCENDING']])
+        arcpy.Sort_management(itin_copy, itin_updated, [[common_id_field,'ASCENDING'], [order_field,'ASCENDING']])
     else:
         arcpy.Sort_management(itin_copy, itin_updated, [[common_id_field,'ASCENDING']])
 
     # Re-build line features.
     header_updated_path = MHN.mem
-    header_updated_name = header_name + '_updated'
-    header_updated = header_updated_path + '/' + header_updated_name
+    header_updated_name = '{0}_updated'.format(header_name)
+    header_updated = os.path.join(header_updated_path, header_updated_name)
     arcs_traversed_by = {}
     field_list = ['ABB', common_id_field]
     with arcpy.da.SearchCursor(itin_updated, field_list) as itin_cursor:
@@ -675,8 +675,8 @@ for route_system in MHN.route_systems:
     itin = MHN.route_systems[route_system][0]
     itin_name = MHN.break_path(itin)['name']
     common_id_field = MHN.route_systems[route_system][1]
-    rel_arcs = MHN.gdb + '/rel_arcs_to_' + itin_name
-    rel_sys = MHN.gdb + '/rel_' + itin_name.rsplit('_',1)[0] + '_to_' + itin_name.rsplit('_',1)[1]
+    rel_arcs = os.path.join(MHN.gdb, 'rel_arcs_to_{0}'.format(itin_name))
+    rel_sys = os.path.join(MHN.gdb, 'rel_{0}_to_{1}'.format(itin_name.rsplit('_',1)[0], itin_name.rsplit('_',1)[1]))
     arcpy.CreateRelationshipClass_management(MHN.arc, itin, rel_arcs, 'SIMPLE', itin_name, MHN.arc_name, 'NONE', 'ONE_TO_MANY', 'NONE', 'ABB', 'ABB')
     arcpy.CreateRelationshipClass_management(header, itin, rel_sys, 'COMPOSITE', itin_name, header_name, 'FORWARD', 'ONE_TO_MANY', 'NONE', common_id_field, common_id_field)
 

@@ -1,7 +1,7 @@
 /*
    generate_highway_files_2.sas
    Authors: cheither & npeterson
-   Revised: 6/26/13
+   Revised: 2/19/14
    ----------------------------------------------------------------------------
    Program uses base conditions and project data from the MHN to build Emme
    scenario highway networks. Emme batchin files are the output of this
@@ -18,10 +18,10 @@ options pagesize=50 linesize=125;
 
 /* ------------------------------------------------------------------------------ */
                               *** INPUT FILES ***;
-  filename in1 "&dir.&scen./network.csv";
-  filename in2 "&dir.&scen./transact.csv";
-  filename in3 "&dir.&scen./year.csv";
-  filename in4 "&dir.&scen./nodes.csv";
+  filename in1 "&dir.\&scen.\network.csv";
+  filename in2 "&dir.\&scen.\transact.csv";
+  filename in3 "&dir.\&scen.\year.csv";
+  filename in4 "&dir.\&scen.\nodes.csv";
                               *** OUTPUT FILES ***;
    *** output files under macro output ***;
 /* ------------------------------------------------------------------------------ */
@@ -260,6 +260,7 @@ data network; set network;
       else mode='ASH';                    ** catch all for truck restrictions outside City not yet reviewed;
    end;
    else if modes=3 then mode='AThmlb';    ** truck only;
+   else if modes=4 then delete;           ** transit only;
    else if modes=5 then mode='AH';        ** HOV only;
    if tipid='.' then tipid=0;
      proc sort; by anode bnode;
@@ -403,10 +404,10 @@ data coord; infile in4 dlm=',' dsd firstobs=2;
   %let tot=0;
 
                            *** OUTPUT FILES cont. ***;
-  filename out2 "&dir.&scen.\&scen.0&tod..l1";
-  filename out3 "&dir.&scen.\&scen.0&tod..l2";
-  filename out4 "&dir.&scen.\&scen.0&tod..n1";
-  filename out5 "&dir.&scen.\&scen.0&tod..n2";
+  filename out2 "&dir.\&scen.\&scen.0&tod..l1";
+  filename out3 "&dir.\&scen.\&scen.0&tod..l2";
+  filename out4 "&dir.\&scen.\&scen.0&tod..n1";
+  filename out5 "&dir.\&scen.\&scen.0&tod..n2";
 
            ** IDENTIFY ANY TOD-SPECIFIC ATTRIBUTE CHANGES **;
          data per; set period(where=(tp ? "&tod"));
