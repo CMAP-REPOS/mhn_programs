@@ -1,7 +1,7 @@
 /*
    generate_highway_files_2.sas
    Authors: cheither & npeterson
-   Revised: 2/6/14
+   Revised: 2/19/14
    ----------------------------------------------------------------------------
    Program uses base conditions and project data from the MHN to build Emme
    scenario highway networks. Emme batchin files are the output of this
@@ -260,6 +260,7 @@ data network; set network;
       else mode='ASH';                    ** catch all for truck restrictions outside City not yet reviewed;
    end;
    else if modes=3 then mode='AThmlb';    ** truck only;
+   else if modes=4 then delete;           ** transit only;
    else if modes=5 then mode='AH';        ** HOV only;
    if tipid='.' then tipid=0;
      proc sort; by anode bnode;
