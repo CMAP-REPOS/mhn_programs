@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 2/12/14
+    Revised: 3/18/14
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -46,7 +46,9 @@ route_systems = {
     bus_current: (os.path.join(gdb, 'bus_current_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
     bus_future: (os.path.join(gdb, 'bus_future_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
 }
-mhn2iris = gdb + '/mhn2iris'
+
+mhn2iris_name = 'mhn2iris'
+mhn2iris = os.path.join(gdb, mhn2iris_name)
 
 zone_gdb = os.path.join(root_dir, 'zone_systems.gdb')
 zone = os.path.join(zone_gdb, 'zonesys09', 'zones09')

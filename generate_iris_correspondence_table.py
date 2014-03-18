@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 1/17/2014
+    Revised: 3/18/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -20,8 +20,8 @@ arcpy.AddWarning('\nCurrently generating IRIS correspondence for {0}.'.format(MH
 # -----------------------------------------------------------------------------
 iris_fc = arcpy.GetParameterAsText(0)  # Full path to IRIS shapefile
 iris_id_field = arcpy.GetParameterAsText(1)  # IRIS field containing unique ID
-out_workspace = arcpy.GetParameterAsText(2).replace('\\','/').rstrip('/') + '/'  # Output directory
-table_name = 'mhn2iris_{0}'.format(MHN.timestamp('%Y%m%d'))
+out_workspace = arcpy.GetParameterAsText(2)  # Output directory
+table_name = 'mhn2iris_{0}'  # Format with timestamp at time of creation
 
 densify_distance = 30  # Minimum distance (ft) between road vertices
 near_distance = 50  # Maximum distance (ft) between MHN/IRIS vertices to consider match
@@ -31,7 +31,7 @@ min_match_count = 5  # Minimum number of vertex matches to consider line match
 # -----------------------------------------------------------------------------
 #  Create temporary (dense) road features and points of their vertices.
 # -----------------------------------------------------------------------------
-temp_gdb = MHN.temp_dir + '/iris_temp.gdb'
+temp_gdb = os.path.join(MHN.temp_dir, 'iris_temp.gdb')
 MHN.delete_if_exists(temp_gdb)
 arcpy.CreateFileGDB_management(MHN.break_path(temp_gdb)['dir'], MHN.break_path(temp_gdb)['name'], 'CURRENT')
 
@@ -39,10 +39,10 @@ arcpy.CreateFileGDB_management(MHN.break_path(temp_gdb)['dir'], MHN.break_path(t
 illinois_lyr = MHN.make_skinny_feature_layer(MHN.zone, 'illinois_lyr', where_clause=''' "COUNTY" LIKE '17%' ''')
 
 arcpy.AddMessage('\nGenerating dense MHN vertices...')
-mhn_clipped = MHN.mem + '/mhn_clipped'
+mhn_clipped = os.path.join(MHN.mem, 'mhn_clipped')
 arcpy.Clip_analysis(MHN.arc, illinois_lyr, mhn_clipped)
-mhn_arts_fc = temp_gdb + '/mhn_arts'
-mhn_arts_vertices_fc = temp_gdb + '/mhn_arts_vertices'
+mhn_arts_fc = os.path.join(temp_gdb, 'mhn_arts')
+mhn_arts_vertices_fc = os.path.join(temp_gdb, 'mhn_arts_vertices')
 mhn_arts_fields = ['ABB', 'ROADNAME']
 mhn_arts_query = ''' "TYPE1" = '1' '''
 mhn_arts_lyr = MHN.make_skinny_feature_layer(mhn_clipped, 'mhn_arts_lyr', mhn_arts_fields, mhn_arts_query)
@@ -51,10 +51,10 @@ arcpy.Densify_edit(mhn_arts_fc, distance=densify_distance)
 arcpy.FeatureVerticesToPoints_management(mhn_arts_fc, mhn_arts_vertices_fc, 'ALL')
 
 arcpy.AddMessage('\nGenerating dense IRIS vertices...')
-iris_clipped = MHN.mem + '/iris_clipped'
+iris_clipped = os.path.join(MHN.mem, 'iris_clipped')
 arcpy.Clip_analysis(iris_fc, illinois_lyr, iris_clipped)
-iris_arts_fc = temp_gdb + '/iris_arts'
-iris_arts_vertices_fc = temp_gdb + '/iris_arts_vertices'
+iris_arts_fc = os.path.join(temp_gdb, 'iris_arts')
+iris_arts_vertices_fc = os.path.join(temp_gdb, 'iris_arts_vertices')
 iris_arts_fields = [iris_id_field, 'ROAD_NAME', 'MARKED_RT']
 iris_arts_query = ''' "FCNAME" NOT IN ('Freeway and Expressway','Interstate') '''
 iris_arts_lyr = MHN.make_skinny_feature_layer(iris_clipped, 'iris_arts_lyr', iris_arts_fields, iris_arts_query)
@@ -68,7 +68,7 @@ arcpy.FeatureVerticesToPoints_management(iris_arts_fc, iris_arts_vertices_fc, 'A
 #  the most-matched IRIS link for each MHN link.
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('\nGenerating MHN-IRIS vertex near table...')
-mhn_near_iris_table = temp_gdb + '/mhn_near_iris'
+mhn_near_iris_table = os.path.join(temp_gdb, 'mhn_near_iris')
 arcpy.GenerateNearTable_analysis(mhn_arts_vertices_fc, iris_arts_vertices_fc, mhn_near_iris_table, near_distance)
 
 arcpy.AddMessage('\nIdentifying most-matched IRIS link for each MHN link...')
@@ -87,7 +87,7 @@ with arcpy.da.UpdateCursor(mhn_near_iris_table, ['IN_FID', 'NEAR_FID', near_mhn_
         iris_id = row[1]
         cursor.updateRow([mhn_id, iris_id, mhn_vertices_abb_dict[mhn_id]['ABB'], iris_vertices_oid_dict[iris_id][iris_id_field]])
 
-mhn_near_iris_freq_table = temp_gdb + '/mhn_near_iris_freq'
+mhn_near_iris_freq_table = os.path.join(temp_gdb, 'mhn_near_iris_freq')
 arcpy.Frequency_analysis(mhn_near_iris_table, mhn_near_iris_freq_table, [near_mhn_field, near_iris_field])
 del mhn_vertices_abb_dict, iris_vertices_oid_dict
 
@@ -199,7 +199,7 @@ for mhn_id in match_dict:
 #  Create final table in memory and then write it to MHN geodatabase.
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('\nWriting match table...')
-match_table = temp_gdb + '/mhn_iris_match'
+match_table = os.path.join(temp_gdb, 'mhn_iris_match')
 match_mhn_field = near_mhn_field
 match_iris_field = near_iris_field
 
@@ -210,6 +210,7 @@ with arcpy.da.InsertCursor(match_table, [match_mhn_field, match_iris_field]) as 
     for mhn_id, iris_id in qc_matches:
         cursor.insertRow([mhn_id, iris_id])
 
+table_name = table_name.format(MHN.timestamp('%Y%m%d'))
 output_table = arcpy.TableToTable_conversion(match_table, out_workspace, table_name)
 
 
