@@ -11,6 +11,8 @@
 import os
 import sys
 import arcpy
+
+sys.path.append(os.path.abspath(os.path.join(sys.path[0], '..')))  # Add mhn_programs dir to path, so MHN.py can be imported
 import MHN  # Custom library for MHN processing functionality
 
 arcpy.AddWarning('\nCurrently generating IRIS correspondence for {0}.'.format(MHN.gdb))
@@ -217,6 +219,7 @@ output_table = arcpy.TableToTable_conversion(match_table, out_workspace, table_n
 # -----------------------------------------------------------------------------
 #  Clean up.
 # -----------------------------------------------------------------------------
+arcpy.AddMessage('\nCleaning up...')
 arcpy.Delete_management(MHN.mem)
 arcpy.Delete_management(temp_gdb)
 arcpy.AddMessage('\nAll done! Correspondence table successfully written to {0}\n'.format(output_table))
