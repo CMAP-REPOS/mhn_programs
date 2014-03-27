@@ -475,7 +475,7 @@ data nd; set ntwk;
        ** -- Adjust Itinerary Coding if it Contains Nodes not Available in the Network, If Necessary -- **;
 
 data nodechk(keep=itinerary_a); merge nodechk nd (in=hit); by itinerary_a; if hit then delete;
-  proc print; title "Itinerary Nodes Not in the Network";
+  /*proc print; title "Itinerary Nodes Not in the Network";*/
 data temp; set nodechk nobs=nonode; call symput('badnode',left(put(nonode,8.))); run;
 
 %macro nodefix;
