@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 2/12/14
+    Revised: 3/27/14
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -239,10 +239,10 @@ def ensure_dir(directory):
     return directory
 
 
-def find_shortest_path(graph, start, end, visited=None, distances=None, predecessors=None):
-    ''' Recursive function written by nolfonzo@gmail.com to find shortest path
+def find_shortest_path(graph, start, end):
+    ''' Recursive function written by Chris Laffra to find shortest path
         between 2 nodes in a graph; implementation of Dijkstra's algorithm.
-        Based on <http://rebrained.com/?p=392>, accessed 9/2011.
+        Based on <http://code.activestate.com/recipes/119466/#c6>.
 
         Example graph dictionary (sub-dicts contain distances):
 
@@ -253,31 +253,19 @@ def find_shortest_path(graph, start, end, visited=None, distances=None, predeces
              'y': {'a': 9, 'w': 2, 'x': 10, 'z': 11},
              'z': {'b': 6, 'x': 15, 'y': 11}}
     '''
-    if visited == None:
-        visited = []
-    if distances == None:
-        distances = {}
-    if predecessors == None:
-        predecessors = {}
-    if not visited:
-        distances[start] = 0  # Set distance to 0 for first pass
-    if start == end:  # We've found our end node, now find the path to it, and return
-        path = []
-        while end != None:
-            path.append(end)
-            end = predecessors.get(end, None)
-        return distances[start], path[::-1]
-    for neighbor in graph[start]:  # Process neighbors, keep track of predecessors
-        if neighbor not in visited:
-            neighbor_dist = distances.get(neighbor, float('infinity'))
-            tentative_dist = distances[start] + graph[start][neighbor]
-            if tentative_dist < neighbor_dist:
-                distances[neighbor] = tentative_dist
-                predecessors[neighbor] = start
-    visited.append(start)  # Mark the current node as visited
-    unvisiteds = dict((k, distances.get(k, float('infinity'))) for k in graph if k not in visited)  # Finds the closest unvisited node to the start
-    closest_node = min(unvisiteds, key=unvisiteds.get)
-    return find_shortest_path(graph, closest_node, end, visited, distances, predecessors)  # Start processing the closest node
+    import heapq
+    queue = [(0, start, [])]
+    seen = set()
+    while True:
+        (p_cost, node, path) = heapq.heappop(queue)
+        if node not in seen:
+            path = path + [node]
+            seen.add(node)
+            if node == end:
+                return p_cost, path
+            if node in graph.keys():
+                for (b_node, b_cost) in graph[node].iteritems():
+                    heapq.heappush(queue, (p_cost + b_cost, b_node, path))
 
 
 def get_yearless_hwyproj():
