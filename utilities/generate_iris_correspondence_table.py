@@ -110,7 +110,7 @@ matched_mhn_ids = set([row[0] for row in arcpy.da.SearchCursor(mhn_near_iris_fre
 arcpy.SelectLayerByAttribute_management(mhn_arts_lyr, 'NEW_SELECTION', ''' "ABB" IN ('{0}') '''.format("','".join(matched_mhn_ids)))
 mhn_attr_dict = MHN.make_attribute_dict(mhn_arts_lyr, 'ABB', ['ROADNAME'])
 
-matched_iris_ids = set([row[0] for row in arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_iris_field])])
+matched_iris_ids = set([str(row[0]) for row in arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_iris_field])])
 arcpy.SelectLayerByAttribute_management(iris_arts_lyr, 'NEW_SELECTION', ''' "{0}" IN ({1}) '''.format(iris_id_field, ','.join(matched_iris_ids)))
 iris_attr_dict = MHN.make_attribute_dict(iris_arts_lyr, iris_id_field, ['ROAD_NAME', 'MARKED_RT'])
 
