@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 3/18/2014
+    Revised: 4/10/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -25,8 +25,8 @@ iris_id_field = arcpy.GetParameterAsText(1)  # IRIS field containing unique ID
 out_workspace = arcpy.GetParameterAsText(2)  # Output directory
 table_name = 'mhn2iris_{0}'  # Format with timestamp at time of creation
 
-densify_distance = 30  # Minimum distance (ft) between road vertices
-near_distance = 50  # Maximum distance (ft) between MHN/IRIS vertices to consider match
+densify_distance = 25  # Minimum distance (ft) between road vertices
+near_distance = 75  # Maximum distance (ft) between MHN/IRIS vertices to consider match
 min_match_count = 5  # Minimum number of vertex matches to consider line match
 
 
@@ -178,8 +178,12 @@ for mhn_id in match_dict:
                 match = True
             elif mhn_name_base in iris_name:
                 match = True
-        elif iris_rte and iris_rte in mhn_name:
-            match = True
+        elif iris_rte:
+            if iris_rte in mhn_name:
+                match = True
+    elif not (iris_name_base or iris_rte):
+        # Give the benefit of the doubt when either link is unnamed
+        match = True
 
     # Exclude any mistakenly matched 'upper'/'lower' roads:
     if match:
