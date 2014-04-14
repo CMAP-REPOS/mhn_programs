@@ -158,7 +158,7 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
         iris_name = clean_name(iris_attr_dict[iris_id]['ROAD_NAME'])
         iris_rte = clean_rte(iris_attr_dict[iris_id]['MARKED_RT'])
         iris_rte2 = clean_rte(iris_attr_dict[iris_id]['MARKED_RT2'])
-        iris_combo = '{0} {1} {2}'.format(iris_rte, iris_rte2, iris_name).strip().replace('  ', ' ')
+        iris_combo = '{0} {1} {2}'.format(iris_rte, iris_rte2, iris_name).replace('  ', ' ').strip()
 
         fuzz_score = fuzz.token_set_ratio(mhn_name, iris_combo)  # 0-100: How similar are the names?
 
@@ -167,7 +167,7 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
             if freq > min_match_count:
 
                 # Give the benefit of the doubt when either is unnamed
-                if not (mhn_name or iris_combo):
+                if not (mhn_name and iris_combo):
                     match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
 
                 # Otherwise only match if fuzz_score is better (and above minimum threshold)
@@ -178,7 +178,7 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
         elif freq > match_dict[mhn_id][1]:
 
             # Give the benefit of the doubt when either is unnamed
-            if not (mhn_name or iris_combo):
+            if not (mhn_name and iris_combo):
                 match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
 
             # Otherwise only match if fuzz_score is better (and above minimum threshold)
