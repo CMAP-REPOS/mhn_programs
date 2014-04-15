@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 4/14/2014
+    Revised: 4/15/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -26,7 +26,7 @@ arcpy.AddWarning('\nCurrently generating IRIS correspondence for {0}.'.format(MH
 iris_fc = arcpy.GetParameterAsText(0)  # Full path to IRIS shapefile
 iris_id_field = arcpy.GetParameterAsText(1)  # IRIS field containing unique ID
 out_workspace = arcpy.GetParameterAsText(2)  # Output directory
-table_name = 'mhn2iris_{0}'  # Format with timestamp at time of creation
+table_name = 'mhn2iris_{0}.dbf'  # Format with timestamp at time of creation
 
 densify_distance = 30  # Minimum distance (ft) between road vertices
 near_distance = 60  # Maximum distance (ft) between MHN/IRIS vertices to consider match
@@ -77,7 +77,7 @@ arcpy.AddMessage('\nGenerating MHN-IRIS vertex near table...')
 mhn_near_iris_table = os.path.join(temp_gdb, 'mhn_near_iris')
 arcpy.GenerateNearTable_analysis(mhn_arts_vertices_fc, iris_arts_vertices_fc, mhn_near_iris_table, near_distance)
 
-arcpy.AddMessage('\nIdentifying most-matched IRIS link for each MHN link...')
+arcpy.AddMessage('\nCalculating frequencies of match candidates...')
 near_mhn_field = 'MHN_ABB'
 near_iris_field = 'IRIS_{0}'.format(iris_id_field)
 
@@ -121,7 +121,7 @@ def clean_name(in_name):
     # Ignore ramps (mostly in IRIS):
     if ' TO ' not in out_name:
         # Replace punctuation and misc. keywords:
-        for string, rep in [('-',' '),('/',' '),('(',''),(')',''),('.',''),("'",""),('MARTIN LUTHER KING', 'MLK')]:
+        for string, rep in [('-',' '),('/',' '),('&',''),('(',''),(')',''),('.',''),("'",""),('MARTIN LUTHER KING', 'MLK')]:
             out_name = out_name.replace(string, rep)
         # Remove cardinal directions:
         for cdir in ('N','S','E','W'):
@@ -164,7 +164,7 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
 
         # Make initial match if min match count and fuzz_score are okay
         if mhn_id not in match_dict:
-            if freq > min_match_count:
+            if freq >= min_match_count:
 
                 # Give the benefit of the doubt when either is unnamed
                 if not (mhn_name and iris_combo):
