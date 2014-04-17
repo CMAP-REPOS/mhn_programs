@@ -47,6 +47,9 @@ route_systems = {
     bus_future: (os.path.join(gdb, 'bus_future_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
 }
 
+mhn2iris_name = 'mhn2iris'
+mhn2iris = os.path.join(gdb, mhn2iris_name)
+
 zone_gdb = os.path.join(root_dir, 'zone_systems.gdb')
 zone = os.path.join(zone_gdb, 'zonesys09', 'zones09')
 zone_attr = 'Zone09'
@@ -389,26 +392,6 @@ def timestamp(ts_format='%Y%m%d%H%M%S'):
     return ts
 
 
-def write_attribute_csv(in_obj, textfile, field_list=None, include_headers=True):
-    ''' Write attributes of a feature class/table to a specified text file.
-        Input field_list allows output field order to be specified. Defaults to
-        all non-shape fields. '''
-    all_field_objects = arcpy.ListFields(in_obj)
-    valid_field_names = [field.name for field in all_field_objects if field.name != '' and field.type != 'Geometry']
-    if not field_list:
-        fields = valid_field_names
-    else:
-        fields = [field for field in field_list if field in valid_field_names]
-    csv = open(textfile,'w')
-    if include_headers:
-        csv.write(','.join(fields) + '\n')
-    with arcpy.da.SearchCursor(in_obj, fields) as cursor:
-        for row in cursor:
-            csv.write(','.join(map(str, row)) + '\n')
-    csv.close()
-    return textfile
-
-
 def write_arc_flag_file(flag_file, flag_query):
     ''' Create a file containing l=anode,bnode rows for all directional links
         meeting a specified criterion. '''
@@ -427,3 +410,23 @@ def write_arc_flag_file(flag_file, flag_query):
                     w.write('l={1},{0}\n'.format(anode, bnode))
     arcpy.Delete_management(flag_lyr)
     return flag_file
+
+
+def write_attribute_csv(in_obj, textfile, field_list=None, include_headers=True):
+    ''' Write attributes of a feature class/table to a specified text file.
+        Input field_list allows output field order to be specified. Defaults to
+        all non-shape fields. '''
+    all_field_objects = arcpy.ListFields(in_obj)
+    valid_field_names = [field.name for field in all_field_objects if field.name != '' and field.type != 'Geometry']
+    if not field_list:
+        fields = valid_field_names
+    else:
+        fields = [field for field in field_list if field in valid_field_names]
+    csv = open(textfile,'w')
+    if include_headers:
+        csv.write(','.join(fields) + '\n')
+    with arcpy.da.SearchCursor(in_obj, fields) as cursor:
+        for row in cursor:
+            csv.write(','.join(map(str, row)) + '\n')
+    csv.close()
+    return textfile
