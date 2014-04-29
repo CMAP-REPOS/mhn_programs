@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 4/15/2014
+    Revised: 4/29/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -12,6 +12,7 @@
 '''
 import os
 import sys
+import math
 import arcpy
 from fuzzywuzzy import fuzz  # Fuzzy string matching <https://github.com/seatgeek/fuzzywuzzy>
 
@@ -105,10 +106,13 @@ del mhn_vertices_abb_dict, iris_vertices_oid_dict
 arcpy.AddMessage('\nRunning QC tests on potential matches...')
 
 # Create dictionaries of attributes (road name, rte number) for any matched MHN
-# and IRIS links.
+# and IRIS links, as well as link length for MHN arcs.
 matched_mhn_ids = set([row[0] for row in arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field])])
 arcpy.SelectLayerByAttribute_management(mhn_arts_lyr, 'NEW_SELECTION', ''' "ABB" IN ('{0}') '''.format("','".join(matched_mhn_ids)))
 mhn_attr_dict = MHN.make_attribute_dict(mhn_arts_lyr, 'ABB', ['ROADNAME'])
+with arcpy.da.SearchCursor(mhn_arts_lyr, ['ABB', 'SHAPE@LENGTH']) as cursor:
+    for row in cursor:
+        mhn_attr_dict[row[0]]['LENGTH'] = row[1]
 
 matched_iris_ids = set([str(row[0]) for row in arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_iris_field])])
 arcpy.SelectLayerByAttribute_management(iris_arts_lyr, 'NEW_SELECTION', ''' "{0}" IN ({1}) '''.format(iris_id_field, ','.join(matched_iris_ids)))
@@ -162,9 +166,15 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
 
         fuzz_score = fuzz.token_set_ratio(mhn_name, iris_combo)  # 0-100: How similar are the names?
 
+        # If MHN link is too short for a match to be possible (or unlikely), reduce match count threshold
+        mhn_length = mhn_attr_dict[mhn_id]['LENGTH']
+        max_possible_matches = math.floor(mhn_length / densify_distance)
+        max_likely_matches = math.ceil(0.6 * max_possible_matches)
+        arc_min_freq = min(min_match_count, max_likely_matches)
+
         # Make initial match if min match count and fuzz_score are okay
         if mhn_id not in match_dict:
-            if freq >= min_match_count:
+            if freq >= arc_min_freq:
 
                 # Give the benefit of the doubt when either is unnamed
                 if not (mhn_name and iris_combo):
