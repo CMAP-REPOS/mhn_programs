@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 4/29/2014
+    Revised: 5/2/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -33,6 +33,11 @@ densify_distance = 30  # Minimum distance (ft) between road vertices
 near_distance = 60  # Maximum distance (ft) between MHN/IRIS vertices to consider match
 min_match_count = 5  # Minimum number of vertex matches to consider line match
 min_fuzz_score = 50  # Minimum fuzzy string match score for MHN/IRIS names to consider line match
+
+if near_distance < densify_distance * 2:
+    arcpy.AddWarning(('\nWARNING: near_distance parameter is less than 2x densify_distance,'
+                      ' which may lead to less effective matching. For best results, set'
+                      ' near_distance to at least double densify_distance.'))
 
 
 # -----------------------------------------------------------------------------
@@ -97,7 +102,6 @@ with arcpy.da.UpdateCursor(mhn_near_iris_table, ['IN_FID', 'NEAR_FID', near_mhn_
 mhn_near_iris_freq_table = os.path.join(temp_gdb, 'mhn_near_iris_freq')
 arcpy.Frequency_analysis(mhn_near_iris_table, mhn_near_iris_freq_table, [near_mhn_field, near_iris_field])
 del mhn_vertices_abb_dict, iris_vertices_oid_dict
-
 
 
 # -----------------------------------------------------------------------------
@@ -180,7 +184,7 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
                 if not (mhn_name and iris_combo):
                     match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
 
-                # Otherwise only match if fuzz_score is better (and above minimum threshold)
+                # Otherwise only match if fuzz_score is above minimum threshold
                 elif fuzz_score > min_fuzz_score:
                     match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
 
