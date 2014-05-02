@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 3/27/14
+    Revised: 5/2/14
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -386,7 +386,30 @@ def submit_sas(sas_file, sas_log, sas_lst, arg_list=None):
 def timestamp(ts_format='%Y%m%d%H%M%S'):
     ''' Creates a timestamp string, defaulting to the form YYYYMMDDHHMMSS, but
         any standard date formatting is accepted. See docs for details:
-        <http://docs.python.org/2/library/datetime.html#strftime-strptime-behavior>. '''
+        <http://docs.python.org/2/library/datetime.html#strftime-strptime-behavior>.
+
+        %a day of week, using locale's abbreviated weekday names
+        %A day of week, using locale's full weekday names
+        %b,%h month, using locale's abbreviated month names
+        %B month, using locale's full month names #%c date and time as %x %X
+        %d day of month (01-31)
+        %H hour (00-23)
+        %I hour (00-12)
+        %j day number of year (001-366)
+        %m month number (01-12)
+        %M minute (00-59)
+        %p locale's equivalent of AM or PM, whichever is appropriate
+        %r time as %I:%M:%S %p
+        %S seconds (00-59)
+        %U week number of year (01-52), Sunday is the first day of the week
+        %w day of week; Sunday is day 0
+        %W week number of year (01-52), Monday is the first
+        %x date, using locale's date format
+        %X time, using locale's time format
+        %y year within century (00-99)
+        %Y year, including century (for example, 1994)
+        %Z time zone abbreviation
+    '''
     from datetime import datetime
     ts = datetime.now().strftime(ts_format)
     return ts
