@@ -2,7 +2,7 @@
 '''
     export_future_network.py
     Author: npeterson
-    Revised: 2/6/14
+    Revised: 5/13/14
     ---------------------------------------------------------------------------
     Build the MHN to its coded state for a specified year, and save the future
     arcs and nodes in a specified GDB. This is particularly for building the
@@ -12,6 +12,12 @@
 import os
 import sys
 import arcpy
+
+# Import MHN module from parent directory
+import inspect
+util_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+prog_dir = os.path.dirname(util_dir)
+sys.path.insert(0, prog_dir)
 import MHN
 
 # -----------------------------------------------------------------------------
