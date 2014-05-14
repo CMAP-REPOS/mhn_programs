@@ -1,7 +1,7 @@
 /*
    import_future_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 5/21/13
+   revised: 5/14/14
    ----------------------------------------------------------------------------
    Program is called by import_future_bus_routes.py and formats bus itineraries
    to build with arcpy.
@@ -9,6 +9,7 @@
 */
 
 %let xls=%scan(&sysparm,1,$);
+%let excel=%scan(&xls,-1,.);
 %let dir=%scan(&sysparm,2,$);
 %let itincsv=%scan(&sysparm,3,$);
 %let routecsv=%scan(&sysparm,4,$);
@@ -30,7 +31,7 @@ filename out2 "&itincsv";
 %macro getdata;
   %if %sysfunc(fexist(inbus)) %then %do;
         ** READ IN CODING FOR BUS ITINERARIES **;
-       proc import out=section datafile="&xls" dbms=xls replace; sheet="itinerary"; getnames=yes; mixed=yes; guessingrows=1000;
+       proc import out=section datafile="&xls" dbms=&excel replace; sheet="itinerary"; getnames=yes; mixed=yes; guessingrows=1000;
           proc sort data=section; by tr_line order;
   %end;
   %else %do;
@@ -56,7 +57,7 @@ data verify; set section; proc sort; by itin_a itin_b;
 
 
              ** READ IN ROUTE TABLE CODING **;
-proc import out=rte datafile="&xls" dbms=xls replace; sheet="header"; getnames=yes; mixed=yes; guessingrows=1000;
+proc import out=rte datafile="&xls" dbms=&excel replace; sheet="header"; getnames=yes; mixed=yes; guessingrows=1000;
 data rte; set rte(where=(tr_line is not null));
  length des $22. nt $32.;
   tr_line=lowcase(tr_line);

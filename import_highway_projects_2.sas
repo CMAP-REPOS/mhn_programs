@@ -1,7 +1,7 @@
 /*
    import_highway_projects_2.sas
    authors: cheither & npeterson
-   revised: 5/16/13
+   revised: 5/14/14
    ----------------------------------------------------------------------------
    This program reads highway project coding and assigns an observation number
    to each line of coding, dependent upon the number of times a link (anode-
@@ -13,6 +13,7 @@
 option missing=0;  **this is only a mask: the true value is still .;
 
 %let xls=%scan(&sysparm,1,$);
+%let excel=%scan(&xls,-1,.);
 %let mhnlinks=%scan(&sysparm,2,$);
 %let projcsv=%scan(&sysparm,3,$);
 %let lst=%scan(&sysparm,4,$);
@@ -26,7 +27,7 @@ option missing=0;  **this is only a mask: the true value is still .;
 %macro getdata;
   %if %sysfunc(fexist(in0)) %then %do;
         ** READ IN HIGHWAY PROJECT CODING **;
-       proc import out=coding datafile="&xls" dbms=xls replace; sheet="template"; getnames=yes; mixed=yes;
+       proc import out=coding datafile="&xls" dbms=&excel replace; sheet="template"; getnames=yes; mixed=yes;
   %end;
   %else %do;
    data null;

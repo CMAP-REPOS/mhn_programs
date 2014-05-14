@@ -1,35 +1,36 @@
 @echo off
-REM sasrun.bat
-REM   cheither & npeterson, last revised 06/01/2013
+REM    sasrun.bat
+REM    Author: cheither & npeterson
+REM    Revised: 5/14/14
+REM    ------------------------------------------------------------------------
+REM    This is called by various Python scripts to execute a specified SAS
+REM    program. SAS 9.3 path is hardcoded in order to send the appropriate SAS
+REM    command. The ERRORLEVEL variable is used to flag instances when SAS
+REM    issues a Warning or Error.
 REM
-REM    This is called by various Python scripts to execute a specified SAS program.
-REM    SAS paths are defined (now that all pcs should be on Windows 7) in order to send the appropriate SAS command. 
-REM    The ERRORLEVEL variable is used to flag instances when SAS issues a Warning or Error.
-REM    Each script that calls this file supplies the following arguments: 
-REM        %1: SAS program name
-REM        %2: directory path
-REM        %3: SAS log file name
-REM        %4: SAS list file name
-REM #################################################
+REM    Each script that calls this file must supply the following arguments:
+REM        %1: full path to SAS script
+REM        %2: script parameters as $-separated string
+REM        %3: full path to output .log file
+REM        %4: full path to output .lst file
 
-set saspath="C:\Program Files\SASHome\SASFoundation\9.3\sas.exe"
-set saspath1="C:\Program Files\SAS\SASFoundation\9.2(32-bit)\sas.exe"
-set saspath2="C:\Program Files\SAS\SASFoundation\9.2\sas.exe"
 
-if not exist %saspath% (set saspath=%saspath1%)
-if not exist %saspath% (set saspath=%saspath2%)
-if not exist %saspath% (goto badsas)
+REM - Set SAS path (SAS 9.3+ required for handling .xlsx files)
+set SASPATH="C:\Program Files\SASHome\SASFoundation\9.3\sas.exe"
+if not exist %SASPATH% (goto BADSAS)
 
 REM - Run SAS
-%saspath% -sysin %1 -sysparm %2 -log %3 -print %4
-goto end
+%SASPATH% -sysin %1 -sysparm %2 -log %3 -print %4
+goto ERRCHECK
 
-:badsas
-REM - SAS Executable Not Found
-@echo SAS Executable Not Found - Manually Update >>%4
-goto last
+:BADSAS
+REM - SAS executable not found
+echo SAS executable not found - manually update sasrun.bat > %4
+goto END
 
-:end
-REM - Write Error Message to SAS .LST File if SAS did not Terminate Successfully
-if %ERRORLEVEL% GTR 0 echo errorlevel=%ERRORLEVEL% >>%4
-:last
+:ERRCHECK
+REM - Write errorlevel to .lst file if SAS did not terminate successfully
+if %ERRORLEVEL% gtr 0 echo errorlevel=%ERRORLEVEL% > %4
+goto END
+
+:END
