@@ -17,20 +17,18 @@
 
 :: Set SAS path (SAS 9.3+ required for handling .xlsx files)
 set SASPATH="C:\Program Files\SASHome\SASFoundation\9.3\sas.exe"
-if not exist %SASPATH% (goto BADSAS)
+if not exist %SASPATH% goto BADSAS
 
 :: Run SAS
 %SASPATH% -sysin %1 -sysparm %2 -log %3 -print %4
-goto ERRCHECK
+
+:: Write errorlevel to .lst file if SAS did not terminate successfully
+if %ERRORLEVEL% gtr 0 echo SAS script failed with errorlevel=%ERRORLEVEL%. Check %3. > %4
+goto END
 
 :BADSAS
 :: SAS executable not found
-echo SAS executable not found - manually update sasrun.bat > %4
-goto END
-
-:ERRCHECK
-:: Write errorlevel to .lst file if SAS did not terminate successfully
-if %ERRORLEVEL% gtr 0 echo errorlevel=%ERRORLEVEL% > %4
+echo SAS executable not found. Modify sasrun.bat. > %4
 goto END
 
 :END
