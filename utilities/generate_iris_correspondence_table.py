@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 5/2/2014
+    Revised: 5/15/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -29,8 +29,8 @@ iris_id_field = arcpy.GetParameterAsText(1)  # IRIS field containing unique ID
 out_workspace = arcpy.GetParameterAsText(2)  # Output directory
 table_name = 'mhn2iris_{0}.dbf'  # Format with timestamp at time of creation
 
-densify_distance = 30  # Minimum distance (ft) between road vertices
-near_distance = 60  # Maximum distance (ft) between MHN/IRIS vertices to consider match
+densify_distance = 35  # Minimum distance (ft) between road vertices
+near_distance = 70  # Maximum distance (ft) between MHN/IRIS vertices to consider match
 min_match_count = 5  # Minimum number of vertex matches to consider line match
 min_fuzz_score = 50  # Minimum fuzzy string match score for MHN/IRIS names to consider line match
 
@@ -80,9 +80,26 @@ arcpy.FeatureVerticesToPoints_management(iris_arts_fc, iris_arts_vertices_fc, 'A
 #  the most-matched IRIS link for each MHN link.
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('\nGenerating MHN-IRIS vertex near table...')
-mhn_near_iris_table = os.path.join(temp_gdb, 'mhn_near_iris')
-arcpy.GenerateNearTable_analysis(mhn_arts_vertices_fc, iris_arts_vertices_fc, mhn_near_iris_table, near_distance)
 
+# Use larger near_distance for specific boulevards, because IRIS only digitized one side...
+blvd_near_dist = 200
+mhn_blvd_vertices_lyr = 'mhn_blvd_vertices_lyr'
+mhn_blvd_query = ''' "ROADNAME" IN ('DREXEL BLVD','DOUGLAS BLVD','GARFIELD BLVD','INDEPENDENCE BLVD') '''
+mhn_blvd_near_iris_table = os.path.join(temp_gdb, 'mhn_blvd_near_iris')
+arcpy.MakeFeatureLayer_management(mhn_arts_vertices_fc, mhn_blvd_vertices_lyr, mhn_blvd_query)
+arcpy.GenerateNearTable_analysis(mhn_blvd_vertices_lyr, iris_arts_vertices_fc, mhn_near_iris_table, blvd_near_distance)
+arcpy.Delete_management(mhn_blvd_vertices_lyr)
+
+# ... then use normal distance for most MHN arterials and append blvd table
+mhn_arts_vertices_lyr = 'mhn_arts_vertices_lyr'
+mhn_arts_query = 'NOT' + mhn_blvd_query
+mhn_near_iris_table = os.path.join(temp_gdb, 'mhn_near_iris')
+arcpy.MakeFeatureLayer_management(mhn_arts_vertices_fc, mhn_arts_vertices_lyr, mhn_arts_query)
+arcpy.GenerateNearTable_analysis(mhn_arts_vertices_lyr, iris_arts_vertices_fc, mhn_near_iris_table, near_distance)
+arcpy.Delete_management(mhn_arts_vertices_lyr)
+arcpy.Append_management(mhn_blvd_near_iris_table, mhn_near_iris_table)
+
+# Identify vertex match frequencies for each matched pair of links
 arcpy.AddMessage('\nCalculating frequencies of match candidates...')
 near_mhn_field = 'MHN_ABB'
 near_iris_field = 'IRIS_{0}'.format(iris_id_field)
@@ -166,9 +183,15 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
         iris_name = clean_name(iris_attr_dict[iris_id]['ROAD_NAME'])
         iris_rte = clean_rte(iris_attr_dict[iris_id]['MARKED_RT'])
         iris_rte2 = clean_rte(iris_attr_dict[iris_id]['MARKED_RT2'])
-        iris_combo = '{0} {1} {2}'.format(iris_rte, iris_rte2, iris_name).replace('  ', ' ').strip()
+        iris_combo = '{0} {1} {2}'.format(iris_rte, iris_rte2, iris_name).strip()
 
-        fuzz_score = fuzz.token_set_ratio(mhn_name, iris_combo)  # 0-100: How similar are the names?
+        # Score names on similarity, ignoring non-"lower" matches (e.g. Lower Wacker Dr)
+        if 'LOWER' in mhn_name.split() and 'LOWER' not in iris_name.split():
+            fuzz_score = 0
+        elif 'LOWER' not in mhn_name.split() and 'LOWER' in iris_name.split():
+            fuzz_score = 0
+        else:
+            fuzz_score = fuzz.token_set_ratio(mhn_name, iris_combo)  # 0-100: How similar are the names?
 
         # If MHN link is too short for a match to be possible (or unlikely), reduce match count threshold
         mhn_length = mhn_attr_dict[mhn_id]['LENGTH']
