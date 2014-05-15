@@ -82,7 +82,7 @@ arcpy.FeatureVerticesToPoints_management(iris_arts_fc, iris_arts_vertices_fc, 'A
 arcpy.AddMessage('\nGenerating MHN-IRIS vertex near table...')
 
 # Use larger near_distance for specific boulevards, because IRIS only digitized one side...
-blvd_near_dist = 200
+blvd_near_distance = 200
 mhn_blvd_vertices_lyr = 'mhn_blvd_vertices_lyr'
 mhn_blvd_query = ''' "ROADNAME" IN ('DREXEL BLVD','DOUGLAS BLVD','GARFIELD BLVD','INDEPENDENCE BLVD') '''
 mhn_blvd_near_iris_table = os.path.join(temp_gdb, 'mhn_blvd_near_iris')
