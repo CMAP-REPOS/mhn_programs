@@ -81,8 +81,8 @@ arcpy.FeatureVerticesToPoints_management(iris_arts_fc, iris_arts_vertices_fc, 'A
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('\nGenerating MHN-IRIS vertex near table...')
 
-# Use larger near_distance for specific boulevards, because IRIS only digitized one side...
-blvd_near_distance = 200
+# Enforce minimum near_distance for specific boulevards, because IRIS only digitized one side...
+blvd_near_distance = max(near_distance, 200)
 mhn_blvd_vertices_lyr = 'mhn_blvd_vertices_lyr'
 mhn_blvd_query = ''' "ROADNAME" IN ('DREXEL BLVD','DOUGLAS BLVD','GARFIELD BLVD','INDEPENDENCE BLVD') '''
 mhn_blvd_near_iris_table = os.path.join(temp_gdb, 'mhn_blvd_near_iris')
@@ -90,7 +90,7 @@ arcpy.MakeFeatureLayer_management(mhn_arts_vertices_fc, mhn_blvd_vertices_lyr, m
 arcpy.GenerateNearTable_analysis(mhn_blvd_vertices_lyr, iris_arts_vertices_fc, mhn_blvd_near_iris_table, blvd_near_distance)
 arcpy.Delete_management(mhn_blvd_vertices_lyr)
 
-# ... then use normal distance for most MHN arterials and append blvd table
+# ... then use normal near_distance for most MHN arterials and append blvd table
 mhn_arts_vertices_lyr = 'mhn_arts_vertices_lyr'
 mhn_arts_query = 'NOT' + mhn_blvd_query
 mhn_near_iris_table = os.path.join(temp_gdb, 'mhn_near_iris')
