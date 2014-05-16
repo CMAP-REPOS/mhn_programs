@@ -68,7 +68,8 @@ arcpy.Clip_analysis(iris_fc, illinois_lyr, iris_clipped)
 iris_arts_fc = os.path.join(temp_gdb, 'iris_arts')
 iris_arts_vertices_fc = os.path.join(temp_gdb, 'iris_arts_vertices')
 iris_arts_fields = [iris_id_field, 'ROAD_NAME', 'MARKED_RT', 'MARKED_RT2']
-iris_arts_query = ''' "FCNAME" NOT IN ('Freeway and Expressway','Interstate') '''
+iris_arts_query = ''' "FCNAME" NOT IN ('Freeway and Expressway','Interstate') '''  # Exclude freeways
+iris_arts_query += ''' AND "ROAD_NAME" NOT LIKE '% TO %' '''                       # Exclude ramps
 iris_arts_lyr = MHN.make_skinny_feature_layer(iris_clipped, 'iris_arts_lyr', iris_arts_fields, iris_arts_query)
 arcpy.CopyFeatures_management(iris_arts_lyr, iris_arts_fc)
 arcpy.Densify_edit(iris_arts_fc, distance=densify_distance)
