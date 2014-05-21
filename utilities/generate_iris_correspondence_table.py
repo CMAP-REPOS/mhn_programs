@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 5/16/2014
+    Revised: 5/21/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -93,7 +93,7 @@ arcpy.Delete_management(mhn_blvd_vertices_lyr)
 
 # ... then use normal near_distance for most MHN arterials and append blvd table
 mhn_arts_vertices_lyr = 'mhn_arts_vertices_lyr'
-mhn_arts_query = 'NOT' + mhn_blvd_query
+mhn_arts_query = ''' NOT ({0}) '''.format(mhn_blvd_query.strip())
 mhn_near_iris_table = os.path.join(temp_gdb, 'mhn_near_iris')
 arcpy.MakeFeatureLayer_management(mhn_arts_vertices_fc, mhn_arts_vertices_lyr, mhn_arts_query)
 arcpy.GenerateNearTable_analysis(mhn_arts_vertices_lyr, iris_arts_vertices_fc, mhn_near_iris_table, near_distance)
