@@ -2,7 +2,7 @@
 '''
     export_future_network.py
     Author: npeterson
-    Revised: 5/16/14
+    Revised: 7/11/14
     ---------------------------------------------------------------------------
     Build the MHN to its coded state for a specified year, and save the future
     arcs and nodes in a specified GDB. This is particularly for building the
@@ -101,7 +101,7 @@ network_lyr = MHN.make_skinny_feature_layer(MHN.arc, 'network_lyr', network_attr
 MHN.write_attribute_csv(network_lyr, network_csv, network_attr)
 
 # Process attribute tables with export_future_network_2.sas.
-sas1_sas = os.path.join(util_dir, '{0}.sas'.format(sas1_name))
+sas1_sas = os.path.join(MHN.util_dir, '{0}.sas'.format(sas1_name))
 sas1_args = [network_csv, transact_csv, year_csv, update_link_csv, flag_node_csv, build_year, MHN.max_poe, MHN.base_year]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
