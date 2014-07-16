@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 5/13/14
+    Revised: 7/11/14
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -27,8 +27,13 @@ root_dir = os.path.dirname(gdb)
 imp_dir = os.path.join(root_dir, 'import')
 out_dir = os.path.join(root_dir, 'output')
 temp_dir = os.path.join(root_dir, 'temp')
-prog_dir = sys.path[0]  # Directory containing this module
-util_dir = os.path.join(prog_dir, 'utilities')
+script_dir = sys.path[0]  # Directory containing this module
+if script_dir.endswith('utilities'):
+    prog_dir = os.path.dirname(script_dir)
+    util_dir = script_dir
+else:
+    prog_dir = script_dir
+    util_dir = os.path.join(prog_dir, 'utilities')
 mem = 'in_memory'
 
 hwynet_name = 'hwynet'
