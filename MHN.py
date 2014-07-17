@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 7/11/14
+    Revised: 7/17/14
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -233,7 +233,7 @@ def determine_OID_fieldname(fc):
     return OID_name
 
 
-def die(error_message):
+def die(error_message=''):
     ''' End processing prematurely. '''
     arcpy.AddError('\n' + error_message + '\n')
     sys.exit()
