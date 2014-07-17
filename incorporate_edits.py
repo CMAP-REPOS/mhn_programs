@@ -606,11 +606,7 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
                 with arcpy.da.UpdateCursor(itin_updated, ['OID@'], itin_delete_query) as itin_delete_cursor:
                     for row in itin_delete_cursor:
                         itin_delete_cursor.deleteRow()
-                arcpy.AddWarning(
-                    '   - {0} = {1} cannot be rebuilt because the arcs comprising '
-                    'it no longer exist (or have new ABB). It cannot be rebuilt '
-                    'and is being deleted. Please re-import it if necessary.'.format(common_id_field, common_id)
-                )
+                arcpy.AddWarning('  - All arcs comprising {0}={1} have been removed. It cannot be rebuilt and is being deleted. Please re-import it if necessary.'.format(common_id_field, common_id))
 
     # Append the header file attribute values from a search cursor of the original.
     attributes = MHN.make_attribute_dict(header, common_id_field)
