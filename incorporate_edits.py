@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 2/12/14
+    Revised: 7/17/14
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -598,8 +598,15 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
     with arcpy.da.InsertCursor(header_updated, ['SHAPE@', common_id_field]) as routes_cursor:
         for common_id in common_id_list:
             route_vertices = arcpy.Array([vertices_comprising[abb] for abb in arcs_traversed_by[common_id] if abb in vertices_comprising])
-            route = arcpy.Polyline(route_vertices)
-            routes_cursor.insertRow([route, common_id])
+            try:
+                route = arcpy.Polyline(route_vertices)
+                routes_cursor.insertRow([route, common_id])
+            except:
+                itin_delete_query = ''' "{0}" = '{1}' '''.format(common_id_field, common_id)
+                with arcpy.da.UpdateCursor(itin_updated, ['OID@'], itin_delete_query) as itin_delete_cursor:
+                    for row in itin_delete_cursor:
+                        itin_delete_cursor.deleteRow()
+                arcpy.AddWarning('  - All arcs comprising {0}={1} have been removed. It cannot be rebuilt and is being deleted. Please re-import it if necessary.'.format(common_id_field, common_id))
 
     # Append the header file attribute values from a search cursor of the original.
     attributes = MHN.make_attribute_dict(header, common_id_field)
