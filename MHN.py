@@ -21,7 +21,7 @@ arcpy.env.OverwriteOutput = True
 # -----------------------------------------------------------------------------
 #  1. DIRECTORIES & FILES
 # -----------------------------------------------------------------------------
-gdb = r'C:\MHN\mhn.gdb'
+gdb = r'C:\MHN\mhn_BORKED_1.gdb'
 
 root_dir = os.path.dirname(gdb)
 imp_dir = os.path.join(root_dir, 'import')
