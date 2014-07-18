@@ -1,7 +1,7 @@
 /*
    import_highway_projects_2.sas
    authors: cheither & npeterson
-   revised: 5/14/14
+   revised: 7/18/14
    ----------------------------------------------------------------------------
    This program reads highway project coding and assigns an observation number
    to each line of coding, dependent upon the number of times a link (anode-
@@ -113,6 +113,17 @@ data check; set coding(where=(action=2));
   if rep_anode>0 and rep_bnode>0 then delete;
      proc print; var tipid anode bnode action rep_anode rep_bnode;
       title 'REPLACE NODE VALUES ARE REQUIRED ON THESE LINKS';
+
+data replaced; set coding(where=(action=2));
+  proc sort; by rep_anode rep_bnode;
+data baselinks; set mhn(where=(baselink=1));
+  rep_anode=anode; rep_bnode=bnode;
+  keep rep_anode rep_bnode match;
+  proc sort; by rep_anode rep_bnode;
+data check; merge replaced baselinks; by rep_anode rep_bnode;
+  if match=1 then delete;
+     proc print; var tipid anode bnode action rep_anode rep_bnode;
+      title 'REPLACED BASELINKS DO NOT EXIST FOR THESE LINKS';
 
 data check; set coding(where=(action=2));
   if max(type1,type2,sigic,feet1,lanes1,speed1,feet2,lanes2,speed2,tolldollars,directions,parklanes1,parklanes2,cltl,ampm1,ampm2,modes,tod)>0;
