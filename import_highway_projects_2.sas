@@ -12,14 +12,14 @@
 */
 option missing=0;  **this is only a mask: the true value is still .;
 
-%let xls=%scan(&sysparm,1,$);
-%let excel=%scan(&xls,-1,.);
+%let codexls=%scan(&sysparm,1,$);
+%let excel=%scan(&codexls,-1,.);  *gets coding spreadsheet extension: XLS or XLSX;
 %let mhnlinks=%scan(&sysparm,2,$);
 %let projcsv=%scan(&sysparm,3,$);
 %let lst=%scan(&sysparm,4,$);
 
 ******************************;
- filename in0 "&xls";
+ filename in0 "&codexls";
  filename in1 "&mhnlinks";
  filename out1 "&projcsv";
 ******************************;
@@ -27,12 +27,12 @@ option missing=0;  **this is only a mask: the true value is still .;
 %macro getdata;
   %if %sysfunc(fexist(in0)) %then %do;
         ** READ IN HIGHWAY PROJECT CODING **;
-       proc import out=coding datafile="&xls" dbms=&excel replace; sheet="template"; getnames=yes; mixed=yes;
+       proc import out=coding datafile="&codexls" dbms=&excel replace; *sheet="template"; getnames=yes; mixed=yes;
   %end;
   %else %do;
    data null;
     file "&lst";
-     put "File not found: &xls";
+     put "File not found: &codexls";
   %end;
 %mend getdata;
 %getdata
@@ -61,7 +61,6 @@ data coding1; set coding;
 
 data coding1; set coding1;
  retain observ 1;
-
  if abnode ne check then observ=1;
   output;
   observ+1;
@@ -72,12 +71,13 @@ data coding2(keep=anode bnode tipid action); set coding;
    proc sort; by anode bnode;
 
 data check; set coding2;
- if tipid>0 and anode>0 and bnode>0 and action>0 then delete;
-   proc print; title 'FIX MISSING VALUES ON THESE LINKS';
+ if tipid>0 & anode>0 & bnode>0 & action>0 then delete;
+   proc print; var tipid action anode bnode;
+    title 'FIX MISSING VALUES ON THESE LINKS';
 
 data mhn; infile in1 missover dlm=',' firstobs=2;
   input anode bnode baselink;
-    match=1;
+   match=1;
    proc sort; by anode bnode;
 
 data coding2; merge coding2 (in=hit) mhn; by anode bnode;
@@ -85,43 +85,53 @@ data coding2; merge coding2 (in=hit) mhn; by anode bnode;
 
 data check; set coding2;
    if match=1 then delete;
-     proc print; title 'FIX ANODE-BNODE CODING ON THESE LINKS';
+     proc print; var tipid action anode bnode;
+      title 'FIX ANODE-BNODE CODING ON THESE LINKS';
 
 data check2; set coding2;
-   if baselink=1 then delete;
+   if baselink^=0 then delete;
    if action=2 or action=4 then delete;
-   *if tipid=1020020 then delete;
-     proc print; title 'BAD SKELETON LINK CODING ON THESE LINKS';
+     proc print; var tipid action anode bnode;
+      title 'BAD SKELETON LINK CODING ON THESE LINKS';
 
 ** Check for Duplicates within Project **;
-data junk; set coding;
-  ab2=lag(abnode);
-   tip2=lag(tipid);
-   if tod>0 then delete;
-   if abnode=ab2 and tipid=tip2 then output;
-     proc print; title 'DUPLICATE ANODE-BNODE CODING WITHIN A PROJECT';
+data dupcheck; set coding;
+  proc freq data=dupcheck noprint;
+    tables tipid*anode*bnode*tod / out=freqs;
+data dups; set freqs(where=(count>1));
+    proc print; var tipid anode bnode tod count;
+     title 'DUPLICATE ANODE-BNODE CODING WITHIN A PROJECT';
 
 ** Verify Coding for Action=4 Links **;
 data check; set coding(where=(action=4));
-  if type1>0 and lanes1>0 and feet1>0 and speed1>0 and ampm1>0 and modes>0 then delete;
-  if type1=7 and (speed1=0 or speed1='.') then delete;
-     proc print; var tipid anode bnode action type1 lanes1 feet1 speed1 ampm1 modes;
-      title 'FIX MISSING VALUES ON THESE LINKS';
+if modes in (1:4) & lanes1>0 & feet1>0 & ampm1 in (1:4) then do;
+  if directions in (1,2) then do;
+    if type1=7 then delete;
+    if type1 in (1:6,8) & speed1>0 then delete;
+    end;
+  if directions=3 & lanes2>0 & feet2>0 & ampm2 in (1:4) then do;
+    if type1=7 & type2=7 then delete;
+    if type1 in (1:6,8) & type2 in (1:6,8) & speed1>0 & speed2>0 then delete;
+    if type1=7 & type2 in (1:6,8) & speed2>0 then delete;
+    if type2=7 & type1 in (1:6,8) & speed1>0 then delete;
+    end;
+  end;
+  proc print; var tipid anode bnode action directions modes type1 lanes1 feet1 speed1 ampm1 type2 lanes2 feet2 speed2 ampm2;
+   title 'FIX MISSING/INVALID VALUES FOR THESE SKELETON LINKS';
 
 ** Verify Coding for Action=2 Links **;
 data check; set coding(where=(action=2));
-  if rep_anode>0 and rep_bnode>0 then delete;
+  if rep_anode>0 & rep_bnode>0 then delete;
      proc print; var tipid anode bnode action rep_anode rep_bnode;
       title 'REPLACE NODE VALUES ARE REQUIRED ON THESE LINKS';
 
 data replaced; set coding(where=(action=2));
   proc sort; by rep_anode rep_bnode;
 data baselinks; set mhn(where=(baselink=1));
-  rep_anode=anode; rep_bnode=bnode;
-  keep rep_anode rep_bnode match;
+  rename anode=rep_anode bnode=rep_bnode;
   proc sort; by rep_anode rep_bnode;
 data check; merge replaced baselinks; by rep_anode rep_bnode;
-  if match=1 then delete;
+  if match=1 or rep_anode=0 or rep_bnode=0 then delete;
      proc print; var tipid anode bnode action rep_anode rep_bnode;
       title 'REPLACED BASELINKS DO NOT EXIST FOR THESE LINKS';
 
