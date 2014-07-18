@@ -1,15 +1,15 @@
 /*
    import_future_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 5/14/14
+   revised: 7/18/14
    ----------------------------------------------------------------------------
    Program is called by import_future_bus_routes.py and formats bus itineraries
    to build with arcpy.
 
 */
 
-%let xls=%scan(&sysparm,1,$);
-%let excel=%scan(&xls,-1,.);
+%let codexls=%scan(&sysparm,1,$);
+%let excel=%scan(&codexls,-1,.);  *gets coding spreadsheet extension: XLS or XLSX;
 %let dir=%scan(&sysparm,2,$);
 %let itincsv=%scan(&sysparm,3,$);
 %let routecsv=%scan(&sysparm,4,$);
@@ -19,7 +19,7 @@
 
 /*-------------------------------------------------------------*/
                    * INPUT FILES *;
-filename inbus "&xls";
+filename inbus "&codexls";
 filename in1 "&dir./network.csv";
 filename in2 "&dir./transact.csv";
 filename in3 "&dir./year.csv";
@@ -31,12 +31,12 @@ filename out2 "&itincsv";
 %macro getdata;
   %if %sysfunc(fexist(inbus)) %then %do;
         ** READ IN CODING FOR BUS ITINERARIES **;
-       proc import out=section datafile="&xls" dbms=&excel replace; sheet="itinerary"; getnames=yes; mixed=yes; guessingrows=1000;
+       proc import out=section datafile="&codexls" dbms=&excel replace; sheet="itinerary"; getnames=yes; mixed=yes; guessingrows=1000;
           proc sort data=section; by tr_line order;
   %end;
   %else %do;
    data null; file "&lst";
-     put "File not found: &xls";
+     put "File not found: &codexls";
   %end;
 %mend getdata;
 %getdata
@@ -57,7 +57,7 @@ data verify; set section; proc sort; by itin_a itin_b;
 
 
              ** READ IN ROUTE TABLE CODING **;
-proc import out=rte datafile="&xls" dbms=&excel replace; sheet="header"; getnames=yes; mixed=yes; guessingrows=1000;
+proc import out=rte datafile="&codexls" dbms=&excel replace; sheet="header"; getnames=yes; mixed=yes; guessingrows=1000;
 data rte; set rte(where=(tr_line is not null));
  length des $22. nt $32.;
   tr_line=lowcase(tr_line);
