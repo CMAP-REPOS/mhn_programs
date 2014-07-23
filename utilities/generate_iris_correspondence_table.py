@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 5/21/2014
+    Revised: 7/22/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -36,8 +36,8 @@ min_fuzz_score = 50  # Minimum fuzzy string match score for MHN/IRIS names to co
 
 if near_distance < densify_distance * 2:
     arcpy.AddWarning(('\nWARNING: near_distance parameter is less than 2x densify_distance,'
-                      ' which may lead to less effective matching. For best results, set'
-                      ' near_distance to at least double densify_distance.'))
+                      ' which may lead to unexpected matches. For best results,'
+                      ' set near_distance to at least 2x densify_distance.'))
 
 
 # -----------------------------------------------------------------------------
@@ -82,10 +82,11 @@ arcpy.FeatureVerticesToPoints_management(iris_arts_fc, iris_arts_vertices_fc, 'A
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('\nGenerating MHN-IRIS vertex near table...')
 
-# Enforce minimum near_distance for specific boulevards, because IRIS only digitized one side...
+# Enforce large minimum near_distance for specific boulevards, because IRIS only digitized one side...
 blvd_near_distance = max(near_distance, 200)
 mhn_blvd_vertices_lyr = 'mhn_blvd_vertices_lyr'
-mhn_blvd_query = ''' "ROADNAME" IN ('DREXEL BLVD','DOUGLAS BLVD','GARFIELD BLVD','INDEPENDENCE BLVD') '''
+mhn_blvd_query = (''' "ROADNAME" IN ('DREXEL BLVD','DOUGLAS BLVD','GARFIELD BLVD','INDEPENDENCE BLVD') '''
+                  ''' OR "ROADNAME" LIKE '%WACKER DR%' ''')
 mhn_blvd_near_iris_table = os.path.join(temp_gdb, 'mhn_blvd_near_iris')
 arcpy.MakeFeatureLayer_management(mhn_arts_vertices_fc, mhn_blvd_vertices_lyr, mhn_blvd_query)
 arcpy.GenerateNearTable_analysis(mhn_blvd_vertices_lyr, iris_arts_vertices_fc, mhn_blvd_near_iris_table, blvd_near_distance)
@@ -145,9 +146,9 @@ def clean_name(in_name):
     ''' Remove punctuation, cardinal directions, and suffixes '''
     out_name = in_name.upper()
     # Ignore ramps (mostly in IRIS):
-    if ' TO ' not in out_name:
+    if ' TO ' not in out_name and out_name.strip() != 'UNMARKED':
         # Replace punctuation and misc. keywords:
-        for string, rep in [('-',' '),('/',' '),('&',''),('(',''),(')',''),('.',''),("'",""),('MARTIN LUTHER KING', 'MLK')]:
+        for string, rep in [('-',' '),('/',' '),('&',''),('(',''),(')',''),('.',''),("'",""),('MARTIN LUTHER KING ','MLK '),('ML KING ','MLK '),('FRT ','FRONTAGE ')]:
             out_name = out_name.replace(string, rep)
         # Remove cardinal directions:
         for cdir in ('N','S','E','W'):
@@ -156,7 +157,7 @@ def clean_name(in_name):
             if out_name.endswith(' ' + cdir):
                 out_name = out_name[:-len(cdir)].strip()
         # Remove suffixes (road types and directions):
-        for suf in ('NB','SB','EB','WB','AVE','AV','BLVD','CT','DR','EXPY','HWY','LN','PKWY','PKY','PL','RD','SQ','ST','TR','WAY'):
+        for suf in ('NB','SB','EB','WB','AVE','AV','BLVD','CT','DR','EXPY','FWY','HWY','LN','PKWY','PKY','PL','RD','SQ','ST','TR','WAY'):
             if out_name.endswith(' ' + suf) or ' ' + suf + ' ' in out_name:
                 out_name = out_name.replace(' ' + suf, '')
     else:
@@ -194,10 +195,13 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
         else:
             fuzz_score = fuzz.token_set_ratio(mhn_name, iris_combo)  # 0-100: How similar are the names?
 
-        # If MHN link is too short for a match to be possible (or unlikely), reduce match count threshold
+        # Set tuple of values to save if matched
+        match_tuple = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
+
+        # If MHN link is too short for a match to be possible (or likely), reduce match count threshold
         mhn_length = mhn_attr_dict[mhn_id]['LENGTH']
         max_possible_matches = math.floor(mhn_length / densify_distance)
-        max_likely_matches = math.ceil(0.6 * max_possible_matches)
+        max_likely_matches = math.ceil(0.5 * max_possible_matches)  # Multiplier is somewhat arbitrary
         arc_min_freq = min(min_match_count, max_likely_matches)
 
         # Make initial match if min match count and fuzz_score are okay
@@ -206,26 +210,26 @@ with arcpy.da.SearchCursor(mhn_near_iris_freq_table, [near_mhn_field, near_iris_
 
                 # Give the benefit of the doubt when either is unnamed
                 if not (mhn_name and iris_combo):
-                    match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
+                    match_dict[mhn_id] = match_tuple
 
                 # Otherwise only match if fuzz_score is above minimum threshold
                 elif fuzz_score > min_fuzz_score:
-                    match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
+                    match_dict[mhn_id] = match_tuple
 
         # Consider replacing match if new match count is at least as high
         elif freq > match_dict[mhn_id][1]:
 
             # Give the benefit of the doubt when either is unnamed
             if not (mhn_name and iris_combo):
-                match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
+                match_dict[mhn_id] = match_tuple
 
             # Otherwise only match if fuzz_score is better (and above minimum threshold)
             elif fuzz_score > max(min_fuzz_score, match_dict[mhn_id][2]):
-                match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
+                match_dict[mhn_id] = match_tuple
 
         elif freq == match_dict[mhn_id][1]:
             if fuzz_score > max(min_fuzz_score, match_dict[mhn_id][2]):
-                match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
+                match_dict[mhn_id] = match_tuple
 
 
 # -----------------------------------------------------------------------------
