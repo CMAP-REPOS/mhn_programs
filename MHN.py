@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 7/17/14
+    Revised: 7/23/14
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -28,7 +28,7 @@ imp_dir = os.path.join(root_dir, 'import')
 out_dir = os.path.join(root_dir, 'output')
 temp_dir = os.path.join(root_dir, 'temp')
 script_dir = sys.path[0]  # Directory containing this module
-if script_dir.endswith('utilities'):
+if os.path.basename(script_dir) == 'utilities':
     prog_dir = os.path.dirname(script_dir)
     util_dir = script_dir
 else:
@@ -167,6 +167,7 @@ def calculate_itin_measures(itin_table):
         based on the MILES values of the corresponding MHN arc. '''
     abb_miles_dict = make_attribute_dict(arc, 'ABB', attr_list=['MILES'])
     route_miles_dict = {}
+
     # 1st loop to determine total route lengths.
     with arcpy.da.SearchCursor(itin_table, ['TRANSIT_LINE', 'ABB']) as cursor:
         for row in cursor:
@@ -176,15 +177,17 @@ def calculate_itin_measures(itin_table):
                 route_miles_dict[route] += abb_miles_dict[abb]['MILES']
             else:
                 route_miles_dict[route] = abb_miles_dict[abb]['MILES']
+
     # 2nd loop to calculate F_MEAS and T_MEAS for each row.
-    with arcpy.da.UpdateCursor(itin_table, ['TRANSIT_LINE', 'ITIN_ORDER', 'ABB', 'F_MEAS', 'T_MEAS']) as cursor:
+    sql = (None, 'ORDER BY TRANSIT_LINE, ITIN_ORDER')
+    with arcpy.da.UpdateCursor(itin_table, ['TRANSIT_LINE', 'ITIN_ORDER', 'ABB', 'F_MEAS', 'T_MEAS'], sql_clause=sql) as cursor:
         order_tracker = 0
         cumulative_percent = 0
         for row in cursor:
             route = row[0]
             row_order = row[1]
             abb = row[2]
-            if row_order < order_tracker:
+            if row_order == 1:  # Beginning of new route
                 cumulative_percent = 0
             segment_length = abb_miles_dict[abb]['MILES']
             segment_percent = segment_length / route_miles_dict[route] * 100
@@ -194,6 +197,7 @@ def calculate_itin_measures(itin_table):
             cursor.updateRow(row)
             order_tracker = row_order
             cumulative_percent = new_cumulative_percent
+
     return itin_table
 
 
