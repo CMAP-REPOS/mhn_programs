@@ -35,6 +35,7 @@ header_csv = os.path.join(MHN.temp_dir, 'header.csv')
 itin_csv = os.path.join(MHN.temp_dir, 'itin.csv')
 link_dict_txt = os.path.join(MHN.out_dir, 'link_dictionary.txt')  # shortest_path.py input file (called by import_gtfs_bus_routes_2.sas)
 short_path_txt = os.path.join(MHN.out_dir, 'short_path.txt')      # shortest_path.py output file
+path_err_txt = os.path.join(MHN.out_dir, 'path_errors.txt')
 hold_check_csv = os.path.join(MHN.out_dir, 'hold_check.csv')
 hold_times_csv = os.path.join(MHN.out_dir, 'hold_times.csv')
 routes_processed_csv = os.path.join(MHN.out_dir, 'routes_processed.csv')
@@ -52,6 +53,7 @@ MHN.delete_if_exists(header_csv)
 MHN.delete_if_exists(itin_csv)
 MHN.delete_if_exists(link_dict_txt)
 MHN.delete_if_exists(short_path_txt)
+MHN.delete_if_exists(path_err_txt)
 MHN.delete_if_exists(hold_check_csv)
 MHN.delete_if_exists(hold_times_csv)
 MHN.delete_if_exists(routes_processed_csv)
@@ -127,11 +129,13 @@ arcpy.AddMessage('{0}Validating coding in {1} & {2}...'.format('\n', raw_header_
 sas1_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas1_name))
 sas1_args = [raw_header_csv, raw_itin_csv, transact_csv, network_csv, nodes_csv,
              MHN.prog_dir, header_csv, itin_csv, link_dict_txt, short_path_txt,
-             hold_check_csv, hold_times_csv, routes_processed_csv,
+             path_err_txt, hold_check_csv, hold_times_csv, routes_processed_csv,
              str(min_route_id), str(MHN.max_poe), sas1_lst]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
     MHN.die('{0} did not run!'.format(sas1_sas))
+elif os.path.exists(path_err_txt):
+    MHN.die('Path errors were encountered. Please see {0}.'.format(path_err_txt))
 elif os.path.exists(sas1_lst):
     MHN.die('Problems with bus_{0} route coding. Please see {1}.'.format(which_bus, sas1_lst))
 else:

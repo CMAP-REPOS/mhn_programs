@@ -56,12 +56,13 @@ options noxwait;
 %let itin=%scan(&sysparm,8,$);
 %let linkdict=%scan(&sysparm,9,$);
 %let shrtpath=%scan(&sysparm,10,$);
-%let holdchck=%scan(&sysparm,11,$);
-%let holdtime=%scan(&sysparm,12,$);
-%let rteprcss=%scan(&sysparm,13,$);
-%let counter=%scan(&sysparm,14,$);
-%let maxzn=%scan(&sysparm,15,$);
-%let lst=%scan(&sysparm,16,$);
+%let ptherrtx=%scan(&sysparm,11,$);
+%let holdchck=%scan(&sysparm,12,$);
+%let holdtime=%scan(&sysparm,13,$);
+%let rteprcss=%scan(&sysparm,14,$);
+%let counter=%scan(&sysparm,15,$);
+%let maxzn=%scan(&sysparm,16,$);
+%let lst=%scan(&sysparm,17,$);
 %let pypath=%sysfunc(tranwrd(&progdir./pypath.txt,/,\));
 %let count=1;
 %let tothold=0;
@@ -594,7 +595,7 @@ data temp; set hold nobs=totobs; call symput('tothold',left(put(totobs,8.))); ru
 
               data _null_; set nopath nobs=totobs; call symput('patherr',left(put(totobs,8.))); run;
               %if &patherr>0 %then %do;
-                 proc printto print="path_errors.txt";
+                 proc printto print="&ptherrtx";
                  proc print noobs data=nopath; title "***** SHORTEST PATH ERROR: NO PATH FOUND, REVIEW CODING *****";
                  proc printto;
               %end;
