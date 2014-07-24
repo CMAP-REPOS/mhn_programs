@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 7/17/14
+    Revised: 7/24/14
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -560,6 +560,7 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
         else:
             if order_field:
                 itin_dict[OID][order_field] += order_bump
+
     for OID in bad_itin_OIDs:
         del itin_dict[OID]  # Remove invalid ABB records after accounting for splits
 
@@ -577,6 +578,7 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
         arcpy.Sort_management(itin_copy, itin_updated, [[common_id_field,'ASCENDING'], [order_field,'ASCENDING']])
     else:
         arcpy.Sort_management(itin_copy, itin_updated, [[common_id_field,'ASCENDING']])
+    arcpy.Delete_management(itin_copy)
 
     # Re-build line features.
     header_updated_path = MHN.mem
