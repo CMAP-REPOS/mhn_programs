@@ -1,7 +1,7 @@
 /*
    import_gtfs_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 6/5/13
+   revised: 7/25/13
    ----------------------------------------------------------------------------
    Program is called by import_gtfs_bus_routes.py and formats bus itineraries
    to build with arcpy.
@@ -510,6 +510,13 @@ data temp; set nodechk nobs=nonode; call symput('badnode',left(put(nonode,8.)));
 %mend nodefix;
 %nodefix
  /* end macro*/
+
+** Above does NOT fix first/last itin segments beginning/ending on bad nodes, so print still-bad itin nodes **;
+data nodechk2(keep=itinerary_a); set verify;
+  output; itinerary_a=itinerary_b; output;
+    proc sort nodupkey; by itinerary_a;
+data nodechk2(keep=itinerary_a); merge nodechk2 nd (in=hit); by itinerary_a; if hit then delete;
+  proc print; title "Itinerary Start/End Nodes Not in the Network";
  *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*;
 
 
