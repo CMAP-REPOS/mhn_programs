@@ -114,7 +114,8 @@ if arcpy.Exists(temp_gdb):
 arcpy.CreateFileGDB_management(os.path.dirname(temp_gdb), os.path.basename(temp_gdb), 'CURRENT')
 
 # Create a layer of the modeled extent of Illinois, for clipping the MHN and IRIS links:
-illinois_lyr = MHN.make_skinny_feature_layer(MHN.zone, 'illinois_lyr', where_clause=''' "COUNTY" LIKE '17%' ''')
+illinois_lyr = MHN.make_skinny_feature_layer(MHN.zone, 'illinois_lyr', where_clause=''' "COUNTY" >= 17000 AND "COUNTY" < 18000 ''')
+arcpy.CopyFeatures_management(illinois_lyr, os.path.join(temp_gdb, 'ILLINOIS'))
 
 # Select IRIS links intersecting Illinois zones
 arcpy.AddMessage('Selecting IRIS links in Illinois modeling zones...')
