@@ -84,9 +84,7 @@ def clean_rte(in_rte):
 def make_oid_dict(fc, value_field):
     ''' Create a dictionary of feature class/table attributes, using OID as the
         key and another specified field as the value. '''
-    key_field = MHN.determine_OID_fieldname(fc)
-    oid_dict = {row[0]: row[1] for row in arcpy.da.SearchCursor(fc, (key_field, value_field))}
-    return oid_dict
+    return {r[0]: r[1] for r in arcpy.da.SearchCursor(fc, ['OID@', value_field])}
 
 ## An alternative to make_oid_dict(), if background processing is disabled.
 ## Uses array module: <https://docs.python.org/2/library/array.html>.
@@ -94,9 +92,9 @@ def make_oid_dict(fc, value_field):
 #    import array
 #    oid_array = array.array('L')  # 'L' = unsigned long integer
 #    key_field = arcpy.Describe(fc).OIDFieldName
-#    with arcpy.da.SearchCursor(fc, (key_field, value_field)) as cur:
-#        for row in cur:
-#            oid, value = row
+#    with arcpy.da.SearchCursor(fc, ['OID@', value_field]) as c:
+#        for r in c:
+#            oid, value = r
 #            if oid > len(oid_array) - 1:
 #                oid_array.extend((0 for x in xrange(oid + 1 - len(oid_array))))
 #            oid_array[oid] = int(value)
@@ -129,7 +127,7 @@ arcpy.SelectLayerByLocation_management(iris_mem_lyr, 'INTERSECT', illinois_lyr)
 # Copy IRIS & MHN links into temp GDB, projecting IRIS to match MHN projection
 arcpy.AddMessage('Copying IRIS & HERE links to geodatabase...')
 mhn_fc = os.path.join(temp_gdb, 'mhn')
-mhn_keep_fields = [mhn_id_field, 'ROADNAME']
+mhn_keep_fields = [mhn_id_field, 'ROADNAME', 'TYPE1']
 mhn_lyr = MHN.make_skinny_feature_layer(MHN.arc, 'mhn_lyr', mhn_keep_fields)
 arcpy.CopyFeatures_management(mhn_lyr, mhn_fc)
 
@@ -149,11 +147,6 @@ arcpy.MakeFeatureLayer_management(iris_fc, iris_subset_lyr)
 arcpy.SelectLayerByLocation_management(iris_subset_lyr, 'INTERSECT', mhn_buffer_fc)
 iris_subset_fc = os.path.join(temp_gdb, 'iris_subset')
 arcpy.CopyFeatures_management(iris_subset_lyr, iris_subset_fc)
-
-## Clip IRIS lines that intersect MHN buffers with those buffers
-#arcpy.AddMessage('Clipping IRIS links with MHN buffer and calculating clipped lengths...')
-#iris_clip_fc = os.path.join(temp_gdb, 'iris_clip')
-#arcpy.Clip_analysis(iris_subset_fc, mhn_buffer_fc, iris_clip_fc)
 
 # Densify IRIS & MHN links and create vertices from dense lines
 arcpy.AddMessage('Densifying links and generating vertices...')
@@ -276,13 +269,21 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
 #  Define SQL queries to stratify links into types that may require
 #  unique matching procedures.
 # ---------------------------------------------------------------------
-mhn_ramp_qry = ''' "BASELINK" = '1' AND "TYPE1" IN ('3', '5') '''
+mhn_ramp_qry = (
+    ''' "{0}" LIKE '%-%-1' AND "TYPE1" IN ('3', '5') '''
+).format(mhn_id_field)
 
-mhn_expy_qry = ''' "BASELINK" = '1' AND "TYPE1" IN ('2', '4') '''
+mhn_expy_qry = (
+    ''' "{0}" LIKE '%-%-1' AND "TYPE1" IN ('2', '4') '''
+).format(mhn_id_field)
 
-mhn_arts_qry = ''' "BASELINK" = '1' AND "TYPE1" = '1' '''
+mhn_arts_qry = (
+    ''' "{0}" LIKE '%-%-1' AND "TYPE1" = '1' '''
+).format(mhn_id_field)
 
-iris_ramp_qry = ''' UPPER("ROAD_NAME") LIKE '% TO %' '''
+iris_ramp_qry = (
+    ''' UPPER("ROAD_NAME") LIKE '% TO %' '''
+)
 
 iris_expy_qry = (
     ''' "FCNAME" IN ('Freeway and Expressway', 'Interstate') '''
