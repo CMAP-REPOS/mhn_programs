@@ -121,7 +121,7 @@ arcpy.AddMessage('Selecting IRIS links in Illinois modeling zones...')
 iris_mem_fc = os.path.join(MHN.mem, 'iris')
 iris_keep_fields = [iris_id_field, 'ROAD_NAME', 'MARKED_RT', 'MARKED_RT2', 'FCNAME']
 iris_lyr = MHN.make_skinny_feature_layer(iris_fc, 'iris_lyr', iris_keep_fields)
-arcpy.CopyFeatures_management(iris_shp_lyr, iris_mem_fc)
+arcpy.CopyFeatures_management(iris_lyr, iris_mem_fc)
 iris_mem_lyr = 'iris_mem_lyr'
 arcpy.MakeFeatureLayer_management(iris_mem_fc, iris_mem_lyr)
 arcpy.SelectLayerByLocation_management(iris_mem_lyr, 'INTERSECT', illinois_lyr)
