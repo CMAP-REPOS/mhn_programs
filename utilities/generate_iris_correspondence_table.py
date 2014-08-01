@@ -112,7 +112,8 @@ if arcpy.Exists(temp_gdb):
 arcpy.CreateFileGDB_management(os.path.dirname(temp_gdb), os.path.basename(temp_gdb), 'CURRENT')
 
 # Create a layer of the modeled extent of Illinois, for clipping the MHN and IRIS links:
-illinois_lyr = MHN.make_skinny_feature_layer(MHN.zone, 'illinois_lyr', where_clause=''' "COUNTY" >= 17000 AND "COUNTY" < 18000 ''')
+il_zones_sql = ''' "COUNTY" >= 17000 AND "COUNTY" < 18000 '''
+illinois_lyr = MHN.make_skinny_feature_layer(MHN.zone, 'illinois_lyr', il_zones_sql)
 
 # Select IRIS links intersecting Illinois zones
 arcpy.AddMessage('Selecting IRIS links in Illinois modeling zones...')
@@ -128,7 +129,8 @@ arcpy.SelectLayerByLocation_management(iris_mem_lyr, 'INTERSECT', illinois_lyr)
 arcpy.AddMessage('Copying IRIS & HERE links to geodatabase...')
 mhn_fc = os.path.join(temp_gdb, 'mhn')
 mhn_keep_fields = [mhn_id_field, 'ROADNAME', 'TYPE1']
-mhn_lyr = MHN.make_skinny_feature_layer(MHN.arc, 'mhn_lyr', mhn_keep_fields)
+base_mhn_sql = ''' "BASELINK" = '1' AND "TYPE1" <> '6' '''
+mhn_lyr = MHN.make_skinny_feature_layer(MHN.arc, 'mhn_lyr', mhn_keep_fields, base_mhn_sql)
 arcpy.CopyFeatures_management(mhn_lyr, mhn_fc)
 
 iris_fc = os.path.join(temp_gdb, 'iris')
@@ -269,21 +271,13 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
 #  Define SQL queries to stratify links into types that may require
 #  unique matching procedures.
 # ---------------------------------------------------------------------
-mhn_ramp_qry = (
-    ''' "{0}" LIKE '%-%-1' AND "TYPE1" IN ('3', '5') '''
-).format(mhn_id_field)
+mhn_ramp_qry = ''' "TYPE1" IN ('3', '5') '''
 
-mhn_expy_qry = (
-    ''' "{0}" LIKE '%-%-1' AND "TYPE1" IN ('2', '4') '''
-).format(mhn_id_field)
+mhn_expy_qry = ''' "TYPE1" IN ('2', '4') '''
 
-mhn_arts_qry = (
-    ''' "{0}" LIKE '%-%-1' AND "TYPE1" = '1' '''
-).format(mhn_id_field)
+mhn_arts_qry = ''' "TYPE1" = '1' '''
 
-iris_ramp_qry = (
-    ''' UPPER("ROAD_NAME") LIKE '% TO %' '''
-)
+iris_ramp_qry = ''' UPPER("ROAD_NAME") LIKE '% TO %' '''
 
 iris_expy_qry = (
     ''' "FCNAME" IN ('Freeway and Expressway', 'Interstate') '''
