@@ -115,7 +115,6 @@ arcpy.CreateFileGDB_management(os.path.dirname(temp_gdb), os.path.basename(temp_
 
 # Create a layer of the modeled extent of Illinois, for clipping the MHN and IRIS links:
 illinois_lyr = MHN.make_skinny_feature_layer(MHN.zone, 'illinois_lyr', where_clause=''' "COUNTY" >= 17000 AND "COUNTY" < 18000 ''')
-arcpy.CopyFeatures_management(illinois_lyr, os.path.join(temp_gdb, 'ILLINOIS'))
 
 # Select IRIS links intersecting Illinois zones
 arcpy.AddMessage('Selecting IRIS links in Illinois modeling zones...')
@@ -150,25 +149,11 @@ arcpy.MakeFeatureLayer_management(iris_fc, iris_subset_lyr)
 arcpy.SelectLayerByLocation_management(iris_subset_lyr, 'INTERSECT', mhn_buffer_fc)
 iris_subset_fc = os.path.join(temp_gdb, 'iris_subset')
 arcpy.CopyFeatures_management(iris_subset_lyr, iris_subset_fc)
-#arcpy.AddField_management(iris_subset_fc, 'LENGTH', 'DOUBLE')
-#with arcpy.da.UpdateCursor(iris_subset_fc, ['SHAPE@LENGTH', 'LENGTH']) as cursor:
-#    for row in cursor:
-#        row[1] = row[0]
-#        cursor.updateRow(row)
 
 # Clip IRIS lines that intersect MHN buffers with those buffers
 arcpy.AddMessage('Clipping IRIS links with MHN buffer and calculating clipped lengths...')
 iris_clip_fc = os.path.join(temp_gdb, 'iris_clip')
 arcpy.Clip_analysis(iris_subset_fc, mhn_buffer_fc, iris_clip_fc)
-
-## Calculate clipped line lengths
-#arcpy.AddField_management(iris_clip_fc, 'LENGTH_CLIP', 'DOUBLE')
-#arcpy.AddField_management(iris_clip_fc, 'LENGTH_PCT', 'DOUBLE')
-#with arcpy.da.UpdateCursor(iris_clip_fc, ['SHAPE@LENGTH', 'LENGTH', 'LENGTH_CLIP', 'LENGTH_PCT']) as cursor:
-#    for row in cursor:
-#        row[2] = row[0]
-#        row[3] = 100 * row[0] / row[1]
-#        cursor.updateRow(row)
 
 # Densify IRIS & MHN links and create vertices from dense lines
 arcpy.AddMessage('Densifying links and generating vertices...')
