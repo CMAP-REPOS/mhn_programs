@@ -150,10 +150,10 @@ arcpy.SelectLayerByLocation_management(iris_subset_lyr, 'INTERSECT', mhn_buffer_
 iris_subset_fc = os.path.join(temp_gdb, 'iris_subset')
 arcpy.CopyFeatures_management(iris_subset_lyr, iris_subset_fc)
 
-# Clip IRIS lines that intersect MHN buffers with those buffers
-arcpy.AddMessage('Clipping IRIS links with MHN buffer and calculating clipped lengths...')
-iris_clip_fc = os.path.join(temp_gdb, 'iris_clip')
-arcpy.Clip_analysis(iris_subset_fc, mhn_buffer_fc, iris_clip_fc)
+## Clip IRIS lines that intersect MHN buffers with those buffers
+#arcpy.AddMessage('Clipping IRIS links with MHN buffer and calculating clipped lengths...')
+#iris_clip_fc = os.path.join(temp_gdb, 'iris_clip')
+#arcpy.Clip_analysis(iris_subset_fc, mhn_buffer_fc, iris_clip_fc)
 
 # Densify IRIS & MHN links and create vertices from dense lines
 arcpy.AddMessage('Densifying links and generating vertices...')
@@ -161,9 +161,9 @@ arcpy.Densify_edit(mhn_fc, distance=densify_distance)
 mhn_vertices_fc = os.path.join(temp_gdb, 'mhn_vertices')
 arcpy.FeatureVerticesToPoints_management(mhn_fc, mhn_vertices_fc, 'ALL')
 
-arcpy.Densify_edit(iris_clip_fc, distance=densify_distance)
+arcpy.Densify_edit(iris_subset_fc, distance=densify_distance)
 iris_vertices_fc = os.path.join(temp_gdb, 'iris_vertices')
-arcpy.FeatureVerticesToPoints_management(iris_clip_fc, iris_vertices_fc, 'ALL')
+arcpy.FeatureVerticesToPoints_management(iris_subset_fc, iris_vertices_fc, 'ALL')
 
 
 # ---------------------------------------------------------------------
@@ -210,7 +210,7 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
     mhn_attr_dict = MHN.make_attribute_dict(mhn_lyr, mhn_id_field, ['ROADNAME', 'SHAPE@LENGTH'])
 
     matched_iris_ids = set([str(row[0]) for row in arcpy.da.SearchCursor(near_freq_table, [near_iris_field])])
-    iris_clip_lyr = MHN.make_skinny_feature_layer(iris_clip_fc, 'iris_clip_lyr', ['ROAD_NAME', 'MARKED_RT', 'MARKED_RT2'])
+    iris_clip_lyr = MHN.make_skinny_feature_layer(iris_subset_fc, 'iris_clip_lyr', ['ROAD_NAME', 'MARKED_RT', 'MARKED_RT2'])
     arcpy.SelectLayerByAttribute_management(iris_clip_lyr, 'NEW_SELECTION', ''' "{0}" IN ({1}) '''.format(iris_id_field, ','.join(matched_iris_ids)))
     iris_attr_dict = MHN.make_attribute_dict(iris_clip_lyr, iris_id_field, ['ROAD_NAME', 'MARKED_RT', 'MARKED_RT2'])
 
