@@ -392,7 +392,8 @@ with arcpy.da.InsertCursor(match_table, [match_mhn_field, match_iris_field, 'FRE
     for mhn_id in expy_match_dict.keys():
         cursor.insertRow([mhn_id] + list(expy_match_dict[mhn_id]))
 
-output_table = arcpy.TableToTable_conversion(match_table, out_workspace, table_name.format(MHN.timestamp('%Y%m%d')))
+table_name = table_name.format(MHN.timestamp('%Y%m%d'))
+output_table = arcpy.TableToTable_conversion(match_table, out_workspace, table_name)
 
 
 # ---------------------------------------------------------------------
