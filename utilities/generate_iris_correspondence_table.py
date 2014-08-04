@@ -205,7 +205,10 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
     # IRIS and MHN links, as well as link length for MHN links.
     matched_mhn_ids = set([str(row[0]) for row in arcpy.da.SearchCursor(near_freq_table, [near_mhn_field])])
     arcpy.SelectLayerByAttribute_management(mhn_lyr, 'NEW_SELECTION', ''' "{0}" IN ('{1}') '''.format(mhn_id_field, "','".join(matched_mhn_ids)))
-    mhn_attr_dict = MHN.make_attribute_dict(mhn_lyr, mhn_id_field, ['ROADNAME', 'SHAPE@LENGTH'])
+    mhn_attr_dict = MHN.make_attribute_dict(mhn_lyr, mhn_id_field, ['ROADNAME'])
+    with arcpy.da.SearchCursor(mhn_lyr, [mhn_id_field, 'SHAPE@LENGTH']) as cursor:
+        for row in cursor:
+            mhn_attr_dict[row[0]]['LENGTH'] = row[1]
 
     matched_iris_ids = set([str(row[0]) for row in arcpy.da.SearchCursor(near_freq_table, [near_iris_field])])
     iris_clip_lyr = MHN.make_skinny_feature_layer(iris_subset_fc, 'iris_clip_lyr', ['ROAD_NAME', 'MARKED_RT', 'MARKED_RT2'])
@@ -235,7 +238,7 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
                 fuzz_score = fuzz.token_set_ratio(mhn_name, iris_combo)  # 0-100: How similar are the names?
 
             # If MHN link is too short for a match to be possible (or unlikely), reduce match count threshold
-            mhn_length = mhn_attr_dict[mhn_id]['SHAPE@LENGTH']
+            mhn_length = mhn_attr_dict[mhn_id]['LENGTH']
             max_possible_matches = math.floor(mhn_length / densify_distance)
             max_likely_matches = math.ceil(0.6 * max_possible_matches)
             arc_min_freq = min(min_match_count, max_likely_matches)
