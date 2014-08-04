@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 7/31/2014
+    Revised: 8/4/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -181,7 +181,7 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
     arcpy.GenerateNearTable_analysis(mhn_vertices_lyr, iris_vertices_lyr, near_table, near_distance)
 
     arcpy.AddMessage('-- Calculating frequencies of match candidates...')
-    arcpy.AddField_management(near_table, near_mhn_field, 'LONG')
+    arcpy.AddField_management(near_table, near_mhn_field, 'TEXT', field_length=13)
     arcpy.AddField_management(near_table, near_iris_field, 'LONG')
 
     with arcpy.da.UpdateCursor(near_table, ['IN_FID', 'NEAR_FID', near_mhn_field, near_iris_field]) as cursor:
@@ -346,7 +346,7 @@ match_mhn_field = near_mhn_field
 match_iris_field = near_iris_field
 
 arcpy.CreateTable_management(os.path.dirname(match_table), os.path.basename(match_table))
-arcpy.AddField_management(match_table, match_mhn_field, 'LONG')
+arcpy.AddField_management(match_table, match_mhn_field, 'TEXT', field_length=13)
 arcpy.AddField_management(match_table, match_iris_field, 'LONG')
 arcpy.AddField_management(match_table, 'FREQUENCY', 'LONG')
 arcpy.AddField_management(match_table, 'FUZZ_SCORE', 'LONG')
