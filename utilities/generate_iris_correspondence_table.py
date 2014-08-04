@@ -167,9 +167,12 @@ arcpy.FeatureVerticesToPoints_management(iris_subset_fc, iris_vertices_fc, 'ALL'
 near_mhn_field = 'MHN_{0}'.format(mhn_id_field)
 near_iris_field = 'IRIS_{0}'.format(iris_id_field)
 
-def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=False):
+def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=False, subset_near_distance=None):
     ''' For two feature layers (subsets of the IRIS and MHN vertices feature
         classes) return a dictionary of matched links. '''
+
+    if not subset_near_distance:
+        subset_near_distance = near_distance
 
     ###  GENERATE NEAR FREQUENCY TABLE AND ATTACH ID_FIELD VALUES ###
     arcpy.AddMessage('-- Generating vertex OID dictionaries...')
@@ -178,7 +181,7 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
 
     arcpy.AddMessage('-- Generating near-table...')
     near_table = os.path.join(temp_gdb, 'mhn_near_iris')
-    arcpy.GenerateNearTable_analysis(mhn_vertices_lyr, iris_vertices_lyr, near_table, near_distance)
+    arcpy.GenerateNearTable_analysis(mhn_vertices_lyr, iris_vertices_lyr, near_table, subset_near_distance)
 
     arcpy.AddMessage('-- Calculating frequencies of match candidates...')
     arcpy.AddField_management(near_table, near_mhn_field, 'TEXT', field_length=13)
@@ -201,7 +204,7 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
     # Create dictionaries of attributes (road name, rte number) for near table's
     # IRIS and MHN links, as well as link length for MHN links.
     matched_mhn_ids = set([str(row[0]) for row in arcpy.da.SearchCursor(near_freq_table, [near_mhn_field])])
-    arcpy.SelectLayerByAttribute_management(mhn_lyr, 'NEW_SELECTION', ''' "{0}" IN ({1}) '''.format(mhn_id_field, ','.join(matched_mhn_ids)))
+    arcpy.SelectLayerByAttribute_management(mhn_lyr, 'NEW_SELECTION', ''' "{0}" IN ('{1}') '''.format(mhn_id_field, "','".join(matched_mhn_ids)))
     mhn_attr_dict = MHN.make_attribute_dict(mhn_lyr, mhn_id_field, ['ROADNAME', 'SHAPE@LENGTH'])
 
     matched_iris_ids = set([str(row[0]) for row in arcpy.da.SearchCursor(near_freq_table, [near_iris_field])])
@@ -271,12 +274,23 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
 #  Define SQL queries to stratify links into types that may require
 #  unique matching procedures.
 # ---------------------------------------------------------------------
+
+# -- MHN --
 mhn_ramp_qry = ''' "TYPE1" IN ('3', '5') '''
 
 mhn_expy_qry = ''' "TYPE1" IN ('2', '4') '''
 
-mhn_arts_qry = ''' "TYPE1" = '1' '''
+mhn_blvd_qry = (
+    ''' "TYPE1" = '1' AND ("ROADNAME" LIKE '%WACKER DR%' OR '''
+    ''' "ROADNAME" IN ('DREXEL BLVD','DOUGLAS BLVD','GARFIELD BLVD', '''
+    ''' 'INDEPENDENCE BLVD')) '''
+)
 
+mhn_arts_qry = (
+    ''' "TYPE1" = '1' AND NOT ({0}) '''
+).format(mhn_blvd_qry)
+
+# -- IRIS --
 iris_ramp_qry = ''' UPPER("ROAD_NAME") LIKE '% TO %' '''
 
 iris_expy_qry = (
@@ -293,20 +307,30 @@ iris_arts_qry = (
 #  Create match dictionaries for each link type.
 # -----------------------------------------------------------------------------
 
-# -- ARTERIALS --
-arcpy.AddMessage('\nMatching IRIS arterials with MHN arterials...')
+# -- BOULEVARDS / DIVIDED ARTERIALS --
+arcpy.AddMessage('\nMatching IRIS arterials to MHN divided arterials/boulevards...')
 
-mhn_arts_vertices_lyr = 'mhn_arts_vertices_lyr'
-arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_arts_vertices_lyr, mhn_arts_qry)
+mhn_blvd_vertices_lyr = 'mhn_blvd_vertices_lyr'
+arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_blvd_vertices_lyr, mhn_blvd_qry)
 
 iris_arts_vertices_lyr = 'iris_arts_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_arts_vertices_lyr, iris_arts_qry)
+
+blvd_near_distance = max(near_distance, 200)
+blvd_match_dict = match_subset_of_links(mhn_blvd_vertices_lyr, iris_arts_vertices_lyr, subset_near_distance=blvd_near_distance)
+
+
+# -- REMAINING ARTERIALS --
+arcpy.AddMessage('\nMatching IRIS arterials to remaining MHN arterials...')
+
+mhn_arts_vertices_lyr = 'mhn_arts_vertices_lyr'
+arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_arts_vertices_lyr, mhn_arts_qry)
 
 arts_match_dict = match_subset_of_links(mhn_arts_vertices_lyr, iris_arts_vertices_lyr)
 
 
 # -- RAMPS --
-arcpy.AddMessage('\nMatching IRIS ramps with MHN ramps (geometry only)...')
+arcpy.AddMessage('\nMatching IRIS ramps to MHN ramps (geometry only)...')
 
 mhn_ramp_vertices_lyr = 'mhn_ramp_vertices_lyr'
 arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_ramp_vertices_lyr, mhn_ramp_qry)
@@ -317,8 +341,8 @@ arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_ramp_vertices_lyr, iris
 ramp_match_dict = match_subset_of_links(mhn_ramp_vertices_lyr, iris_ramp_vertices_lyr, ignore_names=True)
 
 
-# -- EXPRESSWAYS, 1ST PASS --
-arcpy.AddMessage('\nMatching IRIS expressways with MHN expressways (geometry only, 1st pass)...')
+# -- EXPRESSWAYS --
+arcpy.AddMessage('\nMatching IRIS expressways to MHN expressways (geometry only)...')
 
 mhn_expy_vertices_lyr = 'mhn_expy_vertices_lyr'
 arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_expy_vertices_lyr, mhn_expy_qry)
@@ -326,15 +350,8 @@ arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_expy_vertices_lyr, mhn_ex
 iris_expy_vertices_lyr = 'iris_expy_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_expy_vertices_lyr, iris_expy_qry)
 
-expy_match_dict_1 = match_subset_of_links(mhn_expy_vertices_lyr, iris_expy_vertices_lyr, ignore_names=True)
-
-
-# -- EXPRESSWAYS, 2ND PASS --
-### Exclude matched HERE links from 1st pass, and increase near_distance to match opposite side
-
-
-# -- DIVIDED ARTERIALS, 2ND PASS --
-### Exclude matched HERE links from 1st pass, and increase near_distance to match opposite side
+expy_near_distance = max(near_distance, 200)
+expy_match_dict = match_subset_of_links(mhn_expy_vertices_lyr, iris_expy_vertices_lyr, ignore_names=True, subset_near_distance=expy_near_distance)
 
 
 # -----------------------------------------------------------------------------
@@ -356,17 +373,21 @@ arcpy.AddField_management(match_table, 'IRIS_NAME', 'TEXT', field_length=50)
 # Insert matches from each dict into table.
 with arcpy.da.InsertCursor(match_table, [match_mhn_field, match_iris_field, 'FREQUENCY', 'FUZZ_SCORE', 'MHN_NAME', 'IRIS_NAME']) as cursor:
 
-    # 1. Insert arterial matches:
+    # 2. Insert boulevard/divided arterial matches:
+    for mhn_id in blvd_match_dict.keys():
+        cursor.insertRow([mhn_id] + list(blvd_match_dict[mhn_id]))
+
+    # 2. Insert other arterial matches:
     for mhn_id in arts_match_dict.keys():
         cursor.insertRow([mhn_id] + list(arts_match_dict[mhn_id]))
 
-    # 2. Insert ramp matches:
+    # 3. Insert ramp matches:
     for mhn_id in ramp_match_dict.keys():
         cursor.insertRow([mhn_id] + list(ramp_match_dict[mhn_id]))
 
-    # 3. Insert expressway (1st pass) matches:
-    for mhn_id in expy_match_dict_1.keys():
-        cursor.insertRow([mhn_id] + list(expy_match_dict_1[mhn_id]))
+    # 4. Insert expressway matches:
+    for mhn_id in expy_match_dict.keys():
+        cursor.insertRow([mhn_id] + list(expy_match_dict[mhn_id]))
 
 output_table = arcpy.TableToTable_conversion(match_table, out_workspace, table_name + '.dbf')
 
