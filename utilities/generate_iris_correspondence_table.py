@@ -131,6 +131,7 @@ mhn_fc = os.path.join(temp_gdb, 'mhn')
 mhn_keep_fields = [mhn_id_field, 'ROADNAME', 'TYPE1']
 base_mhn_sql = ''' "BASELINK" = '1' AND "TYPE1" <> '6' '''
 mhn_lyr = MHN.make_skinny_feature_layer(MHN.arc, 'mhn_lyr', mhn_keep_fields, base_mhn_sql)
+arcpy.SelectLayerByLocation_management(mhn_lyr, 'INTERSECT', illinois_lyr, selection_type='SUBSET_SELECTION')
 arcpy.CopyFeatures_management(mhn_lyr, mhn_fc)
 
 iris_fc = os.path.join(temp_gdb, 'iris')
