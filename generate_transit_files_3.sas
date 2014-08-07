@@ -1,7 +1,7 @@
 /*
    generate_transit_files_3.sas
    authors: cheither & npeterson
-   revised: 5/6/13
+   revised: 8/7/14
    ----------------------------------------------------------------------------
    Program reads batchout of rail transit lines (modes c and m) and formats
    file of stops to be used in arc to create bus-rail links. Emme rail batchin
@@ -30,7 +30,7 @@ options pagesize=64 linesize=80;
 data lines itins;
  infile in1 missover dlm="= ' # + < > *";
   retain count 0; retain type;
-  input @1 check $1. @3 check2 $4. @13 check3 $1. @22 check4 $1. @;
+  input @1 check $1. @3 check2 $4. @13 check3 $1. @9 check4 $1. @;
     select;
        when (check in ('c','t')) delete;
        when (check='a') do; count+1;
@@ -39,7 +39,7 @@ data lines itins;
        when (check=' ' and check3=' ' and (check4 ne '#' and check4 ne '+' and check4 ne '<' and
                     check4 ne '>' and check4 ne '*')) delete;
        otherwise do;
-             input @1 anode dwt=$ ttf= lay= us1= us2= us3=;
+             input @1 dwt=$ anode ttf= lay= us1= us2= us3=;
                output itins; end;
     end;
 
