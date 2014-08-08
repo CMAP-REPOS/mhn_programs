@@ -521,15 +521,17 @@ data out1; set out1;
    file out1;
    if _n_=1 then do;
       put "c BUS TRANSIT LINE BATCHIN FILE FOR SCENARIO NETWORK &scen TOD &tod" /
-          "c  &sysdate" / "c us1 holds segment travel time, us2 holds zone fare" / "t lines";
+          "c  &sysdate" /
+          "c us1 holds segment travel time, us2 holds zone fare" /
+          "t lines";
    end;
    if first.linename then do;
-      put 'a' +0 name +2 mode +2 vehtype +2 headway +2 speed +2 desc /
+      put 'a' +1 name +2 mode +2 vehtype +2 headway +2 speed +2 desc /
           +2 'path=no';
    end;
    else if last.linename then do;
       put +4 d +1 itina +2 tf +2 us1 +2 us2 /
-          +3 itinb +2 'lay=' +0 layover;
+          +4 itinb +2 'lay=' +0 layover;
    end;
    else if dwcode=1 then do;
       put +4 d +7 itina +4 tf +2 us1 +2 us2;
