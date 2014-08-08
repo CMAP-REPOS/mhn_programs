@@ -1,7 +1,7 @@
 /*
    generate_transit_files_3.sas
    authors: cheither & npeterson
-   revised: 8/7/14
+   revised: 8/8/14
    ----------------------------------------------------------------------------
    Program reads batchout of rail transit lines (modes c and m) and formats
    file of stops to be used in arc to create bus-rail links. Emme rail batchin
@@ -28,29 +28,42 @@ options pagesize=64 linesize=80;
             ** READ IN & FORMAT ITINERARIES **;
           *------------------------------------*;
 data lines itins;
- infile in1 missover dlm="= ' # + < > *";
+  infile in1 truncover;
   retain count 0; retain type;
-  input @1 check $1. @3 check2 $4. @13 check3 $1. @9 check4 $1. @;
-    select;
-       when (check in ('c','t')) delete;
-       when (check='a') do; count+1;
-              input @1 check $ name $6. type $;  output lines; end;
-       when (check2='path') delete;
-       when (check=' ' and check3=' ' and (check4 ne '#' and check4 ne '+' and check4 ne '<' and
-                    check4 ne '>' and check4 ne '*')) delete;
-       otherwise do;
-             input @1 dwt=$ anode ttf= lay= us1= us2= us3=;
-               output itins; end;
+  input @1 first $1. @;
+  if first in ('c','t') then delete;
+  else if first='a' then do;
+    count+1;
+    input name $ type $;
+    name = dequote(name);
+    output lines;
+  end;
+  else do;
+    input @1 path= $ @;
+    if path='no' then delete;
+    else do;
+      if find(_infile_, "dwt=") > 0 then do;
+        input @1 dwt= $20. ttf= us1= us2= us3= lay=;
+        anode=input(scan(dwt,2,' '), best.);
+        dwt=scan(dwt,1,' ');
+		if substr(dwt,1,1) in ('#','>','<','+','*') then dwflag = substr(dwt,1,1);
+        output itins;
+      end;
+      else do;
+        input @1 anode lay=;
+        output itins;
+      end;
     end;
+  end;
 
  /*GET CODE AND BNODE ON SAME LINE*/
 data itins(keep=node code type); set itins;
   node=anode;
-  if check4='#' then dwcode=1;
-  else if check4='>' then dwcode=2;
-  else if check4='<' then dwcode=3;
-  else if check4='+' then dwcode=4;
-  else if check4='*' then dwcode=5;
+  if dwflag='#' then dwcode=1;
+  else if dwflag='>' then dwcode=2;
+  else if dwflag='<' then dwcode=3;
+  else if dwflag='+' then dwcode=4;
+  else if dwflag='*' then dwcode=5;
   else dwcode=0;
   code=lag(dwcode);
   counter=lag(count);
