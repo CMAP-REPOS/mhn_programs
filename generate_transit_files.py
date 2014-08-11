@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 2/6/14
+    Revised: 8/11/14
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -44,8 +44,7 @@ if not os.path.exists(tran_path):
 
 sas1_name = 'gtfs_reformat_feed'
 sas2_name = 'generate_transit_files_2'
-sas3_name = 'generate_transit_files_3'
-sas4_name = 'generate_transit_files_4'
+sas3_name = 'generate_transit_files_4'
 
 
 # -----------------------------------------------------------------------------
@@ -57,8 +56,6 @@ sas2_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas2_name))
 sas2_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas2_name))
 sas3_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas3_name))
 sas3_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas3_name))
-sas4_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas4_name))
-sas4_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas4_name))
 bus_route_csv = os.path.join(MHN.temp_dir, 'bus_route.csv')
 bus_itin_csv = os.path.join(MHN.temp_dir, 'bus_itin.csv')
 oneline_itin_txt = os.path.join(MHN.temp_dir, 'oneline_itin.txt')  # gtfs_collapse_routes.py input file (called by gtfs_reformat_feed.sas)
@@ -78,8 +75,6 @@ MHN.delete_if_exists(sas2_log)
 MHN.delete_if_exists(sas2_lst)
 MHN.delete_if_exists(sas3_log)
 MHN.delete_if_exists(sas3_lst)
-MHN.delete_if_exists(sas4_log)
-MHN.delete_if_exists(sas4_lst)
 MHN.delete_if_exists(bus_route_csv)
 MHN.delete_if_exists(bus_itin_csv)
 MHN.delete_if_exists(oneline_itin_txt)
@@ -431,16 +426,90 @@ for scen in scen_list:
             os.remove(rep_runs_itin_csv)
             MHN.delete_if_exists(replace_csv)
 
-        # Call generate_transit_files_3.sas -- creates rail stop information.
-        sas3_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas3_name))
-        sas3_args = [rail_itin, rail_net, cta_stop, metra_stop]
-        MHN.submit_sas(sas3_sas, sas3_log, sas3_lst, sas3_args)
-        if not os.path.exists(sas3_log):
-            MHN.die('{0} did not run!'.format(sas3_sas))
-        elif os.path.exists(sas3_lst) or not (os.path.exists(cta_stop) and os.path.exists(metra_stop)):
-            MHN.die('{0} did not run successfully. Please review {1}.'.format(sas3_sas, sas3_log))
-        else:
-            arcpy.Delete_management(sas3_log)
+
+        # ---------------------------------------------------------------------
+        # Generate rail stop data from rail batchin files.
+        # ---------------------------------------------------------------------
+        def generate_rail_pnt_files(itin_batchin, ntwk_batchin, cta_pnt, metra_pnt):
+
+            # Read in rail network node coordinates
+            node_coords = {}
+
+            with open(ntwk_batchin, 'rb') as network:
+                section = ''
+
+                for line in network:
+                    attr = line.strip().split()
+                    if len(attr) == 0:
+                        continue
+
+                    # Track section to only process nodes (not lines)
+                    elif attr[0] == 't':
+                        section = attr[1].lower()
+
+                    # Store all node coords in dict
+                    elif section == 'nodes' and attr[0] == 'a':
+                        node = int(attr[1])
+                        x = float(attr[2])
+                        y = float(attr[3])
+                        node_coords[node] = (x, y)
+
+            # Determine rail network nodes that serve as stops for CTA/Metra
+            cta_stops = set()
+            metra_stops = set()
+
+            with open(itin_batchin, 'rb') as itin:
+                vtype = ''
+                is_stop = True  # First node in file will be a stop
+
+                for line in itin:
+                    attr = line.strip().split()
+                    if len(attr) == 0 or attr[0] in ('c', 't', 'path=no'):
+                        continue
+
+                    # Set type and first is_stop for header lines
+                    elif attr[0] == 'a':
+                        vtype = attr[2].upper()  # 'C' (CTA) or 'M' (Metra)
+                        is_stop = True  # First node in itin will be a stop
+
+                    # Check whether each itin anode is a stop
+                    else:
+                        if attr[0].startswith('dwt='):
+                            anode = int(attr[1])
+                        else:
+                            anode = int(attr[0])
+
+                        # If stops allowed, add to appropriate stop dict
+                        if is_stop:
+                            if vtype == 'C':
+                                cta_stops.add(anode)
+                            elif vtype == 'M':
+                                metra_stops.add(anode)
+
+                        # Update is_stop for *next* anode (dwt applies to bnodes)
+                        if attr[0].startswith('dwt='):
+                            is_stop = False if '#' in attr[0] else True
+
+                # Write CTA .pnt file
+                cta_w = open(cta_pnt, 'wb')
+                for node in sorted(cta_stops):
+                    if node in node_coords:
+                        cta_w.write('{0},{1},{2}\n'.format(node, node_coords[node][0], node_coords[node][1]))
+                cta_w.write('END\n')
+                cta_w.close()
+
+                # Write Metra .pnt file
+                metra_w = open(metra_pnt, 'wb')
+                for node in sorted(metra_stops):
+                    if node in node_coords:
+                        metra_w.write('{0},{1},{2}\n'.format(node, node_coords[node][0], node_coords[node][1]))
+                metra_w.write('END\n')
+                metra_w.close()
+
+            return None
+
+        generate_rail_pnt_files(rail_itin, rail_net, cta_stop, metra_stop)
+
 
         # ---------------------------------------------------------------------
         # Create transit network links with modes c, m, u, v, w, x, y and z.
@@ -566,16 +635,16 @@ for scen in scen_list:
             arcpy.Delete_management(fc)
 
         # Call generate_transit_files_4.sas -- writes access.network file.
-        sas4_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas4_name))
-        sas4_output = os.path.join(scen_tran_path, 'access.network_{0}'.format(tod))
-        sas4_args = [scen_tran_path, scen, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])), tod]
-        MHN.submit_sas(sas4_sas, sas4_log, sas4_lst, sas4_args)
-        if not os.path.exists(sas4_log):
-            MHN.die('{0} did not run!'.format(sas4_sas))
-        elif os.path.exists(sas4_lst) or not os.path.exists(sas4_output):
-            MHN.die('{0} did not run successfully. Please review {1}.'.format(sas4_sas, sas4_log))
+        sas3_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas3_name))
+        sas3_output = os.path.join(scen_tran_path, 'access.network_{0}'.format(tod))
+        sas3_args = [scen_tran_path, scen, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])), tod]
+        MHN.submit_sas(sas3_sas, sas3_log, sas3_lst, sas3_args)
+        if not os.path.exists(sas3_log):
+            MHN.die('{0} did not run!'.format(sas3_sas))
+        elif os.path.exists(sas3_lst) or not os.path.exists(sas3_output):
+            MHN.die('{0} did not run successfully. Please review {1}.'.format(sas3_sas, sas3_log))
         else:
-            os.remove(sas4_log)
+            os.remove(sas3_log)
             os.remove(cbddist_txt)
             os.remove(ctadist_txt)
             os.remove(metracta_txt)

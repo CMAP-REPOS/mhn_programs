@@ -1,7 +1,7 @@
 /*
    generate_transit_files_2.sas
    authors: cheither & npeterson
-   revised: 7/16/13
+   revised: 8/11/14
    ----------------------------------------------------------------------------
    Program creates bus transit network batchin files. Bus transit network is
    built using a modified version of MHN processing procedures.
@@ -500,7 +500,7 @@ data segout; set routes verify; proc sort; by linename order;
 data segout; set segout; by linename;
   if last.linename then end=1; else end=0;
 
-data out1; set segout;
+data out1; set segout; by linename;
   length desc $22 dwell $4 d $9;
     layov=lag1(layover);
     if dwcode=1 then dwell='0';
@@ -508,6 +508,7 @@ data out1; set segout;
     if descr ne ' ' then layov=0;
     name="'"||compress(linename)||"'";
     desc="'"||descr||"'";
+    ltime=round(ltime, 0.1);
     if dwcode=1 then d=compress('dwt=#'||dwell);
     else if dwcode=2 then d=compress('dwt=>'||dwell);
     else if dwcode=3 then d=compress('dwt=<'||dwell);
@@ -515,26 +516,30 @@ data out1; set segout;
     else if dwcode=5 then d=compress('dwt=*'||dwell);
     else d=compress('dwt='||dwell);
     tf=compress('ttf='||ttf);
-data out1; set out1;
-    ltime=round(ltime, 0.1);
+    us1=compress('us1='||ltime);
+    us2=compress('us2='||zfare);
 
+data out1; set out1;
    file out1;
    if _n_=1 then do;
-      put "c BUS TRANSIT LINE BATCHIN FILE FOR SCENARIO NETWORK &scen TOD &tod" /
-          "c  &sysdate" / "c us1 holds segment travel time, us2 holds zone fare" / "t lines";
+      put "c BUS TRANSIT BATCHIN FILE FOR SCENARIO &scen TOD &tod" /
+          "c &sysdate" /
+          "c us1 holds segment travel time, us2 holds zone fare" /
+          "t lines";
    end;
    if descr ne ' ' then do;
-      put 'a' +2 name +2 mode +2 vehtype +2 headway +2 speed
-           +2 desc / +2 'path=no';
+      put 'a' +1 name +2 mode +2 vehtype +2 headway +2 speed +2 desc /
+          +2 'path=no';
    end;
    else if end=1 then do;
-      put +3 itina +2 d +2 tf +2 'us1=' +0 ltime +2 'us2=' +0 zfare / +3 itinb +2 'lay=' +0 layover;
+      put +4 d +(10-length(left(trim(d)))) itina +(7-length(left(trim(itina)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2 /
+          +15 itinb +(7-length(left(trim(itinb)))) 'lay=' +0 layover;
    end;
    else if layov>0 then do;
-      put +3 itina +2 d +2 tf +2 'us1=' +0 ltime +2 'us2=' +0 zfare +2 'lay=' +0 layov;
+      put +4 d +(10-length(left(trim(d)))) itina +(7-length(left(trim(itina)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2 +2 'lay=' +0 layov;
    end;
    else do;
-      put +3 itina +2 d +2 tf +2 'us1=' +0 ltime +2 'us2=' +0 zfare;
+      put +4 d +(10-length(left(trim(d)))) itina +(7-length(left(trim(itina)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2;
    end;
 
 
