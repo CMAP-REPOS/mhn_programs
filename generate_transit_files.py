@@ -464,7 +464,7 @@ for scen in scen_list:
 
                 for line in itin:
                     attr = line.strip().split()
-                    if len(attr) == 0:
+                    if len(attr) == 0 or attr[0] in ('c', 't', 'path=no'):
                         continue
 
                     # Set type and first is_stop for header lines
@@ -472,8 +472,8 @@ for scen in scen_list:
                         vtype = attr[2].upper()  # 'C' (CTA) or 'M' (Metra)
                         is_stop = True  # First node in itin will be a stop
 
-                    # Check whether each anode in itin is a stop
-                    elif not (attr[0] in ('c', 't') or attr[0].startswith('path=')):
+                    # Check whether each itin anode is a stop
+                    else:
                         if attr[0].startswith('dwt='):
                             anode = int(attr[1])
                         else:
