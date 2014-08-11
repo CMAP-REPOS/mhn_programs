@@ -634,7 +634,7 @@ for scen in scen_list:
         for fc in (cta_stop_xy_z, metra_stop_xy_z, bus_stop_xy_z, cta_bus_xy, pace_bus_xy, cta_cbd_fc, cta_noncbd_fc, bus_cbd_fc, bus_noncbd_fc):
             arcpy.Delete_management(fc)
 
-        # Call generate_transit_files_4.sas -- writes access.network file.
+        # Call generate_transit_files_3.sas -- writes access.network file.
         sas3_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas3_name))
         sas3_output = os.path.join(scen_tran_path, 'access.network_{0}'.format(tod))
         sas3_args = [scen_tran_path, scen, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])), tod]
