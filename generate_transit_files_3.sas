@@ -1,7 +1,7 @@
 /*
    generate_transit_files_3.sas
    authors: cheither & npeterson
-   revised: 8/8/14
+   revised: 8/11/14
    ----------------------------------------------------------------------------
    Program reads batchout of rail transit lines (modes c and m) and formats
    file of stops to be used in arc to create bus-rail links. Emme rail batchin
@@ -27,7 +27,7 @@ options pagesize=64 linesize=80;
           *------------------------------------*;
             ** READ IN & FORMAT ITINERARIES **;
           *------------------------------------*;
-data lines itins;
+data lines (drop=first path dwt) itins (drop=first path dwt);
   infile in1 truncover;
   retain count 0; retain type;
   input @1 first $1. @;
@@ -39,14 +39,16 @@ data lines itins;
     output lines;
   end;
   else do;
-    input @1 path= $ @;
+    input @1 path=$ @;
     if path='no' then delete;
     else do;
-      if find(_infile_, "dwt=") > 0 then do;
-        input @1 dwt= $20. ttf= us1= us2= us3= lay=;
+      if find(_infile_, "dwt=")>0 then do;
+        input @1 dwt=$20. ttf= us1= us2= us3= lay=;
+        ** NOTE: dwt includes anode because SAS won't allow list input after first named input;
+        ** <http://support.sas.com/documentation/cdl/en/lrdict/64316/HTML/default/viewer.htm#a000148147.htm>;
         anode=input(scan(dwt,2,' '), best.);
-        dwt=scan(dwt,1,' ');
-		if substr(dwt,1,1) in ('#','>','<','+','*') then dwflag = substr(dwt,1,1);
+        dwtime=input(scan(dwt,1,' '), $5.);
+		if substr(dwtime,1,1) in ('#','>','<','+','*') then dwflag=input(substr(dwtime,1,1), $1.);
         output itins;
       end;
       else do;
