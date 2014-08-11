@@ -44,7 +44,7 @@ if not os.path.exists(tran_path):
 
 sas1_name = 'gtfs_reformat_feed'
 sas2_name = 'generate_transit_files_2'
-sas3_name = 'generate_transit_files_4'
+sas3_name = 'generate_transit_files_3'
 
 
 # -----------------------------------------------------------------------------
@@ -467,9 +467,9 @@ for scen in scen_list:
                     if len(attr) == 0 or attr[0] in ('c', 't', 'path=no'):
                         continue
 
-                    # Set type and first is_stop for header lines
+                    # Set mode and first is_stop for header lines
                     elif attr[0] == 'a':
-                        vtype = attr[2].upper()  # 'C' (CTA) or 'M' (Metra)
+                        mode = attr[2].lower()  # 'c' (CTA) or 'm' (Metra)
                         is_stop = True  # First node in itin will be a stop
 
                     # Check whether each itin anode is a stop
@@ -481,9 +481,9 @@ for scen in scen_list:
 
                         # If stops allowed, add to appropriate stop dict
                         if is_stop:
-                            if vtype == 'C':
+                            if mode == 'c':
                                 cta_stops.add(anode)
-                            elif vtype == 'M':
+                            elif mode == 'm':
                                 metra_stops.add(anode)
 
                         # Update is_stop for *next* anode (dwt applies to bnodes)

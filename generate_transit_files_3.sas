@@ -1,7 +1,7 @@
 /*
-   generate_transit_files_4.sas
+   generate_transit_files_3.sas
    authors: cheither & npeterson
-   revised: 5/6/13
+   revised: 8/11/13
    ----------------------------------------------------------------------------
    Program creates batchin file of mode c, m, u, v, w, x, y and z links.
 
