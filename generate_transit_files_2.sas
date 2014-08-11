@@ -1,7 +1,7 @@
 /*
    generate_transit_files_2.sas
    authors: cheither & npeterson
-   revised: 8/7/14
+   revised: 8/11/14
    ----------------------------------------------------------------------------
    Program creates bus transit network batchin files. Bus transit network is
    built using a modified version of MHN processing procedures.
@@ -497,15 +497,18 @@ data all(keep=itina itinb modes); merge b e p q l; by itina itinb;
             ** WRITE OUT TRANSIT LINE BATCHIN FILE **;
            *----------------------------------------;
 data segout; set routes verify; proc sort; by linename order;
+data segout; set segout; by linename;
+  if last.linename then end=1; else end=0;
 
-data out1; set segout;
+data out1; set segout; by linename;
   length desc $22 dwell $4 d $9;
     layov=lag1(layover);
     if dwcode=1 then dwell='0';
     else dwell='0.01';
-    if first.linename then layov=0;
+    if descr ne ' ' then layov=0;
     name="'"||compress(linename)||"'";
     desc="'"||descr||"'";
+    ltime=round(ltime, 0.1);
     if dwcode=1 then d=compress('dwt=#'||dwell);
     else if dwcode=2 then d=compress('dwt=>'||dwell);
     else if dwcode=3 then d=compress('dwt=<'||dwell);
@@ -515,32 +518,28 @@ data out1; set segout;
     tf=compress('ttf='||ttf);
     us1=compress('us1='||ltime);
     us2=compress('us2='||zfare);
-data out1; set out1;
-    ltime=round(ltime, 0.1);
 
+data out1; set out1;
    file out1;
    if _n_=1 then do;
-      put "c BUS TRANSIT LINE BATCHIN FILE FOR SCENARIO NETWORK &scen TOD &tod" /
-          "c  &sysdate" /
+      put "c BUS TRANSIT BATCHIN FILE FOR SCENARIO &scen TOD &tod" /
+          "c &sysdate" /
           "c us1 holds segment travel time, us2 holds zone fare" /
           "t lines";
    end;
-   if first.linename then do;
+   if descr ne ' ' then do;
       put 'a' +1 name +2 mode +2 vehtype +2 headway +2 speed +2 desc /
           +2 'path=no';
    end;
-   else if last.linename then do;
-      put +4 d +1 itina +2 tf +2 us1 +2 us2 /
-          +4 itinb +2 'lay=' +0 layover;
-   end;
-   else if dwcode=1 then do;
-      put +4 d +7 itina +4 tf +2 us1 +2 us2;
+   else if end=1 then do;
+      put +4 d +(10-length(left(trim(d)))) itina +(7-length(left(trim(itina)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2 /
+          +15 itinb +(7-length(left(trim(itinb)))) 'lay=' +0 layover;
    end;
    else if layov>0 then do;
-      put +4 d +1 itina +2 tf +2 us1 +2 us2 +2 'lay=' +0 layov;
+      put +4 d +(10-length(left(trim(d)))) itina +(7-length(left(trim(itina)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2 +2 'lay=' +0 layov;
    end;
    else do;
-      put +4 d +1 itina +2 tf +2 us1 +2 us2;
+      put +4 d +(10-length(left(trim(d)))) itina +(7-length(left(trim(itina)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2;
    end;
 
 
