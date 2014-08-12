@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 7/23/14
+    Revised: 8/12/14
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -294,6 +294,19 @@ def get_yearless_hwyproj():
         return []
 
 
+def is_tipid(in_str):
+    ''' Check whether a string is a properly formatted TIPID. '''
+    is_tipid = False
+    try:
+        if len(in_str) == 10:
+            pt1, pt2, pt3 = (int(pt) for pt in in_str.split('-'))
+            if 0 <= pt1 <= 99 and 0 <= pt2 <= 99 and 0 <= pt3 <= 9999:
+                return True
+    except:
+        pass
+    return is_tipid
+
+
 def make_attribute_dict(fc, key_field, attr_list=['*']):
     ''' Create a dictionary of feature class/table attributes, using OID as the
         key. Default of ['*'] for attr_list (instead of actual attribute names)
@@ -423,6 +436,25 @@ def timestamp(ts_format='%Y%m%d%H%M%S'):
     from datetime import datetime
     ts = datetime.now().strftime(ts_format)
     return ts
+
+
+def tipid_from_int(n):
+    ''' Format an integer < 100,000,000 as a TIPID string. '''
+    try:
+        n_str = str(int(n)).zfill(8)
+        tipid = '-'.join((n_str[:2], n_str[2:4], n_str[4:]))
+    except:
+        return None
+    return tipid if is_tipid(tipid) else None
+
+
+def tipid_to_int(tipid):
+    ''' Convert a TIPID string to an integer. '''
+    if is_tipid(tipid):
+        n_str = tipid.replace('-', '')
+        return int(n_str)
+    else:
+        return None
 
 
 def write_arc_flag_file(flag_file, flag_query):
