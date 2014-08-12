@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 7/23/14
+    Revised: 8/12/14
     ---------------------------------------------------------------------------
     A library for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -423,6 +423,26 @@ def timestamp(ts_format='%Y%m%d%H%M%S'):
     from datetime import datetime
     ts = datetime.now().strftime(ts_format)
     return ts
+
+
+def tipid_from_int(n):
+    ''' Format an integer as a TIPID string. '''
+    try:
+        n_str = str(int(n)).zfill(8)
+        tipid = '-'.join((n_str[:2], n_str[2:4], n_str[4:]))
+    except:
+        return None
+    return tipid if len(tipid) == 10 else None  # TIPID format is 10 chars.
+
+
+def tipid_to_int(tipid):
+    ''' Convert a TIPID string to an integer. '''
+    try:
+        n_str = tipid.replace('-', '')
+        n = int(n_str)
+    except:
+        return None
+    return n if n < 100000000 else None  # Max TIPID = '99-99-9999'
 
 
 def write_arc_flag_file(flag_file, flag_query):
