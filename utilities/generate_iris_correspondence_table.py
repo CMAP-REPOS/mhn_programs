@@ -298,7 +298,8 @@ mhn_arts_qry = (
 iris_ramp_qry = ''' UPPER("ROAD_NAME") LIKE '% TO %' '''
 
 iris_expy_qry = (
-    ''' "FCNAME" IN ('Freeway and Expressway', 'Interstate') '''
+    ''' ("FCNAME" IN ('Freeway and Expressway', 'Interstate') OR '''
+    ''' (UPPER("ROAD_NAME") LIKE '%LAKE SHORE%' AND "MARKED_RT" = 'U041')) '''
     ''' AND NOT ({0}) '''
 ).format(iris_ramp_qry)
 
