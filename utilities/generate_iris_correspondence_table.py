@@ -377,7 +377,7 @@ arcpy.AddField_management(match_table, 'IRIS_NAME', 'TEXT', field_length=50)
 # Insert matches from each dict into table.
 with arcpy.da.InsertCursor(match_table, [match_mhn_field, match_iris_field, 'FREQUENCY', 'FUZZ_SCORE', 'MHN_NAME', 'IRIS_NAME']) as cursor:
 
-    # 2. Insert boulevard/divided arterial matches:
+    # 1. Insert boulevard/divided arterial matches:
     for mhn_id in blvd_match_dict.keys():
         cursor.insertRow([mhn_id] + list(blvd_match_dict[mhn_id]))
 
