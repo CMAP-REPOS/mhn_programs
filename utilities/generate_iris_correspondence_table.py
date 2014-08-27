@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 8/4/2014
+    Revised: 8/27/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -168,12 +168,15 @@ arcpy.FeatureVerticesToPoints_management(iris_subset_fc, iris_vertices_fc, 'ALL'
 near_mhn_field = 'MHN_{0}'.format(mhn_id_field)
 near_iris_field = 'IRIS_{0}'.format(iris_id_field)
 
-def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=False, subset_near_distance=None):
+def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=False, subset_near_distance=None, subset_min_match_count=None):
     ''' For two feature layers (subsets of the IRIS and MHN vertices feature
         classes) return a dictionary of matched links. '''
 
     if not subset_near_distance:
         subset_near_distance = near_distance
+
+    if not subset_min_match_count:
+        subset_min_match_count = min_match_count
 
     ###  GENERATE NEAR FREQUENCY TABLE AND ATTACH ID_FIELD VALUES ###
     arcpy.AddMessage('-- Generating vertex OID dictionaries...')
@@ -238,11 +241,15 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
             else:
                 fuzz_score = fuzz.token_set_ratio(mhn_name, iris_combo)  # 0-100: How similar are the names?
 
-            # If MHN link is too short for a match to be possible (or unlikely), reduce match count threshold
-            mhn_length = mhn_attr_dict[mhn_id]['LENGTH']
-            max_possible_matches = math.floor(mhn_length / densify_distance)
-            max_likely_matches = math.ceil(0.6 * max_possible_matches)
-            arc_min_freq = min(min_match_count, max_likely_matches)
+            # If MHN name-compared link is too short for a match to be possible (or unlikely),
+            # then reduce match count threshold to allow matches of short links.
+            if not ignore_names:
+                mhn_length = mhn_attr_dict[mhn_id]['LENGTH']
+                max_possible_matches = math.floor(mhn_length / densify_distance)
+                max_likely_matches = math.ceil(0.6 * max_possible_matches)
+                arc_min_freq = min(subset_min_match_count, max_likely_matches)
+            else:
+                arc_min_freq = subset_min_match_count
 
             # Make initial match if min match count and fuzz_score are okay
             if mhn_id not in match_dict:
@@ -280,7 +287,7 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
 # ---------------------------------------------------------------------
 
 # -- MHN --
-mhn_ramp_qry = ''' "TYPE1" IN ('3', '5') '''
+mhn_ramp_qry = ''' "TYPE1" IN ('3', '5', '8') '''
 
 mhn_expy_qry = ''' "TYPE1" IN ('2', '4') '''
 
@@ -321,7 +328,7 @@ arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_blvd_vertices_lyr, mhn_bl
 iris_arts_vertices_lyr = 'iris_arts_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_arts_vertices_lyr, iris_arts_qry)
 
-blvd_near_distance = max(near_distance, 200)
+blvd_near_distance = max(near_distance, 250)
 blvd_match_dict = match_subset_of_links(mhn_blvd_vertices_lyr, iris_arts_vertices_lyr, subset_near_distance=blvd_near_distance)
 
 
@@ -343,7 +350,8 @@ arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_ramp_vertices_lyr, mhn_ra
 iris_ramp_vertices_lyr = 'iris_ramp_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_ramp_vertices_lyr, iris_ramp_qry)
 
-ramp_match_dict = match_subset_of_links(mhn_ramp_vertices_lyr, iris_ramp_vertices_lyr, ignore_names=True)
+ramp_min_match_count = max(min_match_count, 15)  # Require more matches to compensate lack of name-matching
+ramp_match_dict = match_subset_of_links(mhn_ramp_vertices_lyr, iris_ramp_vertices_lyr, ignore_names=True, subset_min_match_count=ramp_min_match_count)
 
 
 # -- EXPRESSWAYS --
@@ -355,8 +363,9 @@ arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_expy_vertices_lyr, mhn_ex
 iris_expy_vertices_lyr = 'iris_expy_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_expy_vertices_lyr, iris_expy_qry)
 
-expy_near_distance = max(near_distance, 200)
-expy_match_dict = match_subset_of_links(mhn_expy_vertices_lyr, iris_expy_vertices_lyr, ignore_names=True, subset_near_distance=expy_near_distance)
+expy_near_distance = max(near_distance, 250)
+expy_min_match_count = max(min_match_count, 15)  # Require more matches to compensate lack of name-matching
+expy_match_dict = match_subset_of_links(mhn_expy_vertices_lyr, iris_expy_vertices_lyr, ignore_names=True, subset_near_distance=expy_near_distance, subset_min_match_count=expy_min_match_count)
 
 
 # -----------------------------------------------------------------------------
