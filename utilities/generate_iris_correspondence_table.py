@@ -302,7 +302,10 @@ mhn_arts_qry = (
 ).format(mhn_blvd_qry)
 
 # -- IRIS --
-iris_ramp_qry = ''' UPPER("ROAD_NAME") LIKE '% TO %' '''
+iris_ramp_qry = (
+    ''' UPPER("ROAD_NAME") LIKE '% TO %' OR ("FCNAME" = 'Interstate' AND '''
+    ''' (ROAD_NAME LIKE '% CD%' OR ROAD_NAME LIKE '% C_D%')) '''
+)
 
 iris_expy_qry = (
     ''' ("FCNAME" IN ('Freeway and Expressway', 'Interstate') OR '''
