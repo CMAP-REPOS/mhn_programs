@@ -367,7 +367,7 @@ arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_expy_vertices_lyr, mhn_ex
 iris_expy_vertices_lyr = 'iris_expy_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_expy_vertices_lyr, iris_expy_qry)
 
-expy_near_distance = max(near_distance, 200)
+expy_near_distance = max(near_distance, 250)
 expy_min_match_count = max(min_match_count, 15)  # Require more matches to compensate lack of name-matching
 expy_match_dict = match_subset_of_links(mhn_expy_vertices_lyr, iris_expy_vertices_lyr, ignore_names=True, subset_near_distance=expy_near_distance, subset_min_match_count=expy_min_match_count)
 
