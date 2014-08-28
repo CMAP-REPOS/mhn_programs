@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 8/27/2014
+    Revised: 8/28/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -32,7 +32,7 @@ table_name = 'mhn2iris_{0}.dbf'              # Output match table; format with t
 
 mhn_buffer_dist = 150  # Only match IRIS links coming within this distance (ft) of a HERE link
 densify_distance = 25  # Minimum distance (ft) between road vertices
-near_distance = 75     # Maximum distance (ft) between IRIS/HERE vertices to consider match
+near_distance = 60     # Maximum distance (ft) between IRIS/HERE vertices to consider match
 min_match_count = 5    # Minimum number of vertex matches to consider line match
 min_fuzz_score = 60    # Minimum fuzzy string match score for IRIS/HERE names to consider line match
 
@@ -304,7 +304,8 @@ mhn_arts_qry = (
 # -- IRIS --
 iris_ramp_qry = (
     ''' UPPER("ROAD_NAME") LIKE '% TO %' OR ("FCNAME" = 'Interstate' AND '''
-    ''' (ROAD_NAME LIKE '% CD%' OR ROAD_NAME LIKE '% C_D%')) '''
+    ''' (UPPER("ROAD_NAME") LIKE '% CD%' OR UPPER("ROAD_NAME") LIKE '% C_D%')) OR '''
+    ''' UPPER("ROAD_NAME") LIKE '% RAMP%' '''
 )
 
 iris_expy_qry = (
@@ -331,7 +332,7 @@ arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_blvd_vertices_lyr, mhn_bl
 iris_arts_vertices_lyr = 'iris_arts_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_arts_vertices_lyr, iris_arts_qry)
 
-blvd_near_distance = max(near_distance, 250)
+blvd_near_distance = max(near_distance, 200)
 blvd_match_dict = match_subset_of_links(mhn_blvd_vertices_lyr, iris_arts_vertices_lyr, subset_near_distance=blvd_near_distance)
 
 
@@ -366,7 +367,7 @@ arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_expy_vertices_lyr, mhn_ex
 iris_expy_vertices_lyr = 'iris_expy_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_expy_vertices_lyr, iris_expy_qry)
 
-expy_near_distance = max(near_distance, 250)
+expy_near_distance = max(near_distance, 200)
 expy_min_match_count = max(min_match_count, 15)  # Require more matches to compensate lack of name-matching
 expy_match_dict = match_subset_of_links(mhn_expy_vertices_lyr, iris_expy_vertices_lyr, ignore_names=True, subset_near_distance=expy_near_distance, subset_min_match_count=expy_min_match_count)
 
