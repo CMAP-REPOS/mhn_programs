@@ -414,8 +414,7 @@ class MasterHighwayNetwork(object):
         return self.set_nulls(0, fc, fields)
 
 
-    @staticmethod
-    def submit_sas(sas_file, sas_log, sas_lst, arg_list=None):
+    def submit_sas(self, sas_file, sas_log, sas_lst, arg_list=None):
         ''' Calls a specified SAS program with optional arguments specified in a
             $-separated string. '''
         from subprocess import call
@@ -423,7 +422,7 @@ class MasterHighwayNetwork(object):
             arg_str = ''
         else:
             arg_str = '$'.join((str(arg) for arg in arg_list))
-        bat = os.path.join(prog_dir, 'sasrun.bat')
+        bat = os.path.join(self.prog_dir, 'sasrun.bat')
         cmd = [bat, sas_file, arg_str, sas_log, sas_lst]
         return call(cmd)
 
