@@ -302,7 +302,7 @@ class MasterHighwayNetwork(object):
             TIPIDs. '''
         common_id_field = self.route_systems[self.hwyproj][1]
         invalid_year_query = '"{0}" = 0 OR "{0}" IS NULL'.format('COMPLETION_YEAR')
-        invalid_year_lyr = self.make_skinny_table_view(hwyproj, 'invalid_year_lyr', ['COMPLETION_YEAR', common_id_field], invalid_year_query)
+        invalid_year_lyr = self.make_skinny_table_view(self.hwyproj, 'invalid_year_lyr', ['COMPLETION_YEAR', common_id_field], invalid_year_query)
         invalid_year_count = int(arcpy.GetCount_management(invalid_year_lyr).getOutput(0))
         if invalid_year_count > 0:
             return [row[0] for row in arcpy.da.SearchCursor(invalid_year_lyr, [common_id_field])]
