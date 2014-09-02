@@ -26,8 +26,6 @@ import sys
 import arcpy
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
-arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
-
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
@@ -40,6 +38,8 @@ uncodable_hwyproj_csv = arcpy.GetParameterAsText(4)  # CSV of uncodable projects
 mrn_future_fc = os.path.join(mrn_gdb_path, 'railnet', 'future')
 people_mover_table = os.path.join(mrn_gdb_path, 'people_mover')
 sas1_name = 'update_highway_project_years_2'
+
+#arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
 
 if not arcpy.Exists(mrn_gdb_path):
     MHN.die("{0} doesn't exist!".format(mrn_gdb_path))

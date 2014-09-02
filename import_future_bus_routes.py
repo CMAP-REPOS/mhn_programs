@@ -14,8 +14,6 @@ import sys
 import arcpy
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
-arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
-
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
@@ -23,6 +21,8 @@ mhn_gdb_path = arcpy.GetParameterAsText(0)  # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
 xls = arcpy.GetParameterAsText(1)           # Spreadsheet containing future bus coding
 sas1_name = 'import_future_bus_routes_2'
+
+#arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
 
 
 # -----------------------------------------------------------------------------

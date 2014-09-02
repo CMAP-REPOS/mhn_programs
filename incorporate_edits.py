@@ -27,7 +27,7 @@ from MHN import MasterHighwayNetwork  # Custom class for MHN processing function
 mhn_gdb_path = arcpy.GetParameterAsText(0)  # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
 
-arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
+#arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
 
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.

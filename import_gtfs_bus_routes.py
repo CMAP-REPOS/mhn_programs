@@ -14,8 +14,6 @@ import sys
 import arcpy
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
-arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
-
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
@@ -25,6 +23,8 @@ raw_header_csv = arcpy.GetParameterAsText(1)  # Bus header coding CSV
 raw_itin_csv = arcpy.GetParameterAsText(2)    # Bus itin coding CSV
 which_bus = arcpy.GetParameterAsText(3)       # Import to base or current?
 sas1_name = 'import_gtfs_bus_routes_2'
+
+#arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
 
 
 # -----------------------------------------------------------------------------
