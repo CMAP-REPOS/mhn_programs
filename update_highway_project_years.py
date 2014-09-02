@@ -2,7 +2,7 @@
 '''
     update_highway_project_years.py
     Author: npeterson
-    Revised: 2/6/14
+    Revised: 9/2/14
     ---------------------------------------------------------------------------
     This script updates the completion years of projects to be included in
     Conformity analyses. The final completion year file is received from the
@@ -24,23 +24,25 @@ import os
 import csv
 import sys
 import arcpy
-import MHN
-
-arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
+from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
-hwyproj_conformed_csv = arcpy.GetParameterAsText(0)
-hwyproj_exempt_csv = arcpy.GetParameterAsText(1)
-uncodable_hwyproj_csv = arcpy.GetParameterAsText(2)
-mrn_gdb = arcpy.GetParameterAsText(3)
-mrn_future_fc = os.path.join(mrn_gdb, 'railnet', 'future')
-people_mover_table = os.path.join(mrn_gdb, 'people_mover')
+mhn_gdb_path = arcpy.GetParameterAsText(0)           # MHN geodatabase
+MHN = MasterHighwayNetwork(mhn_gdb_path)
+mrn_gdb_path = arcpy.GetParameterAsText(1)           # MRN geodatabase
+hwyproj_conformed_csv = arcpy.GetParameterAsText(2)  # CSV of coded conformed projects
+hwyproj_exempt_csv = arcpy.GetParameterAsText(3)     # CSV of coded exempt projects
+uncodable_hwyproj_csv = arcpy.GetParameterAsText(4)  # CSV of uncodable projects
+mrn_future_fc = os.path.join(mrn_gdb_path, 'railnet', 'future')
+people_mover_table = os.path.join(mrn_gdb_path, 'people_mover')
 sas1_name = 'update_highway_project_years_2'
 
-if not arcpy.Exists(mrn_gdb):
-    MHN.die("{0} doesn't exist!".format(mrn_gdb))
+#arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
+
+if not arcpy.Exists(mrn_gdb_path):
+    MHN.die("{0} doesn't exist!".format(mrn_gdb_path))
 if not arcpy.Exists(mrn_future_fc):
     MHN.die("{0} doesn't exist!".format(mrn_future_fc))
 if not arcpy.Exists(people_mover_table):
