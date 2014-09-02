@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 8/28/2014
+    Revised: 9/2/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -17,17 +17,19 @@ import arcpy
 from fuzzywuzzy import fuzz  # Fuzzy string matching <https://github.com/seatgeek/fuzzywuzzy>
 
 sys.path.append(os.path.abspath(os.path.join(sys.path[0], '..')))  # Add mhn_programs dir to path, so MHN.py can be imported
-import MHN  # Custom library for MHN processing functionality
+from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
 arcpy.AddWarning('\nCurrently generating IRIS correspondence for {0}.'.format(MHN.gdb))
 
 # ---------------------------------------------------------------------
 #  Set parameters.
 # ---------------------------------------------------------------------
-iris_fc = arcpy.GetParameterAsText(0)        # Full path to IRIS shapefile
-iris_id_field = arcpy.GetParameterAsText(1)  # IRIS unique ID field
+mhn_gdb_path = arcpy.GetParameterAsText(0)   # MHN gdb path
+MHN = MasterHighwayNetwork(mhn_gdb_path)     # Initialize MHN object
+iris_fc = arcpy.GetParameterAsText(1)        # Full path to IRIS shapefile
+iris_id_field = arcpy.GetParameterAsText(2)  # IRIS unique ID field
 mhn_id_field = 'ABB'                         # MHN unique ID field
-out_workspace = arcpy.GetParameterAsText(2)  # Output directory
+out_workspace = arcpy.GetParameterAsText(3)  # Output directory
 table_name = 'mhn2iris_{0}.dbf'              # Output match table; format with timestamp at time of creation
 
 mhn_buffer_dist = 150  # Only match IRIS links coming within this distance (ft) of a HERE link

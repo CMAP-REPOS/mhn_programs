@@ -2,7 +2,7 @@
 '''
     export_future_network.py
     Author: npeterson
-    Revised: 7/11/14
+    Revised: 9/2/14
     ---------------------------------------------------------------------------
     Build the MHN to its coded state for a specified year, and save the future
     arcs and nodes in a specified GDB. This is particularly for building the
@@ -14,20 +14,23 @@ import sys
 import arcpy
 
 sys.path.append(os.path.abspath(os.path.join(sys.path[0], '..')))  # Add mhn_programs dir to path, so MHN.py can be imported
-import MHN
+from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
+mhn_gdb_path = arcpy.GetParameterAsText(0)   # MHN gdb path
+MHN = MasterHighwayNetwork(mhn_gdb_path)     # Initialize MHN object
+
 # Get the build year, and verify that it can actually be built.
-build_year = arcpy.GetParameter(0)  # Integer, default = 2013
+build_year = arcpy.GetParameter(1)  # Integer, default = 2013
 if build_year < MHN.base_year:
     MHN.die(('The MHN currently has a base year of {0}, so its prior state is '
              'unknown. Please try {0} or later.').format(MHN.base_year))
 
 # Get the output GDB and feature dataset, and create if non-existent.
-gdb_path = arcpy.GetParameterAsText(1)  # Folder, no default
-gdb_name = arcpy.GetParameterAsText(2)  # String, no default
+gdb_path = arcpy.GetParameterAsText(2)  # Folder, no default
+gdb_name = arcpy.GetParameterAsText(3)  # String, no default
 if not gdb_name.endswith('.gdb'):
     gdb_name = '{0}.gdb'.format(gdb_name)
 out_gdb = os.path.join(gdb_path, gdb_name)

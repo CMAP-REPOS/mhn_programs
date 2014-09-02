@@ -2,7 +2,7 @@
 '''
     import_gtfs_bus_routes.py
     Author: npeterson
-    Revised: 2/6/14
+    Revised: 9/2/14
     ---------------------------------------------------------------------------
     This program is used to update the itineraries of bus routes, with data
     from specified header & itinerary coding CSVs.
@@ -12,16 +12,18 @@ import csv
 import os
 import sys
 import arcpy
-import MHN
+from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
 arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
 
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
-raw_header_csv = arcpy.GetParameterAsText(0)  # Bus header coding CSV
-raw_itin_csv = arcpy.GetParameterAsText(1)    # Bus itin coding CSV
-which_bus = arcpy.GetParameterAsText(2)       # Import to base or current?
+mhn_gdb_path = arcpy.GetParameterAsText(0)    # MHN geodatabase
+MHN = MasterHighwayNetwork(mhn_gdb_path)
+raw_header_csv = arcpy.GetParameterAsText(1)  # Bus header coding CSV
+raw_itin_csv = arcpy.GetParameterAsText(2)    # Bus itin coding CSV
+which_bus = arcpy.GetParameterAsText(3)       # Import to base or current?
 sas1_name = 'import_gtfs_bus_routes_2'
 
 

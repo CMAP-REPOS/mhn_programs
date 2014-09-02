@@ -2,7 +2,7 @@
 '''
     import_future_bus_routes.py
     Author: npeterson
-    Revised: 2/6/14
+    Revised: 9/2/14
     ---------------------------------------------------------------------------
     Import future bus route coding from an Excel spreadsheet, with "header" and
     "itinerary" worksheets. SAS can currently only handle .xls and not .xlsx.
@@ -12,14 +12,16 @@ import csv
 import os
 import sys
 import arcpy
-import MHN
+from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
 arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
 
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
-xls = arcpy.GetParameterAsText(0)  # Spreadsheet containing future bus coding
+mhn_gdb_path = arcpy.GetParameterAsText(0)  # MHN geodatabase
+MHN = MasterHighwayNetwork(mhn_gdb_path)
+xls = arcpy.GetParameterAsText(1)           # Spreadsheet containing future bus coding
 sas1_name = 'import_future_bus_routes_2'
 
 

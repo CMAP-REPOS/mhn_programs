@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 7/24/14
+    Revised: 9/2/14
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -19,7 +19,13 @@
 import os
 import sys
 import arcpy
-import MHN  # Custom library for MHN processing functionality
+from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
+
+# -----------------------------------------------------------------------------
+#  Set parameters.
+# -----------------------------------------------------------------------------
+mhn_gdb_path = arcpy.GetParameterAsText(0)  # MHN geodatabase
+MHN = MasterHighwayNetwork(mhn_gdb_path)
 
 arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
 

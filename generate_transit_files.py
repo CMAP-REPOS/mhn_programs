@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 8/11/14
+    Revised: 9/2/14
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -22,16 +22,18 @@
 import os
 import sys
 import arcpy
-import MHN  # Custom library for MHN processing functionality
+from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
 arcpy.env.qualifiedFieldNames = False  # Joined attributes will not have fc name prefix
 
-scen_code = arcpy.GetParameterAsText(0)  # String, default = '100'
-root_path = arcpy.GetParameterAsText(1)  # String, no default
-ct_ramp = arcpy.GetParameter(2)          # Boolean, default = False
+mhn_gdb_path = arcpy.GetParameterAsText(0)  # MHN geodatabase
+MHN = MasterHighwayNetwork(mhn_gdb_path)
+scen_code = arcpy.GetParameterAsText(1)     # String, default = '100'
+root_path = arcpy.GetParameterAsText(2)     # String, no default
+ct_ramp = arcpy.GetParameter(3)             # Boolean, default = False
 
 if not os.path.exists(root_path):
     MHN.die("{0} doesn't exist!".format(root_path))
