@@ -471,11 +471,11 @@ for scen in scen_list:
 
                     # Set mode and first is_stop for header lines
                     elif attr[0].startswith('a'):
-                        mode_index = 2 if attr[0] == 'a' else 1
+                        mode_index = 2 if attr[0] == 'a' else 1  # Allow for space/no space after "a"
                         mode = attr[mode_index].lower()  # 'c' (CTA) or 'm' (Metra)
                         is_stop = True  # First node in itin will be a stop
 
-                    # Check whether each itin anode is a stop
+                    # Add stop nodes to CTA/Metra stop dicts
                     else:
                         if attr[0].startswith('dwt='):
                             anode = int(attr[1])
@@ -490,8 +490,7 @@ for scen in scen_list:
                                 metra_stops.add(anode)
 
                         # Update is_stop for *next* anode (dwt applies to bnodes)
-                        if attr[0].startswith('dwt='):
-                            is_stop = False if '#' in attr[0] else True
+                        is_stop = False if 'dwt=#' in line else True
 
                 # Write CTA .pnt file
                 cta_w = open(cta_pnt, 'wb')
