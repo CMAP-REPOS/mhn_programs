@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 8/4/2014
+    Revised: 9/2/2014
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -17,22 +17,24 @@ import arcpy
 from fuzzywuzzy import fuzz  # Fuzzy string matching <https://github.com/seatgeek/fuzzywuzzy>
 
 sys.path.append(os.path.abspath(os.path.join(sys.path[0], '..')))  # Add mhn_programs dir to path, so MHN.py can be imported
-import MHN  # Custom library for MHN processing functionality
+from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
 arcpy.AddWarning('\nCurrently generating IRIS correspondence for {0}.'.format(MHN.gdb))
 
 # ---------------------------------------------------------------------
 #  Set parameters.
 # ---------------------------------------------------------------------
-iris_fc = arcpy.GetParameterAsText(0)        # Full path to IRIS shapefile
-iris_id_field = arcpy.GetParameterAsText(1)  # IRIS unique ID field
+mhn_gdb_path = arcpy.GetParameterAsText(0)   # MHN gdb path
+MHN = MasterHighwayNetwork(mhn_gdb_path)     # Initialize MHN object
+iris_fc = arcpy.GetParameterAsText(1)        # Full path to IRIS shapefile
+iris_id_field = arcpy.GetParameterAsText(2)  # IRIS unique ID field
 mhn_id_field = 'ABB'                         # MHN unique ID field
-out_workspace = arcpy.GetParameterAsText(2)  # Output directory
+out_workspace = arcpy.GetParameterAsText(3)  # Output directory
 table_name = 'mhn2iris_{0}.dbf'              # Output match table; format with timestamp at time of creation
 
 mhn_buffer_dist = 150  # Only match IRIS links coming within this distance (ft) of a HERE link
 densify_distance = 25  # Minimum distance (ft) between road vertices
-near_distance = 75     # Maximum distance (ft) between IRIS/HERE vertices to consider match
+near_distance = 60     # Maximum distance (ft) between IRIS/HERE vertices to consider match
 min_match_count = 5    # Minimum number of vertex matches to consider line match
 min_fuzz_score = 60    # Minimum fuzzy string match score for IRIS/HERE names to consider line match
 
@@ -168,12 +170,15 @@ arcpy.FeatureVerticesToPoints_management(iris_subset_fc, iris_vertices_fc, 'ALL'
 near_mhn_field = 'MHN_{0}'.format(mhn_id_field)
 near_iris_field = 'IRIS_{0}'.format(iris_id_field)
 
-def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=False, subset_near_distance=None):
+def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=False, subset_near_distance=None, subset_min_match_count=None):
     ''' For two feature layers (subsets of the IRIS and MHN vertices feature
         classes) return a dictionary of matched links. '''
 
     if not subset_near_distance:
         subset_near_distance = near_distance
+
+    if not subset_min_match_count:
+        subset_min_match_count = min_match_count
 
     ###  GENERATE NEAR FREQUENCY TABLE AND ATTACH ID_FIELD VALUES ###
     arcpy.AddMessage('-- Generating vertex OID dictionaries...')
@@ -238,11 +243,15 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
             else:
                 fuzz_score = fuzz.token_set_ratio(mhn_name, iris_combo)  # 0-100: How similar are the names?
 
-            # If MHN link is too short for a match to be possible (or unlikely), reduce match count threshold
-            mhn_length = mhn_attr_dict[mhn_id]['LENGTH']
-            max_possible_matches = math.floor(mhn_length / densify_distance)
-            max_likely_matches = math.ceil(0.6 * max_possible_matches)
-            arc_min_freq = min(min_match_count, max_likely_matches)
+            # If MHN name-compared link is too short for a match to be possible (or unlikely),
+            # then reduce match count threshold to allow matches of short links.
+            if not ignore_names:
+                mhn_length = mhn_attr_dict[mhn_id]['LENGTH']
+                max_possible_matches = math.floor(mhn_length / densify_distance)
+                max_likely_matches = math.ceil(0.6 * max_possible_matches)
+                arc_min_freq = min(subset_min_match_count, max_likely_matches)
+            else:
+                arc_min_freq = subset_min_match_count
 
             # Make initial match if min match count and fuzz_score are okay
             if mhn_id not in match_dict:
@@ -280,7 +289,7 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
 # ---------------------------------------------------------------------
 
 # -- MHN --
-mhn_ramp_qry = ''' "TYPE1" IN ('3', '5') '''
+mhn_ramp_qry = ''' "TYPE1" IN ('3', '5', '8') '''
 
 mhn_expy_qry = ''' "TYPE1" IN ('2', '4') '''
 
@@ -295,10 +304,15 @@ mhn_arts_qry = (
 ).format(mhn_blvd_qry)
 
 # -- IRIS --
-iris_ramp_qry = ''' UPPER("ROAD_NAME") LIKE '% TO %' '''
+iris_ramp_qry = (
+    ''' UPPER("ROAD_NAME") LIKE '% TO %' OR ("FCNAME" = 'Interstate' AND '''
+    ''' (UPPER("ROAD_NAME") LIKE '% CD%' OR UPPER("ROAD_NAME") LIKE '% C_D%')) OR '''
+    ''' UPPER("ROAD_NAME") LIKE '% RAMP%' '''
+)
 
 iris_expy_qry = (
-    ''' "FCNAME" IN ('Freeway and Expressway', 'Interstate') '''
+    ''' ("FCNAME" IN ('Freeway and Expressway', 'Interstate') OR '''
+    ''' (UPPER("ROAD_NAME") LIKE '%LAKE SHORE%' AND "MARKED_RT" = 'U041')) '''
     ''' AND NOT ({0}) '''
 ).format(iris_ramp_qry)
 
@@ -342,7 +356,8 @@ arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_ramp_vertices_lyr, mhn_ra
 iris_ramp_vertices_lyr = 'iris_ramp_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_ramp_vertices_lyr, iris_ramp_qry)
 
-ramp_match_dict = match_subset_of_links(mhn_ramp_vertices_lyr, iris_ramp_vertices_lyr, ignore_names=True)
+ramp_min_match_count = max(min_match_count, 15)  # Require more matches to compensate lack of name-matching
+ramp_match_dict = match_subset_of_links(mhn_ramp_vertices_lyr, iris_ramp_vertices_lyr, ignore_names=True, subset_min_match_count=ramp_min_match_count)
 
 
 # -- EXPRESSWAYS --
@@ -354,8 +369,9 @@ arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_expy_vertices_lyr, mhn_ex
 iris_expy_vertices_lyr = 'iris_expy_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_expy_vertices_lyr, iris_expy_qry)
 
-expy_near_distance = max(near_distance, 200)
-expy_match_dict = match_subset_of_links(mhn_expy_vertices_lyr, iris_expy_vertices_lyr, ignore_names=True, subset_near_distance=expy_near_distance)
+expy_near_distance = max(near_distance, 250)
+expy_min_match_count = max(min_match_count, 15)  # Require more matches to compensate lack of name-matching
+expy_match_dict = match_subset_of_links(mhn_expy_vertices_lyr, iris_expy_vertices_lyr, ignore_names=True, subset_near_distance=expy_near_distance, subset_min_match_count=expy_min_match_count)
 
 
 # -----------------------------------------------------------------------------
@@ -377,7 +393,7 @@ arcpy.AddField_management(match_table, 'IRIS_NAME', 'TEXT', field_length=50)
 # Insert matches from each dict into table.
 with arcpy.da.InsertCursor(match_table, [match_mhn_field, match_iris_field, 'FREQUENCY', 'FUZZ_SCORE', 'MHN_NAME', 'IRIS_NAME']) as cursor:
 
-    # 2. Insert boulevard/divided arterial matches:
+    # 1. Insert boulevard/divided arterial matches:
     for mhn_id in blvd_match_dict.keys():
         cursor.insertRow([mhn_id] + list(blvd_match_dict[mhn_id]))
 
