@@ -469,7 +469,8 @@ for scen in scen_list:
 
                     # Set mode and first is_stop for header lines
                     elif attr[0].startswith('a'):
-                        mode = attr[2].lower()  # 'c' (CTA) or 'm' (Metra)
+                        mode_index = 2 if attr[0] == 'a' else 1
+                        mode = attr[mode_index].lower()  # 'c' (CTA) or 'm' (Metra)
                         is_stop = True  # First node in itin will be a stop
 
                     # Check whether each itin anode is a stop
