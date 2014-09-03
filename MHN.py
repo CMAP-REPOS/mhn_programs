@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 8/28/14
+    Revised: 9/3/14
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -460,21 +460,19 @@ class MasterHighwayNetwork(object):
         return ts
 
 
-    @staticmethod
-    def tipid_from_int(n):
+    def tipid_from_int(self, n):
         ''' Format an integer < 100,000,000 as a TIPID string. '''
         try:
             n_str = str(int(n)).zfill(8)
             tipid = '-'.join((n_str[:2], n_str[2:4], n_str[4:]))
         except:
             return None
-        return tipid if is_tipid(tipid) else None
+        return tipid if self.is_tipid(tipid) else None
 
 
-    @staticmethod
-    def tipid_to_int(tipid):
+    def tipid_to_int(self, tipid):
         ''' Convert a TIPID string to an integer. '''
-        if is_tipid(tipid):
+        if self.is_tipid(tipid):
             n_str = tipid.replace('-', '')
             return int(n_str)
         else:
