@@ -100,7 +100,7 @@ with open(tipid_all_csv, 'r') as r:
 # Report duplicates and stop processing, if any exist
 if duplicates:
     duplicate_message = 'Duplicate TIPID(s) with different completion years in {0} and/or {1}: {2}!'
-    MHN.die(duplicate_message.format(tipid_conformed_csv, tipid_exempt_csv, ', '.join(duplicates)))
+    MHN.die(duplicate_message.format(tipid_conformed_csv, tipid_exempt_csv, ', '.join((str(k) for k in duplicates))))
 
 os.remove(tipid_all_csv)
 
@@ -141,9 +141,9 @@ def clear_transit_project_years(proj_years_dict, rail_fc, bus_fc, mover_table, e
             for tipid in early_scenarios:
                 w.write('{0},{1},{2}\n'.format(MHN.tipid_from_int(tipid), proj_years_dict[tipid], trans_proj_scens[tipid]))
         MHN.die((
-            '''WARNING: Some transit projects (future bus, rail and/or people '''
+            '''ERROR: Some transit projects (future bus, rail and/or people '''
             '''mover) reference a scenario that is earlier than their TIPID's '''
-            '''completion year. See {1} for details.'''
+            '''specified completion year. See {0} for details.'''
         ).format(early_scenarios_csv))
 
     # Remove transit TIPIDs from project years dictionary
