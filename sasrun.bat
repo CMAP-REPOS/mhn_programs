@@ -16,7 +16,7 @@
 
 
 :: Set SAS path (SAS 9.3+ required for handling .xlsx files)
-set SASPATH="C:\Program Files\SASHome\SASFoundation\9.3\sas.exe"
+set SASPATH="C:\Program Files\SASHome2\SASFoundation\9.4\sas.exe"
 if not exist %SASPATH% goto BADSAS
 
 :: Run SAS
