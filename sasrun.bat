@@ -1,10 +1,10 @@
 @echo off
 ::  sasrun.bat
 ::  Author: cheither & npeterson
-::  Revised: 5/14/14
+::  Revised: 11/18/14
 ::  ---------------------------------------------------------------------------
 ::  This is called by various Python scripts to execute a specified SAS
-::  program. SAS 9.3 path is hardcoded in order to send the appropriate SAS
+::  program. SAS 9.4 path is hardcoded in order to send the appropriate SAS
 ::  command. The ERRORLEVEL variable is used to flag instances when SAS
 ::  issues a Warning or Error.
 ::
@@ -16,7 +16,9 @@
 
 
 :: Set SAS path (SAS 9.3+ required for handling .xlsx files)
-set SASPATH="C:\Program Files\SASHome2\SASFoundation\9.4\sas.exe"
+set SASPATH="C:\Program Files\SASHome\SASFoundation\9.4\sas.exe"
+set SASPATHALT="C:\Program Files\SASHome2\SASFoundation\9.4\sas.exe"
+if not exist %SASPATH% (set SASPATH=%SASPATHALT%)
 if not exist %SASPATH% goto BADSAS
 
 :: Run SAS
