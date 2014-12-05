@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 9/3/14
+    Revised: 12/2/14
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -72,6 +72,68 @@ class MasterHighwayNetwork(object):
                '"STARTHOUR" IN (18, 19)'),
         'am': ('7AM-9AM',                                   # am: Same as TOD 3, but for buses w/ >50% service in period
                '"AM_SHARE" >= 0.5')
+    }
+
+    mcps = {
+        '100001': '''Elgin O'Hare Expressway Improvements (including Western O'Hare Bypass)''',
+        '100002': '''I-190 Access Improvements''',
+        '100003': '''I-90 Add/Managed Lanes''',
+        '100004': '''Central Lake County Corridor (IL 53 North and IL 120)''',
+        '100005': '''I-290 Multimodal Corridor''',
+        '100006': '''I-55 Managed Lanes''',
+        '100007': '''I-94 Add Lanes North''',
+        '100008': '''I-80 Add Lanes (US 30 to US 45)''',
+        '100009': '''I-294/I-57 Interchange''',
+        '100010': '''I-88 Add Lanes''',
+        '100011': '''Illiana Expressway''',
+        '100012': '''Circle Interchange Reconstruction''',
+        '101001': '''I-80 Add/Managed Lanes''',
+        '101002': '''I-57 Add Lanes''',
+        '101003': '''I-55 Add Lanes and Reconstruction''',
+        '101004': '''IL 394''',
+        '101005': '''Prairie Parkway''',
+        '101006': '''McHenry-Lake Corridor''',
+        '101007': '''Elgin O'Hare Expressway West Extension''',
+        '101008': '''Elgin O'Hare Expressway Far West Extension''',
+        '101009': '''I-80 to I-55 Connector''',
+        '101010': '''I-80 Managed Lanes''',
+        '101011': '''I-294 Central Tristate Mobility Improvements''',
+        '200001': '''CTA South Red Line Extension''',
+        '200002': '''Metra UP North Improvements''',
+        '200003': '''Metra UP Northwest Improvements and Extension''',
+        '200004': '''Metra Rock Island Improvements''',
+        '200005': '''West Loop Transportation Center (Phase 1)''',
+        '200006': '''Metra SouthWest Service Improvements''',
+        '200007': '''CTA North Red and Purple Line Improvements''',
+        '200008': '''Metra UP West Improvements''',
+        '200009': '''West Loop Transportation Center (Phase 2)''',
+        '201001': '''Metra SouthEast Service Corridor''',
+        '201002': '''Mid-City Transitway''',
+        '201003': '''CTA Orange Line Extension''',
+        '201004': '''CTA Yellow Line Enhancements and Extension''',
+        '201005': '''Metra Rock Island Extension''',
+        '201006': '''Metra Heritage Corridor Improvements''',
+        '201007': '''Metra SouthWest Service Extension and Full Service''',
+        '201008': '''Express Airport Train Service''',
+        '201009': '''Metra Milwaukee District North Extension''',
+        '201010': '''South Lakefront Corridor''',
+        '201011': '''CTA Brown Line Extension''',
+        '201012': '''O'Hare to Schaumburg Transit Service''',
+        '201013': '''Metra North Central Service Improvements''',
+        '201014': '''Metra Electric District Extension''',
+        '201015': '''Metra Milwaukee District West Extension''',
+        '201016': '''Metra Milwaukee District West Improvements''',
+        '201017': '''Metra Milwaukee District North Improvement''',
+        '201018': '''Inner Circumferential Rail Service''',
+        '201019': '''DuPage "J" Line''',
+        '201020': '''Central Area Transitway''',
+        '201021': '''CTA Blue Line West Extension''',
+        '201022': '''CTA Circle Line (Phase III, north)''',
+        '201023': '''Metra BNSF Extension''',
+        '201024': '''CTA Circle Line (Phase II, south)''',
+        '201025': '''Metra STAR Line Corridor''',
+        '201026': '''Metra BNSF Improvements''',
+        '201027': '''Metra Electric District Improvements'''
     }
 
 

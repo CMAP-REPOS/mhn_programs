@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 9/4/14
+    Revised: 12/2/14
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -13,6 +13,7 @@
 import os
 import sys
 import arcpy
+from operator import itemgetter
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
 # -----------------------------------------------------------------------------
@@ -146,7 +147,7 @@ for scen in scen_list:
     hwy_year_query = '"COMPLETION_YEAR" <= {0}'.format(scen_year)
     hwy_year_view = MHN.make_skinny_table_view(MHN.hwyproj, 'hwy_year_view', hwy_year_attr, hwy_year_query)
     MHN.write_attribute_csv(hwy_year_view, hwy_year_csv, hwy_year_attr)
-    hwy_projects = [r[0] for r in arcpy.da.SearchCursor(hwy_year_view, [hwyproj_id_field])]
+    hwy_projects = [r for r in arcpy.da.SearchCursor(hwy_year_view, [hwyproj_id_field, 'MCP_ID', 'COMPLETION_YEAR'])]
     arcpy.Delete_management(hwy_year_view)
 
     hwy_transact_attr = [
@@ -154,7 +155,7 @@ for scen in scen_list:
         'NEW_POSTEDSPEED2', 'NEW_THRULANES1', 'NEW_THRULANES2', 'NEW_THRULANEWIDTH1', 'NEW_THRULANEWIDTH2', 'ADD_PARKLANES1',
         'ADD_PARKLANES2', 'ADD_SIGIC', 'ADD_CLTL', 'ADD_RRGRADECROSS', 'NEW_TOLLDOLLARS', 'NEW_MODES', 'TOD', 'ABB', 'REP_ANODE', 'REP_BNODE'
     ]
-    hwy_transact_query = ''' "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in hwy_projects)))
+    hwy_transact_query = ''' "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id, mcp_id, comp_year in hwy_projects)))
     hwy_transact_view = MHN.make_skinny_table_view(MHN.route_systems[MHN.hwyproj][0], 'hwy_transact_view', hwy_transact_attr, hwy_transact_query)
     MHN.write_attribute_csv(hwy_transact_view, hwy_transact_csv, hwy_transact_attr)
     hwy_abb = [r[0] for r in arcpy.da.SearchCursor(hwy_transact_view, ['ABB'])]
@@ -197,6 +198,15 @@ for scen in scen_list:
         os.remove(hwy_network_csv)
         os.remove(hwy_nodes_csv)
         arcpy.AddMessage('-- Scenario {0} l1, l2, n1, n2 files generated successfully.'.format(scen))
+
+    # Create mcp_stats.txt.
+    mcp_stats = os.path.join(scen_path, 'mcp_stats.txt')
+    with open(mcp_stats, 'w') as w:
+        w.write('MAJOR CAPITAL PROJECTS INCLUDED IN SCENARIO {0}\n\n'.format(scen))
+        for hwyproj_id, mcp_id, comp_year in sorted(hwy_projects, key=itemgetter(2,1)):
+            if mcp_id.strip():
+                w.write('--> {0}: {1} [{2}]\n'.format(comp_year, MHN.mcps[mcp_id], mcp_id))
+    arcpy.AddMessage('-- Scenario {0} mcp_stats.txt generated successfully.'.format(scen))
 
     # Create linkshape.in.
     def generate_linkshape(arcs, output_dir):
