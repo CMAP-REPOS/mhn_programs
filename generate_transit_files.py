@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 9/2/14
+    Revised: 12/9/14
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -257,6 +257,12 @@ for scen in scen_list:
         elif not (os.path.exists(hwy_l1) and os.path.exists(hwy_n1) and os.path.exists(hwy_n2)):
             MHN.die("{0} doesn't contain all required highway batchin files! Please run the Generate Highway Files tool for this scenario first.".format(scen_hwy_path))
 
+        # Export table of Park-n-Ride nodes
+        pnr_view = 'pnr_view'
+        MHN.make_skinny_table_view(MHN.pnr, pnr_view, ['NODE', 'COST', 'SPACES'])
+        pnr_csv = os.path.join(scen_tran_path, 'pnr.csv')
+        MHN.write_attribute_csv(pnr_view, pnr_csv)
+
         # Create a temporary table of TOD's representative runs' header attributes
         bus_lyr = 'bus_lyr'
         arcpy.MakeFeatureLayer_management(bus_fc, bus_lyr)
@@ -332,14 +338,14 @@ for scen in scen_list:
             os.remove(bus_future_itin_csv)
 
         # Identify any missing itinerary endpoints (1st itin_a/last itin_b).
-        scen_nodes = []
+        scen_nodes = set()
         with open(hwy_n1, 'r') as all_nodes:
             for row in all_nodes:
                 attr = row.split()
                 if attr[0] == 'a': # ignore comments and 'a*', which are centroids
-                    scen_nodes.append(attr[1])
+                    scen_nodes.add(attr[1])
 
-        itin_endpoints = []
+        itin_endpoints = set()
         with open(rep_runs_itin_csv, 'r') as itin:
             itina_index = rep_runs_itin_attr.index('ITIN_A')
             itinb_index = rep_runs_itin_attr.index('ITIN_B')
@@ -356,11 +362,25 @@ for scen in scen_list:
                 itina = attr[itina_index]
                 itinb = attr[itinb_index]
                 if fmeas == 0:
-                    itin_endpoints.append(itina)
+                    itin_endpoints.add(itina)
                 if tmeas == 100:
-                    itin_endpoints.append(itinb)
+                    itin_endpoints.add(itinb)
 
-        missing_endpoints = list(set(itin_endpoints).difference(set(scen_nodes)))
+        missing_endpoints = itin_endpoints - scen_nodes
+
+        # Identify any missing PNR nodes.
+        pnr_nodes = set()
+        with open(pnr_csv, 'r') as csv_r:
+            first_line = True
+            for row in csv_r:
+                if first_line:
+                    first_line = False
+                    continue
+                attr = row.strip().split(',')
+                node = attr[0]
+                pnr_nodes.add(node)
+
+        missing_pnr_nodes = pnr_nodes - scen_nodes
 
         # Replace any missing itinerary endpoints with closest existing node.
         if missing_endpoints:
@@ -406,11 +426,46 @@ for scen in scen_list:
             os.remove(rep_runs_itin_csv)
             rep_runs_itin_csv = rep_runs_itin_fixed_csv
 
+        # Replace any missing PNR nodes with closest existing node.
+        if missing_pnr_nodes:
+            replacements = {}
+            node_oid_field = MHN.determine_OID_fieldname(MHN.node)
+            scen_nodes_query = ''' "NODE" IN ({0}) '''.format(','.join(scen_nodes))
+            scen_nodes_lyr = MHN.make_skinny_feature_layer(MHN.node, 'scen_nodes_lyr', [node_oid_field, 'NODE'], scen_nodes_query)
+            for node in missing_pnr_nodes:
+                missing_node_lyr = MHN.make_skinny_feature_layer(MHN.node, 'missing_node_lyr', [node_oid_field, 'NODE'], '"NODE" = {0}'.format(node))
+                closest_node_table = '/'.join((MHN.mem, 'closest_node_table'))
+                arcpy.GenerateNearTable_analysis(missing_node_lyr, scen_nodes_lyr, closest_node_table)  # Defaults to single closest feature
+                with arcpy.da.SearchCursor(closest_node_table, ['NEAR_FID']) as cursor:
+                    for row in cursor:
+                        closest_node_query = '"{0}" = {1}'.format(node_oid_field, row[0])
+                        closest_node_layer = arcpy.MakeFeatureLayer_management(MHN.node, 'closest_node_lyr', closest_node_query)
+                        replacements[node] = [str(row[0]) for row in arcpy.da.SearchCursor(closest_node_layer, ['NODE'])][0]
+                arcpy.Delete_management(closest_node_table)
+
+            pnr_fixed_csv = pnr_csv.replace('.csv', '_fixed.csv')
+            with open(pnr_fixed_csv, 'w') as new_pnr:
+                with open(pnr_csv, 'r') as old_pnr:
+                    first_line = True
+                    for row in old_pnr:
+                        if first_line:
+                            new_pnr.write(row)
+                            first_line = False
+                            continue
+                        attr = row.strip().split(',')
+                        node = attr[0]
+                        if node in missing_pnr_nodes:
+                            row = row.replace(node, replacements[node])
+                        new_pnr.write(row)
+
+            os.remove(pnr_csv)
+            pnr_csv = pnr_fixed_csv
+
         # Call generate_transit_files_2.sas -- creates bus batchin files.
         sas2_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas2_name))
         sas2_output = os.path.join(tran_path, '{0}_{1}.txt'.format(sas2_name, scen))
-        sas2_args = (scen_tran_path, scen_hwy_path, rep_runs_csv, rep_runs_itin_csv, replace_csv, scen,
-                     tod, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])),
+        sas2_args = (scen_tran_path, scen_hwy_path, rep_runs_csv, rep_runs_itin_csv, replace_csv, pnr_csv,
+                     scen, tod, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])),
                      str(MHN.max_poe), min(MHN.scenario_years.keys()), MHN.prog_dir, missing_links_csv,
                      link_dict_txt, short_path_txt, path_errors_txt, sas2_output)
         if tod == sorted(MHN.tod_periods.keys())[0] and os.path.exists(sas2_output):
@@ -426,6 +481,7 @@ for scen in scen_list:
             os.remove(sas2_log)
             os.remove(rep_runs_csv)
             os.remove(rep_runs_itin_csv)
+            os.remove(pnr_csv)
             MHN.delete_if_exists(replace_csv)
 
 
