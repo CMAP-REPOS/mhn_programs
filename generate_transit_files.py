@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 12/9/14
+    Revised: 12/10/14
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -339,8 +339,8 @@ for scen in scen_list:
 
         # Identify any missing itinerary endpoints (1st itin_a/last itin_b).
         scen_nodes = set()
-        with open(hwy_n1, 'r') as all_nodes:
-            for row in all_nodes:
+        with open(hwy_n1, 'r') as n1:
+            for row in n1:
                 attr = row.split()
                 if attr[0] == 'a': # ignore comments and 'a*', which are centroids
                     scen_nodes.add(attr[1])
@@ -426,16 +426,17 @@ for scen in scen_list:
             os.remove(rep_runs_itin_csv)
             rep_runs_itin_csv = rep_runs_itin_fixed_csv
 
-        # Replace any missing PNR nodes with closest existing node.
+        # Replace any missing PNR nodes with closest existing node *in same zone*.
         if missing_pnr_nodes:
+            scen_node_zones = {str(r[0]): r[1] for r in arcpy.da.SearchCursor(MHN.node, ['NODE', MHN.zone_attr])}
             replacements = {}
             node_oid_field = MHN.determine_OID_fieldname(MHN.node)
-            scen_nodes_query = ''' "NODE" IN ({0}) '''.format(','.join(scen_nodes))
-            scen_nodes_lyr = MHN.make_skinny_feature_layer(MHN.node, 'scen_nodes_lyr', [node_oid_field, 'NODE'], scen_nodes_query)
             for node in missing_pnr_nodes:
+                scen_zone_nodes_query = ''' "NODE" IN ({0}) AND "{1}" = {2} '''.format(','.join(scen_nodes), MHN.zone_attr, scen_node_zones[node])
+                scen_zone_nodes_lyr = MHN.make_skinny_feature_layer(MHN.node, 'scen_nodes_lyr', [node_oid_field, 'NODE'], scen_zone_nodes_query)
                 missing_node_lyr = MHN.make_skinny_feature_layer(MHN.node, 'missing_node_lyr', [node_oid_field, 'NODE'], '"NODE" = {0}'.format(node))
                 closest_node_table = '/'.join((MHN.mem, 'closest_node_table'))
-                arcpy.GenerateNearTable_analysis(missing_node_lyr, scen_nodes_lyr, closest_node_table)  # Defaults to single closest feature
+                arcpy.GenerateNearTable_analysis(missing_node_lyr, scen_zone_nodes_lyr, closest_node_table)  # Defaults to single closest feature
                 with arcpy.da.SearchCursor(closest_node_table, ['NEAR_FID']) as cursor:
                     for row in cursor:
                         closest_node_query = '"{0}" = {1}'.format(node_oid_field, row[0])
