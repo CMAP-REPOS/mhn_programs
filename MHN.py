@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 12/2/14
+    Revised: 12/5/14
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -176,6 +176,8 @@ class MasterHighwayNetwork(object):
             self.bus_current: (os.path.join(self.gdb, 'bus_current_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
             self.bus_future: (os.path.join(self.gdb, 'bus_future_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
         }
+        self.pnr_name = 'parknride'
+        self.pnr = os.path.join(self.gdb, self.pnr_name)
         self.projection = arcpy.Describe(self.hwynet).spatialReference
 
         # Zone geodatabase structure (default to zone_systems.gdb in same dir as MHN gdb)

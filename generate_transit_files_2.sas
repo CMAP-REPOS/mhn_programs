@@ -1,7 +1,7 @@
 /*
    generate_transit_files_2.sas
    authors: cheither & npeterson
-   revised: 8/11/14
+   revised: 12/9/14
    ----------------------------------------------------------------------------
    Program creates bus transit network batchin files. Bus transit network is
    built using a modified version of MHN processing procedures.
@@ -14,18 +14,19 @@ options noxwait;
 %let lines=%scan(&sysparm,3,$);
 %let itins=%scan(&sysparm,4,$);
 %let replace=%scan(&sysparm,5,$);
-%let scen=%scan(&sysparm,6,$);
-%let tod=%scan(&sysparm,7,$);       * time-of-day period;
-%let zone1=%scan(&sysparm,8,$);     * zone09 CBD start zone;
-%let zone2=%scan(&sysparm,9,$);     * zone09 CBD end zone;
-%let maxzone=%scan(&sysparm,10,$);  * highest zone09 POE zone number;
-%let baseyr=%scan(&sysparm,11,$);   * base year scenario - not used since c10q1;
-%let progdir=%scan(&sysparm,12,$);
-%let misslink=%scan(&sysparm,13,$);
-%let linkdict=%scan(&sysparm,14,$);
-%let shrt=%scan(&sysparm,15,$);
-%let patherr=%scan(&sysparm,16,$);
-%let outtxt=%scan(&sysparm,17,$);
+%let pnrcsv=%scan(&sysparm,6,$);
+%let scen=%scan(&sysparm,7,$);
+%let tod=%scan(&sysparm,8,$);       * time-of-day period;
+%let zone1=%scan(&sysparm,9,$);     * zone09 CBD start zone;
+%let zone2=%scan(&sysparm,10,$);     * zone09 CBD end zone;
+%let maxzone=%scan(&sysparm,11,$);  * highest zone09 POE zone number;
+%let baseyr=%scan(&sysparm,12,$);   * base year scenario - not used since c10q1;
+%let progdir=%scan(&sysparm,13,$);
+%let misslink=%scan(&sysparm,14,$);
+%let linkdict=%scan(&sysparm,15,$);
+%let shrt=%scan(&sysparm,16,$);
+%let patherr=%scan(&sysparm,17,$);
+%let outtxt=%scan(&sysparm,18,$);
 %let shrtpath=%sysfunc(tranwrd(&shrt,/,\));
 %let pypath=%sysfunc(tranwrd(&progdir./pypath.txt,/,\));
 %let newln=0;
@@ -53,6 +54,7 @@ run;
          filename innd "&hwypath.\&scen.0&tp..n1";
          filename innd2 "&hwypath.\&scen.0&tp..n2";
          filename inlk "&hwypath.\&scen.0&tp..l1";
+         filename pnrnd "&pnrcsv";
 
                                      *** OUTPUT FILES ***;
          filename later "&dirpath.\itin.final";
@@ -221,7 +223,15 @@ data ndzone; infile innd2 missover firstobs=2;
    proc sort; by itina;
 data nodes; merge nodes(in=hit) ndzone; by itina; if hit;
 
-data bnode(rename=(itina=itinb x_a=x_b y_a=y_b)) ; set nodes; drop zone atype;
+*** Join Park-n-Ride data to nodes;
+data pnr; infile pnrnd dsd missover firstobs=2;
+  input itina pcost pspac;
+     proc sort; by itina;
+data nodes; merge nodes pnr; by itina;
+  if pcost=. then pcost=0;
+  if pspac=. then pspac=0;
+
+data bnode(rename=(itina=itinb x_a=x_b y_a=y_b)) ; set nodes; drop zone atype pcost pspac;
 
 data links(drop=flag j1-j2); infile inlk missover;
   input @1 flag $2. @;
@@ -558,6 +568,8 @@ data kplnk(keep=itina); set keeplnk;
 data allnd; merge kplnk(in=hit) nodes; by itina; if hit; flag='a ';
 data centroid; set nodes(where=(itina<=&maxzone)); flag='a*';
 data allnd; set allnd centroid; proc sort; by itina;
+data parking; set nodes(where=(pspac>0)); flag='a '; proc sort; by itina;
+data allnd; merge allnd parking; by itina; proc sort; by itina;
 
      *------------------------------------------------;
          ** WRITE OUT BUS NETWORK BATCHIN FILE **;
@@ -606,10 +618,10 @@ data print3; set allnd;
    file nod;
     if _n_=1 then do;
       put "c BASE NETWORK NODE EXTRA ATTRIBUTE FILE FOR TRANSIT SCENARIO NETWORK &scen TOD &tod" /
-          "c  &sysdate" /  'c node  @atype @zone' /
+          "c  &sysdate" /  'c node  @atype @zone @pspac @pcost' /
           'c ***  @atype=area type for on-street parking  ***' ;
     end;
-    put itina +2 atype +2 zone;
+    put itina +2 atype +2 zone +2 pspac +2 pcost;
 
 
  *=====================================================================;

@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 9/2/14
+    Revised: 12/10/14
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -146,9 +146,7 @@ arcpy.MakeFeatureLayer_management(new_nodes_NODE, new_nodes_NODE_lyr)
 # -----------------------------------------------------------------------------
 #  Determine the current highest NODE value.
 # -----------------------------------------------------------------------------
-max_node_table = os.path.join(MHN.mem, 'max_node_table')
-arcpy.Statistics_analysis(new_nodes_NODE, max_node_table, [['NODE','MAX']])
-max_node_id = int([max_node[0] for max_node in arcpy.da.SearchCursor(max_node_table, ('MAX_NODE'))][0])
+max_node_id = max((r[0] for r in arcpy.da.SearchCursor(new_nodes_NODE, ['NODE'])))
 
 
 # -----------------------------------------------------------------------------
@@ -303,6 +301,23 @@ with arcpy.da.UpdateCursor(new_nodes, ['OID@','SHAPE@','NODE'], '"NODE" IS NULL 
             null_node[2] = max_node_id
             null_nodes_cursor.updateRow(null_node)
 arcpy.AddMessage('-- New NODE values assigned')
+
+
+# Verify that all Park-n-Ride nodes still exist.
+node_ids = set((r[0] for r in arcpy.da.SearchCursor(new_nodes, ['NODE'])))
+non_centroid_ids = set((i for i in node_ids if i > MHN.max_poe))
+pnr_nodes = set((r[0] for r in arcpy.da.SearchCursor(MHN.pnr, ['NODE'])))
+bad_pnr_nodes = pnr_nodes - non_centroid_ids
+if bad_pnr_nodes:
+    bad_pnr_node_str = ', '.join((str(n) for n in sorted(bad_pnr_nodes)))
+    MHN.die(
+        '''The following nodes are referenced in {0}, but no longer exist '''
+        '''in the network or are zone centroids: {1}. Please update the '''
+        '''table to reference only existing, non-centroid nodes.'''
+        ''.format(MHN.pnr, bad_pnr_node_str)
+    )
+else:
+    arcpy.AddMessage('-- Park-n-Ride NODE values verified')
 
 
 # -----------------------------------------------------------------------------
@@ -698,6 +713,9 @@ for route_system in MHN.route_systems:
     rel_sys = os.path.join(MHN.gdb, 'rel_{0}_to_{1}'.format(itin_name.rsplit('_',1)[0], itin_name.rsplit('_',1)[1]))
     arcpy.CreateRelationshipClass_management(MHN.arc, itin, rel_arcs, 'SIMPLE', itin_name, MHN.arc_name, 'NONE', 'ONE_TO_MANY', 'NONE', 'ABB', 'ABB')
     arcpy.CreateRelationshipClass_management(header, itin, rel_sys, 'COMPOSITE', itin_name, header_name, 'FORWARD', 'ONE_TO_MANY', 'NONE', common_id_field, common_id_field)
+
+rel_pnr = os.path.join(MHN.gdb, 'rel_nodes_to_{0}'.format(MHN.pnr_name))
+arcpy.CreateRelationshipClass_management(MHN.node, MHN.pnr, rel_pnr, 'SIMPLE', MHN.pnr_name, MHN.node_name, 'NONE', 'ONE_TO_MANY', 'NONE', 'NODE', 'NODE')
 
 # Clean up.
 arcpy.Compact_management(MHN.gdb)
