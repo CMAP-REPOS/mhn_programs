@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 12/9/14
+    Revised: 12/10/14
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -305,9 +305,9 @@ arcpy.AddMessage('-- New NODE values assigned')
 
 # Verify that all Park-n-Ride nodes still exist.
 node_ids = set((r[0] for r in arcpy.da.SearchCursor(new_nodes, ['NODE'])))
-non_ctrd_ids = set((i for i in node_ids if i > MHN.max_poe))
+non_centroid_ids = set((i for i in node_ids if i > MHN.max_poe))
 pnr_nodes = set((r[0] for r in arcpy.da.SearchCursor(MHN.pnr, ['NODE'])))
-bad_pnr_nodes = pnr_nodes - non_ctrd_ids
+bad_pnr_nodes = pnr_nodes - non_centroid_ids
 if bad_pnr_nodes:
     bad_pnr_node_str = ', '.join((str(n) for n in sorted(bad_pnr_nodes)))
     MHN.die(
