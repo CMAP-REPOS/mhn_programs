@@ -199,14 +199,40 @@ for scen in scen_list:
         os.remove(hwy_nodes_csv)
         arcpy.AddMessage('-- Scenario {0} l1, l2, n1, n2 files generated successfully.'.format(scen))
 
-    # Create mcp_stats.txt.
-    mcp_stats = os.path.join(scen_path, 'mcp_stats.txt')
+    # Calculate scenario mainline links' AM Peak lane-miles, and create mcp_stats.txt.
+    scen_ampeak_l1 = os.path.join(scen_path, '{0}03.l1'.format(scen))
+    mainline_lanemiles = {}
+    with open(scen_ampeak_l1, 'r') as l1:
+        for r in l1:
+            attr = r.split()
+            if attr[0] == 'a'and attr[7] in ('2', '4'): # Ignore comments, t-record and non-mainline links
+                ab = '{0}-{1}'.format(attr[1], attr[2])
+                lanemiles = float(attr[3]) * int(attr[6])
+                mainline_lanemiles[ab] = lanemiles
+    #with open(r'C:\WorkSpace\Temp\mainline_lanemiles.csv', 'w') as w:
+    #    w.write('AB,LANEMILES\n')
+    #    for ab in sorted(mainline_lanemiles.keys()):
+    #        w.write('{0},{1}\n'.format(ab, mainline_lanemiles[ab]))
+
+    scen_mcp_tipids = {}
+    scen_mcp_query = ''' "COMPLETION_YEAR" <= {0} AND "MCP_ID" <> '' '''.format(scen_year)
+    with arcpy.da.SearchCursor(MHN.hwyproj, ['MCP_ID', hwyproj_id_field], scen_mcp_query) as c:
+        for mcp_id, tipid in c:
+            if mcp_id not in scen_mcp_tipids:
+                scen_mcp_tipids[mcp_id] = set([tipid])
+            else:
+                scen_mcp_tipids[mcp_id].add(tipid)
+
+    mcp_stats = os.path.join(scen_path, 'mcp_stats.csv')
     with open(mcp_stats, 'w') as w:
-        w.write('MAJOR CAPITAL PROJECTS INCLUDED IN SCENARIO {0}\n\n'.format(scen))
-        for hwyproj_id, mcp_id, comp_year in sorted(hwy_projects, key=itemgetter(2,1)):
-            if mcp_id.strip():
-                w.write('--> {0}: {1} [{2}]\n'.format(comp_year, MHN.mcps[mcp_id], mcp_id))
-    arcpy.AddMessage('-- Scenario {0} mcp_stats.txt generated successfully.'.format(scen))
+        w.write('MCP_ID,MCP_NAME,MAINLINE_LANEMILES\n')
+        for mcp_id in sorted(scen_mcp_tipids.keys()):
+            mcp_query = ''' "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join(scen_mcp_tipids[mcp_id]))
+            mcp_ab = set((r[0].rsplit('-', 1)[0] for r in arcpy.da.SearchCursor(MHN.route_systems[MHN.hwyproj][0], ['ABB'], mcp_query)))
+            mcp_lanemiles = sum((mainline_lanemiles[ab] for ab in mcp_ab if ab in mainline_lanemiles))
+            w.write('{0},{1},{2}\n'.format(mcp_id, MHN.mcps[mcp_id], mcp_lanemiles))
+
+    arcpy.AddMessage('-- Scenario {0} mcp_stats.csv generated successfully.'.format(scen))
 
     # Create linkshape.in.
     def generate_linkshape(arcs, output_dir):
