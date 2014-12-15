@@ -1,7 +1,7 @@
 /*
    import_gtfs_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 7/25/13
+   revised: 12/15/14
    ----------------------------------------------------------------------------
    Program is called by import_gtfs_bus_routes.py and formats bus itineraries
    to build with arcpy.
@@ -219,7 +219,7 @@ data route; set route; by mode line;
 data route(drop=q ty); set route;
  length newline $6. temp1 $5. descr $50.;
   temp1=q;
-  newline=tranwrd(lowcase(mode)||temp1,'','0');
+  newline=tranwrd(lowcase(substr(mode,1,1))||temp1,'','0');
   descr=trim(route_id)||" "||trim(route_long_name)||": "||trim(direction)||" TO "||trim(terminal);
    proc sort; by newline;
 
