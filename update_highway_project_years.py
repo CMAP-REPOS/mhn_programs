@@ -232,6 +232,8 @@ else:
         '''not listed in {1} or {2}. See {3} for details.'''
         ).format('\n', tipid_conformed_csv, tipid_exempt_csv, in_mhn_not_year_txt))
 
+arcpy.Delete_management(hwyproj_view)
+
 
 # -----------------------------------------------------------------------------
 #  Check for still-uncoded projects.
@@ -261,11 +263,14 @@ arcpy.AddMessage((
     ).format('\n', tipid_conformed_csv, tipid_exempt_csv))
 edit = arcpy.da.Editor(MHN.gdb)
 edit.startEditing()
-with arcpy.da.UpdateCursor(MHN.hwyproj, [common_id_field, 'COMPLETION_YEAR']) as cursor:
-    for row in cursor:
-        if row[0] in hwyproj_years:
-            row[1] = hwyproj_years[row[0]]
-        cursor.updateRow(row)
+edit.startOperation()
+with arcpy.da.UpdateCursor(MHN.hwyproj, [common_id_field, 'COMPLETION_YEAR']) as c:
+    for r in c:
+        tipid = int(r[0])
+        if tipid in hwyproj_years:
+            r[1] = hwyproj_years[tipid]
+        c.updateRow(r)
+edit.stopOperation()
 edit.stopEditing(True)
 
 
