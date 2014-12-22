@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 12/10/14
+    Revised: 12/22/14
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -34,6 +34,11 @@ MHN = MasterHighwayNetwork(mhn_gdb_path)
 scen_code = arcpy.GetParameterAsText(1)     # String, default = '100'
 root_path = arcpy.GetParameterAsText(2)     # String, no default
 ct_ramp = arcpy.GetParameter(3)             # Boolean, default = False
+
+if ct_ramp:
+    out_tod_periods = sorted((k for k in MHN.tod_periods.keys() if k.isdigit()))  # ['1','2','3','4','5','6','7','8']
+else:
+    out_tod_periods = sorted((k for k in MHN.tod_periods.keys() if not k.isdigit()))  # ['am']
 
 if not os.path.exists(root_path):
     MHN.die("{0} doesn't exist!".format(root_path))
@@ -123,7 +128,7 @@ for bus_fc in bus_fc_dict:
     which_bus = bus_fc_dict[bus_fc]
 
     rep_runs_dict[which_bus] = {}
-    for tod in sorted(MHN.tod_periods.keys()):
+    for tod in out_tod_periods:
         arcpy.AddMessage('-- TOD {0}...'.format(tod.upper()))
 
         # Export header info of bus routes in current TOD.
@@ -227,7 +232,7 @@ for scen in scen_list:
     # -------------------------------------------------------------------------
     arcpy.AddMessage('\nGenerating Scenario {0} ({1}) transit files...'.format(scen, str(scen_year)))
 
-    for tod in sorted(MHN.tod_periods.keys()):
+    for tod in out_tod_periods:
         arcpy.AddMessage('-- TOD {0}...'.format(tod.upper()))
 
         rail_itin = os.path.join(scen_tran_path, 'rail.itinerary_{0}'.format(tod))
@@ -469,7 +474,7 @@ for scen in scen_list:
                      scen, tod, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])),
                      str(MHN.max_poe), min(MHN.scenario_years.keys()), MHN.prog_dir, missing_links_csv,
                      link_dict_txt, short_path_txt, path_errors_txt, sas2_output)
-        if tod == sorted(MHN.tod_periods.keys())[0] and os.path.exists(sas2_output):
+        if tod == out_tod_periods[0] and os.path.exists(sas2_output):
             os.remove(sas2_output)  # Delete this before first iteration, or else old version will be appended to.
         MHN.submit_sas(sas2_sas, sas2_log, sas2_lst, sas2_args)
         if not os.path.exists(sas2_log):
@@ -754,7 +759,7 @@ for scen in scen_list:
 # -----------------------------------------------------------------------------
 for bus_fc in bus_fc_dict:
     which_bus = bus_fc_dict[bus_fc]
-    for tod in sorted(MHN.tod_periods.keys()):
+    for tod in out_tod_periods:
         MHN.delete_if_exists(rep_runs_dict[which_bus][tod])
 arcpy.Delete_management(MHN.mem)
 arcpy.AddMessage('\nAll done!\n')
