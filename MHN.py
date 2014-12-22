@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 12/5/14
+    Revised: 12/22/14
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -21,7 +21,7 @@ class MasterHighwayNetwork(object):
     # -----------------------------------------------------------------------------
     base_year = 2010  # BASELINK=1 network year, not necessarily scenario 100 (i.e. base_year was recently 2009, while scenario 100 was 2010)
 
-    bus_years = {'base': 2010, 'current': 2012}
+    bus_years = {'base': 2010, 'current': 2014}
 
     centroid_ranges = {
         'CBD'    : xrange(   1,   48),  # NB. xrange(i,j) includes i & excludes j
