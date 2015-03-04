@@ -293,38 +293,38 @@ data x; set section(where=(itinerary_a is null or itinerary_b is null )); proc p
  *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*;
        ** -- Insert Pseudo Nodes into Itinerary, If Necessary -- **;
 proc sql noprint;
- create table check as
-     select route.newline,
-            pseudo.itinerary_a, itinerary_b, pnode1, pnode2, newlink
-     from route, pseudo
-     where route.mode=pseudo.mode & route.route_id=pseudo.route_id
-     order by newline,itinerary_a,itinerary_b;
+  create table check as
+    select route.newline, pseudo.itinerary_a, itinerary_b, pnode1, pnode2, newlink
+      from route, pseudo
+      where route.mode=pseudo.mode & route.route_id=pseudo.route_id
+      order by newline,itinerary_a,itinerary_b;
 
 data temp; set check nobs=pndfix; call symput('pnd',left(put(pndfix,8.))); run;
 
 %macro fixpseudo;
   %if &pnd>0 %then %do;
 
-    proc sort data=section; by newline itinerary_a itinerary_b;
-    data pfix; merge section(in=hit) check; by newline itinerary_a itinerary_b; if hit;
-    data pfix section; set pfix; if pnode1>0 then output pfix; else output section;
-    data pfix; set pfix; n=1; output; n=2; output; if newlink=3 then do; n=3; output; end;
-    data pfix; set pfix;
-      ltime=round(ltime/newlink,0.1); order=n/10+order; tm=round((arr_time-dep_time)/newlink);
-      if newlink=2 then do;
-         if n=1 then do; itinerary_b=pnode1; dwcode=1; arr_time=dep_time+tm; end;
-         else do; itinerary_a=pnode1; dep_time=dep_time+tm; end;
+  proc sort data=section; by newline itinerary_a itinerary_b;
+  data pfix; merge section(in=hit) check; by newline itinerary_a itinerary_b; if hit;
+  data pfix section; set pfix; if pnode1>0 then output pfix; else output section;
+  data pfix; set pfix; n=1; output; n=2; output; if newlink=3 then do; n=3; output; end;
+  data pfix; set pfix;
+    ltime=round(ltime/newlink,0.1); order=n/10+order; tm=round((arr_time-dep_time)/newlink);
+    if newlink=2 then do;
+      if n=1 then do; itinerary_b=pnode1; dwcode=1; arr_time=dep_time+tm; end;
+      else do; itinerary_a=pnode1; dep_time=dep_time+tm; end;
       end;
-      if newlink=3 then do;
-         if n=1 then do; itinerary_b=pnode1; dwcode=1; arr_time=dep_time+tm; end;
-         else if n=2 then do; itinerary_a=pnode1; itinerary_b=pnode2; dwcode=1; dep_time=dep_time+tm; arr_time=dep_time+tm; end;
-         else do; itinerary_a=pnode2; dep_time=dep_time+(tm*2); end;
+    if newlink=3 then do;
+      if n=1 then do; itinerary_b=pnode1; dwcode=1; arr_time=dep_time+tm; end;
+      else if n=2 then do; itinerary_a=pnode1; itinerary_b=pnode2; dwcode=1; dep_time=dep_time+tm; arr_time=dep_time+tm; end;
+      else do; itinerary_a=pnode2; dep_time=dep_time+(tm*2); end;
       end;
 
-    data dwadj(keep=newline newb pnode1); set pfix(where=(itinerary_b=pnode1 or itinerary_b=pnode2)); rename itinerary_b=newb;
-    data section(drop=pnode1 pnode2 newlink n tm); set section pfix;
-      proc sort; by newline order;
-     run;
+  data dwadj(keep=newline newb pnode1); set pfix(where=(itinerary_b=pnode1 or itinerary_b=pnode2)); rename itinerary_b=newb;
+  data section(drop=pnode1 pnode2 newlink n tm); set section pfix;
+    proc sort; by newline order;
+  run;
+
   %end;
 %mend fixpseudo;
 %fixpseudo
@@ -396,14 +396,14 @@ data node; infile in5 dlm=',' firstobs=2;
 data nodeb; set node; rename itinerary_a=itinerary_b ax=bx ay=by; proc sort; by itinerary_b;
 data pace; merge pace(in=hit) node; by itinerary_a; if hit; proc sort; by itinerary_b;
 data pace(drop=dt ax ay bx by); merge pace(in=hit) nodeb; by itinerary_b; if hit;
- dist=sqrt((ax-bx)**2+(ay-by)**2)/5280;
+  dist=sqrt((ax-bx)**2+(ay-by)**2)/5280;
   proc sort; by newline order grupo;
 proc summary nway data=pace; class grupo; var dist ltime; output out=fixpace sum(dist)=miles sum(ltime)=time n=elements;
 data pace(drop=_type_ _freq_ dist miles grupo time); merge pace fixpace; by grupo;
   if elements>1 then do;          ** only adjust the segments that need it **;
-     ltime=round(dist/miles*time,0.1);
-     if ltime>0 then arr_time=(ltime*60)+dep_time;
-     if ltime=. then ltime=time;
+    ltime=round(dist/miles*time,0.1);
+    if ltime>0 then arr_time=(ltime*60)+dep_time;
+    if ltime=. then ltime=time;
   end;
   proc sort; by newline order;
 
