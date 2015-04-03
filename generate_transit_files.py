@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 12/22/14
+    Revised: 4/3/15
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -38,7 +38,7 @@ ct_ramp = arcpy.GetParameter(3)             # Boolean, default = False
 if ct_ramp:
     out_tod_periods = sorted((k for k in MHN.tod_periods.keys() if k.isdigit()))  # ['1','2','3','4','5','6','7','8']
 else:
-    out_tod_periods = sorted((k for k in MHN.tod_periods.keys() if not k.isdigit()))  # ['am']
+    out_tod_periods = sorted((k for k in MHN.tod_periods.keys() if k=='5' or not k.isdigit()))  # ['5','am']
 
 if not os.path.exists(root_path):
     MHN.die("{0} doesn't exist!".format(root_path))

@@ -44,7 +44,7 @@ class MasterHighwayNetwork(object):
     scenario_years = {
         '100': 2010,
         '200': 2015,
-        '300': 2020, # No longer in use for conformity, as of C13Q3
+        '300': 2020,
         '400': 2025,
         '500': 2030,
         '600': 2040
