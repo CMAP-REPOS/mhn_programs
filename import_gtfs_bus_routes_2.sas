@@ -437,6 +437,7 @@ data pace2; merge pace(in=hit) node; by itinerary_a; if hit; proc sort; by itine
 data pace2; merge pace2(in=hit) nodeb; by itinerary_b; if hit;
     ** Calculate Euclidean distance between nodes;
     eucdist = sqrt((ax - bx)**2 + (ay - by)**2) / 5280;
+    proc sort; by newline order;
 data pace2; set pace2; by newline order;
     nl_lag = lag(newline);
     at_lag = lag(arr_time);
@@ -469,6 +470,7 @@ data pace(drop=dt ax ay bx by); merge pace(in=hit) nodeb; by itinerary_b; if hit
     proc sort; by newline order grupo;
 proc summary nway data=pace; class grupo; var dist ltime;
     output out=fixpace sum(dist)=miles sum(ltime)=time n=elements;
+data pace; set pace; proc sort; by grupo;
 data pace(drop=_type_ _freq_ dist miles grupo time); merge pace fixpace; by grupo;
     if elements > 1 then do;  ** only adjust the segments that need it **;
         ltime = round(dist / miles * time, 0.1);
@@ -669,7 +671,6 @@ data temp; set hold nobs=totobs; call symput('tothold', left(put(totobs, 8.))); 
                 call symput('ymin', left(put(y1, 8.))); call symput('ymax', left(put(y2, 8.))); run;
 
             data net1; set ntwk(where=(&xmin <= ax <= &xmax & &ymin <= ay <= &ymax));
-
 
             data dict(keep=itinerary_a itinerary_b miles); set net1(where=(itinerary_a > &maxzn & itinerary_b > &maxzn));
                 if base = 1 then miles = int(mhnmi * 100);
