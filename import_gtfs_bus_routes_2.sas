@@ -453,7 +453,8 @@ data pace2; set pace2; by newline order;
         arr_time = dep_time + time_est;
         ltime = round(time_est / 60, 0.1);
     end;
-
+    
+proc sort data=pace; by newline order;
 data pace; set pace;
     retain grupo 0;
     if line ^= group or dep_time ^= dt then grupo + 1;
@@ -470,7 +471,6 @@ data pace(drop=dt ax ay bx by); merge pace(in=hit) nodeb; by itinerary_b; if hit
     proc sort; by newline order grupo;
 proc summary nway data=pace; class grupo; var dist ltime;
     output out=fixpace sum(dist)=miles sum(ltime)=time n=elements;
-data pace; set pace; proc sort; by grupo;
 data pace(drop=_type_ _freq_ dist miles grupo time); merge pace fixpace; by grupo;
     if elements > 1 then do;  ** only adjust the segments that need it **;
         ltime = round(dist / miles * time, 0.1);
