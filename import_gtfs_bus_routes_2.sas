@@ -72,7 +72,7 @@ options noxwait;
 %let xmin = 0; %let xmax = 0; %let ymin = 0; %let ymax = 0;
 %let pnd = 0;
 %let patherr = 0;
-%let timefix = 0;
+*%let timefix = 0;
 
 ** INPUT FILES **;
 filename in1 "&rawhead";
@@ -561,7 +561,8 @@ data nd; set ntwk;
 
 ** Adjust itinerary coding if it contains nodes not available in the network, if necessary **;
 
-data nodechk(keep=itinerary_a); merge nodechk nd (in=hit); by itinerary_a; if hit then delete;
+data nodechk(keep=itinerary_a); merge nodechk nd (in=hit); by itinerary_a;
+    if hit then delete;
 data temp; set nodechk nobs=nonode; call symput('badnode', left(put(nonode, 8.))); run;
 
 %macro nodefix;
