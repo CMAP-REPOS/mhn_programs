@@ -390,44 +390,7 @@ data pace(drop=zonefr); merge pace(in=hit) qroute; by newline; if hit;
     dt = lag(dep_time);
     proc sort; by newline order;
 
-** Estimate Times for Pace Lines where first dep_time=last arr_time **;
-/*data first(keep=newline dep_time); set pace; by newline order; if first.newline;
-data last(keep=newline arr_time); set pace; by newline order; if last.newline;
-data chk; merge first last; by newline; if dep_time = arr_time;
-data _null_; set chk nobs=tmfix; call symput('timefix', left(put(tmfix, 8.))); run;
-
-%macro sametime;
-    %if &timefix > 0 %then %do;
-        data chk(keep=newline flag); set chk; flag = 1;
-        data pace; merge pace chk; by newline;
-        data timefix; set pace(where=(flag = 1));
-
-        ** Use Node Coordinates, 30 MPH & Euclidean distance to estimate new final arrival time ... **;
-        data node; infile in5 dlm=',' firstobs=2;
-        input itinerary_a ax ay;  proc sort; by itinerary_a;
-        data nodeb; set node; rename itinerary_a=itinerary_b ax=bx ay=by; proc sort; by itinerary_b;
-
-        proc sort data=timefix; by itinerary_a;
-        data timefix; merge timefix(in=hit) node; by itinerary_a; if hit; proc sort; by itinerary_b;
-        data timefix; merge timefix(in=hit) nodeb; by itinerary_b; if hit;
-            dist = sqrt((ax - bx)**2 + (ay - by)**2) / 5280;
-            minutes = round(dist / 30 * 60, 0.1);
-
-        proc summary nway data=timefix; class newline; var order minutes;
-            output out=fixed max(order)= sum(minutes)=totmin;
-        data timefix(keep=newline order minutes); set timefix; proc sort; by newline order;
-
-        ** ... And Calculate New Estimated Ltime **;
-        proc sort data=pace; by newline order;
-        data pace(drop=_type_ _freq_ flag minutes totmin); merge pace timefix fixed; by newline order;
-        if minutes then ltime = minutes;
-        if totmin then arr_time = round(totmin * 60 + arr_time);
-        run;
-    %end;
-%mend sametime;
-%sametime*/
-/* end macro*/
-
+** Estimate times for Pace segments where dep_time = arr_time **;
 data node; infile in5 dlm=',' firstobs=2;
     input itinerary_a ax ay;  proc sort; by itinerary_a;
 data nodeb; set node; rename itinerary_a=itinerary_b ax=bx ay=by; proc sort; by itinerary_b;
@@ -630,7 +593,7 @@ data temp; set hold nobs=totobs; call symput('tothold', left(put(totobs, 8.))); 
     %if &tothold > 0 %then %do;
         data short(keep=itinerary_a itinerary_b); set hold; proc sort nodupkey; by itinerary_a itinerary_b;
         
-        ** -- This file can be used for troubleshooting & verification with short_path.txt -- **;
+        /* This file can be used for troubleshooting & verification with short_path.txt */
         proc export data=short outfile="&holdchck" dbms=csv replace;
         data short; set short; num = _n_;
         data temp; set short nobs=fixobs; call symput('totfix', left(put(fixobs, 8.))); run;
@@ -643,12 +606,11 @@ data temp; set hold nobs=totobs; call symput('tothold', left(put(totobs, 8.))); 
             input location $varying254. reclen;
             loc = scan(location, 2, '=');
             goodloc = substr(loc, 1, index(loc, '.exe"') + 4);
-            call symput('runpython', trim(goodloc));
-            run;
+            call symput('runpython', trim(goodloc)); run;
 
         data _null_; command = "if exist &pypath (del &pypath /Q)" ; call system(command);
 
-        ** RUN PYTHON SCRIPT **;
+        /* RUN PYTHON SCRIPT */
         %do %while (&count <= &totfix);
             data shrt; set short(where=(num = &count));
                 call symput('a', left(put(itinerary_a, 5.)));
@@ -660,8 +622,8 @@ data temp; set hold nobs=totobs; call symput('tothold', left(put(totobs, 8.))); 
             data coord; set coord;
                 d = round(sqrt((axmax - axmin)**2 + (aymax - aymin)**2), 0.5);
                 d = max(d / &search, 3);
-                d = min(d, 3);  ** link coord search multiplier parameter capped at 3 miles;
-                *** AREN'T THE ABOVE LINES EQUIVALENT TO SIMPLY "d = 3"? ***;
+                d = min(d, 3);  /* link coord search multiplier parameter capped at 3 miles */
+                /* AREN'T THE ABOVE LINES EQUIVALENT TO SIMPLY d = 3? */
                 x1 = axmin - (d * &search);
                 x2 = axmax + (d * &search);
                 y1 = aymin - (d * &search);
@@ -671,12 +633,12 @@ data temp; set hold nobs=totobs; call symput('tothold', left(put(totobs, 8.))); 
                 call symput('xmin', left(put(x1, 8.))); call symput('xmax', left(put(x2, 8.)));
                 call symput('ymin', left(put(y1, 8.))); call symput('ymax', left(put(y2, 8.))); run;
 
-            data net1; set ntwk(where=(&xmin <= ax <= &xmax & &ymin <= ay <= &ymax));
+            data net1; set ntwk(where=(&xmin <= ax <= &xmax and &ymin <= ay <= &ymax));
 
-            data dict(keep=itinerary_a itinerary_b miles); set net1(where=(itinerary_a > &maxzn & itinerary_b > &maxzn));
+            data dict(keep=itinerary_a itinerary_b miles); set net1(where=(itinerary_a > &maxzn and itinerary_b > &maxzn));
                 if base = 1 then miles = int(mhnmi * 100);
-                else miles = int(mhnmi * 100) + 500;  ** Add 5 mile penalty to skeleton links to prohibit selection;
-                *** SHOULD SKELETON LINKS JUST BE DELETED FROM DATASET INSTEAD? ***;
+                else miles = int(mhnmi * 100) + 500;  /* add 5 mile penalty to skeleton links to prohibit selection */
+                /* SHOULD SKELETON LINKS JUST BE DELETED FROM DATASET INSTEAD? */
 
             data dict; set dict; by itinerary_a;
                 file out3;
@@ -691,11 +653,11 @@ data temp; set hold nobs=totobs; call symput('tothold', left(put(totobs, 8.))); 
                 %put a=&a b=&b;
                 command = "%bquote(&runpython) &progdir./shortest_path.py &a &b &linkdict &shrtpath";
                 call system(command);
-                %let count = %eval(&count + 1);
+            %let count = %eval(&count + 1);
         %end;
 
-        ** READ SHORTEST PATHS FOUND **;
-        ** Do a first pass to check for paths not found **;
+        /* READ SHORTEST PATHS FOUND */
+        /* Do a first pass to check for paths not found */
         data nopath; infile in4 dlm="(,)";
             input length node $; if length = 0;
 
@@ -705,7 +667,7 @@ data temp; set hold nobs=totobs; call symput('tothold', left(put(totobs, 8.))); 
                 proc print noobs data=nopath; title "***** SHORTEST PATH ERROR: NO PATH FOUND, REVIEW CODING *****";
                 proc printto;
             %end;
-        *** ADD LOGIC TO VERIFY NUMBER OF ENTRIES IN SHORT_PATH IS EQUAL TO &TOTFIX, ELSE STOP SCRIPTS ***;
+        /* ADD LOGIC TO VERIFY NUMBER OF ENTRIES IN SHORT_PATH IS EQUAL TO &TOTFIX, ELSE STOP SCRIPTS */
 
         %include "&progdir./read_path_output.sas";
     %end;
@@ -767,7 +729,7 @@ data route; merge route sect1 stats; by newline;
     ** set headways to time period length **;
     if strthour in (0:5, 20:23) then headway = 600;  ** overnight;
     else if strthour in (6, 9) then headway = 60;  ** AM peak shoulders;
-    else if strthour (10:13) then headway = 240;  ** midday;
+    else if strthour in (10:13) then headway = 240;  ** midday;
     else headway = 120;  ** AM/PM peaks, PM peak shoulders;
 
 ** Replace route header file for Arc **;
