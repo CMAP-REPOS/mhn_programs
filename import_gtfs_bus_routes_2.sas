@@ -1,7 +1,7 @@
 /*
    import_gtfs_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 6/9/15
+   revised: 6/10/15
    ----------------------------------------------------------------------------
    Program is called by import_gtfs_bus_routes.py & formats bus itineraries
    to build with arcpy.
