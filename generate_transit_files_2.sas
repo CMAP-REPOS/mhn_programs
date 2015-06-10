@@ -1,7 +1,7 @@
 /*
    generate_transit_files_2.sas
    authors: cheither & npeterson
-   revised: 12/9/14
+   revised: 4/22/15
    ----------------------------------------------------------------------------
    Program creates bus transit network batchin files. Bus transit network is
    built using a modified version of MHN processing procedures.
@@ -543,7 +543,7 @@ data out1; set out1;
    end;
    else if end=1 then do;
       put +4 d +(10-length(left(trim(d)))) itina +(7-length(left(trim(itina)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2 /
-          +15 itinb +(7-length(left(trim(itinb)))) 'lay=' +0 layover;
+          +4 'dwt=0.01' +3 itinb +(7-length(left(trim(itinb)))) 'lay=' +0 layover;
    end;
    else if layov>0 then do;
       put +4 d +(10-length(left(trim(d)))) itina +(7-length(left(trim(itina)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2 +2 'lay=' +0 layov;
