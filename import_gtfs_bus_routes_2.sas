@@ -430,9 +430,8 @@ data _null_; set chk nobs=tmfix; call symput('timefix', left(put(tmfix, 8.))); r
     %end;
 %mend sametime;
 %sametime
- /* end macro*/
-    
-proc sort data=pace; by newline order;
+/* end macro*/
+
 data pace; set pace;
     retain grupo 0;
     if line ^= group or dep_time ^= dt then grupo + 1;
