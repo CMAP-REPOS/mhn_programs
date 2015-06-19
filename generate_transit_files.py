@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 4/10/15
+    Revised: 6/19/15
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -673,6 +673,20 @@ for scen in scen_list:
 
             return out_csv
 
+        def distance_to_zone_centroid(pts_fc, pts_node_field, pts_zone_field, centroids_fc, centroids_node_field, out_csv):
+            ''' Create a CSV of each point in pts_fc, the zone it's in, and the
+                distance to that zone's centroid. '''
+            centroid_geom = {r[0]: r[1] for r in arcpy.da.SearchCursor(centroids_fc, [centroids_node_field, 'SHAPE@'])}
+            w = open(out_csv, 'wb')
+            with arcpy.da.SearchCursor(pts_fc, [pts_node_field, pts_zone_field, 'SHAPE@']) as c:
+                for node, zone, pt_geom in c:
+                    distance = pt_geom.distanceTo(centroid_geom[zone])
+                    w.write('{0},{1},{2}\n'.format(node, zone, distance))
+            w.close()
+            del centroid_geom
+            return out_csv
+
+
         # -- Mode c: 1/8 mile inside CBD; 1/2 mile outside CBD.
         cbddist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_cbd_lyr, 'cta_stop_xy_PNT_ID', 660, os.path.join(scen_tran_path, 'cbddist.txt'))
         ctadist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_noncbd_lyr, 'cta_stop_xy_PNT_ID', 2640, os.path.join(scen_tran_path, 'ctadist.txt'))
@@ -683,10 +697,13 @@ for scen in scen_list:
 
         # -- Modes u, v, w, x, y & z.
         busz_txt = calculate_distances(bus_cbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 1320, os.path.join(scen_tran_path, 'busz.txt'))
-        busz2_txt = calculate_distances(bus_noncbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'busz2.txt'))
+        busz2_txt = calculate_distances(bus_noncbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 6600, os.path.join(scen_tran_path, 'busz2.txt'))
         ctaz_txt = calculate_distances(cta_cbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz.txt'))
         ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz2.txt'))
         metraz_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'metraz.txt'))
+
+        bcent_txt = distance_to_zone_centroid(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', MHN.zone_attr, centroid_fc, 'NODE', os.path.join(scen_tran_path, 'buscentroids.txt'))  ### NEW C15Q3
+
         c1z_txt = MHN.write_attribute_csv(cta_cbd_fc, os.path.join(scen_tran_path, 'c1z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
         c2z_txt = MHN.write_attribute_csv(cta_noncbd_fc, os.path.join(scen_tran_path, 'c2z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
         mz_txt = MHN.write_attribute_csv(metra_stop_xy_z, os.path.join(scen_tran_path, 'mz.txt'), ['metra_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
@@ -715,6 +732,7 @@ for scen in scen_list:
             os.remove(ctaz_txt)
             os.remove(ctaz2_txt)
             os.remove(metraz_txt)
+            os.remove(bcent_txt)  ### NEW C15Q3
             os.remove(c1z_txt)
             os.remove(c2z_txt)
             os.remove(mz_txt)
