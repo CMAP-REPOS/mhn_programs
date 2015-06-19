@@ -1,10 +1,10 @@
 /*
-   generate_transit_files_2.sas
-   authors: cheither & npeterson
-   revised: 4/22/15
-   ----------------------------------------------------------------------------
-   Program creates bus transit network batchin files. Bus transit network is
-   built using a modified version of MHN processing procedures.
+    generate_transit_files_2.sas
+    authors: cheither & npeterson
+    revised: 4/22/15
+    ----------------------------------------------------------------------------
+    Program creates bus transit network batchin files. Bus transit network is
+    built using a modified version of MHN processing procedures.
 
 */
 options noxwait;
