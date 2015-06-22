@@ -676,11 +676,12 @@ for scen in scen_list:
         def distance_to_zone_centroid(pts_fc, pts_node_field, pts_zone_field, centroids_fc, centroids_node_field, out_csv):
             ''' Create a CSV of each point in pts_fc, the zone it's in, and the
                 distance to that zone's centroid. '''
-            centroid_geom = {r[0]: r[1] for r in arcpy.da.SearchCursor(centroids_fc, [centroids_node_field, 'SHAPE@'])}
+            centroid_sr = arcpy.Describe(centroids_fc).spatialReference
+            centroid_geom = {r[0]: r[1].projectAs(centroid_sr) for r in arcpy.da.SearchCursor(centroids_fc, [centroids_node_field, 'SHAPE@'])}
             w = open(out_csv, 'wb')
             with arcpy.da.SearchCursor(pts_fc, [pts_node_field, pts_zone_field, 'SHAPE@']) as c:
                 for node, zone, pt_geom in c:
-                    distance = pt_geom.distanceTo(centroid_geom[zone])
+                    distance = pt_geom.projectAs(centroid_sr).distanceTo(centroid_geom[zone])
                     w.write('{0},{1},{2}\n'.format(node, zone, distance))
             w.close()
             del centroid_geom
