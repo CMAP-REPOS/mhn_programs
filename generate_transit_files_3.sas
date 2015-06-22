@@ -292,15 +292,21 @@ data finlist; set finlist;
     output;
 
 /* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
-/* MODE x - MAXIMUM OF 9 PER ZONE */
+/* MODE x - IN CBD MAX. OF 8 PER ZONE, OUTSIDE CBD MAX. OF 9 PER ZONE */
 data finlistx(drop=match ord); set finlist;
-    if ord > 9 then delete;
+    *if ord > 9 then delete;
+    if &zone1 <= centroid <= &zone2 and ord > 8 then delete;
+    if centroid < &zone1 and ord > 9 then delete;
+    if centroid > &zone2 and ord > 9 then delete;
     mode = 'x';
 
 /* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
-/* MODE u - MAXIMUM OF 8 PER ZONE */
+/* MODE u - IN CBD MAX. OF 3 PER ZONE, OUTSIDE CBD MAX. OF 9 PER ZONE */
 data finlistu(drop=match ord t); set finlist;
-    if ord > 8 then delete;
+    *if ord > 9 then delete;
+    if &zone1 <= centroid <= &zone2 and ord > 3 then delete;
+    if centroid < &zone1 and ord > 9 then delete;
+    if centroid > &zone2 and ord > 9 then delete;
     mode = 'u';
     t = stop; stop = centroid; centroid = t;  ** Reverse direction;
     output;
