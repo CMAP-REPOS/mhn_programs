@@ -266,13 +266,13 @@ data centdist(drop=dist); infile in13 dlm=',' missover;
 proc sort data=stops; by stop;
 data stopcent(keep=linename stop centroid miles); merge stops (in=hit) centdist; by stop;
     if hit;  ** Only keep actual stops (dwtime > 0);
-    proc sort; by stop centroid;
+    proc sort; by centroid;
 
-proc sort data=finlist; by stop centroid;
-data stopcent(keep=linename stop centroid miles); merge stopcent finlist (in=hit); by stop centroid;
-    if hit then delete;  ** Remove links already accounted for;
+proc sort data=finlist; by centroid;
+data stopcent(keep=linename stop centroid miles); merge stopcent finlist (in=hit); by centroid;
+    if hit then delete;  ** Remove links in zones that already have access;
 
-proc means data=stopcent; var miles; class centroid; output out=nearstop minid(miles(stop))=stop min=;
+proc means noprint data=stopcent; var miles; class centroid; output out=nearstop minid(miles(stop))=stop min=;
 data nearstop(keep=centroid stop miles); set nearstop;
     if centroid > 0;
     miles = 0.7;  ** Assign a blanket distance of 0.7 miles;
