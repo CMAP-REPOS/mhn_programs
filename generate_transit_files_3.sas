@@ -1,7 +1,7 @@
 /*
     generate_transit_files_3.sas
     authors: cheither & npeterson
-    revised: 6/19/13
+    revised: 6/22/15
     ----------------------------------------------------------------------------
     Program creates batchin file of mode c, m, u, v, w, x, y and z links.
 
@@ -128,7 +128,6 @@ data bus(drop=dist); infile in4 dlm=',' missover;
 data bus2(drop=dist); infile in5 dlm=',' missover;
     input stop centroid dist;
     miles = round(dist / 5280, 0.01);
-    if miles > 0.55 then miles = 0.65;
 
 data bus; set bus bus2;
     proc sort; by stop;
@@ -256,8 +255,20 @@ data final2(drop=_type_ _freq_); merge final1 dir2diff(in=hit); by linename;
 /* ELIMINATE REDUNDANCIES */
 proc summary nway; var miles; class stop centroid; output out=finlist mean=;
 
-/* FORCE CONNECTIONS IN ZONES WITH ONLY BUS STOPS BEYOND REGULAR DISTANCE
-   THRESHOLD. */
+/* ORDER ACCESS LINKS BY CENTROID BY MILES */
+proc sort data=finlist; by centroid miles;
+
+data finlist (drop=_type_ _freq_); set finlist;
+    match = lag1(centroid);
+
+data finlist; set finlist;
+    retain ord 1;
+    ord + 1;
+    if centroid ^= match then ord = 1;
+    if miles > 0.55 then miles = 0.65;  ** Use 0.65 miles for long access links;
+    output;
+
+/* FORCE CONNECTIONS IN ZONES WITH ONLY BUS STOPS BEYOND THE REGULAR DISTANCE THRESHOLD. */
 data centdist(drop=dist); infile in13 dlm=',' missover;
     input stop centroid dist;
     miles = round(dist / 5280, 0.01);
@@ -276,20 +287,9 @@ proc means noprint data=stopcent; var miles; class centroid; output out=nearstop
 data nearstop(keep=centroid stop miles); set nearstop;
     if centroid > 0;
     miles = 0.7;  ** Assign a blanket distance of 0.7 miles;
+    ord = 1;  ** Set ord=1 to force inclusion;
 
-data finlist; set finlist (drop=_type_ _freq_) nearstop;  ** Append NEARSTOPS to FINLIST;
-
-/* ORDER ACCESS LINKS BY CENTROID BY MILES */
-proc sort data=finlist; by centroid miles;
-
-data finlist; set finlist;
-    match = lag1(centroid);
-
-data finlist; set finlist;
-    retain ord 1;
-    ord + 1;
-    if centroid ^= match then ord = 1;
-    output;
+data finlist; set finlist nearstop;  ** Append NEARSTOPS to FINLIST;
 
 /* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
 /* MODE x - IN CBD MAX. OF 8 PER ZONE, OUTSIDE CBD MAX. OF 9 PER ZONE */
