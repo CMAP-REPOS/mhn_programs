@@ -1,7 +1,7 @@
 /*
     generate_transit_files_3.sas
     authors: cheither & npeterson
-    revised: 6/23/15
+    revised: 6/24/15
     ----------------------------------------------------------------------------
     Program creates batchin file of mode c, m, u, v, w, x, y and z links.
 
@@ -285,9 +285,8 @@ data coreu extrau; set finlist;
     else output coreu;
 
 /* ADD EXTRA u/x LINKS TO ENSURE ROUTES HAVE ACCESS TO ALL ZONES THEY STOP IN */
-data zndist(drop=dist); infile in13 dlm=',' missover;
+data zndist (drop=dist); infile in13 dlm=',' missover;
     input stop centroid dist;
-    miles = round(dist / 5280, 0.01);
     proc sort; by stop;
 
 proc sort data=stops; by stop;
@@ -295,80 +294,49 @@ data stopzn (keep=linename stop centroid); merge stops (in=hit) zndist; by stop;
     if hit;  ** Only keep actual stops (dwtime > 0);
     proc sort; by stop centroid;
     
-* Identify all stops by line that have access and egress to centroid via core u/x links;
+* Identify all stops by line without access and egress to centroid via core u/x links;
 proc sort data=corex; by stop centroid;
 proc sort data=coreu; by stop centroid;
 
-data accegr; merge stopzn coreu(in=hit1) corex(in=hit2); by stop centroid;
-    acc = hit1;
-    egr = hit2;
+data accegr (keep=linename stop centroid flag); merge stopzn (in=hit1) coreu (in=hit2) corex (in=hit3); by stop centroid;
+    if hit1;
+    flag = min(hit2, hit3);
 
-proc means noprint data=accegr; var acc; class linename centroid; output out=noacc max=;
+proc means noprint data=accegr; var flag; class linename centroid; output out=noacc max=;
 data noacc (keep=linename centroid); set noacc;
-    if acc = 0 and centroid > 0 and linename ^= ' ';
-    proc sort; by centroid;
+    if flag = 0 and centroid > 0 and linename ^= ' ';
+    proc sort; by linename centroid;
 
-proc means noprint data=accegr; var egr; class linename centroid; output out=noegr max=;
-data noegr (keep=linename centroid); set noegr;
-    if egr = 0 and centroid > 0 and linename ^= ' ';
-    proc sort; by centroid;
-
-* Filter out extra access links to other zones;
-proc sort data=extrax; by stop centroid;
-data extrax(keep=centroid stop miles); merge extrax (in=hit1) stopzn (in=hit2); by stop centroid;
-    if hit1 and hit2;
-    proc sort; by centroid;
-    
-proc sort data=extrau; by stop centroid;
-data extrau(keep=centroid stop miles); merge extrau (in=hit1) stopzn (in=hit2); by stop centroid;
-    if hit1 and hit2;
-    proc sort; by centroid;
-
-* Identify shortest extra u/x link for each required line & centroid pair;
-proc sql noprint;
-    create table potentialx as
-    select extrax.centroid, stop, miles, noegr.linename
-    from extrax, noegr
-    where extrax.centroid=noegr.centroid;
-proc means noprint data=potentialx; var miles; class linename centroid;
-    output out=nearx minid(miles(stop))=stop min=;
-data nearx (drop=linename); set nearx;
-    if centroid > 0 and stop > 0 and linename ^= ' ';
-    proc sort nodupkey; by stop centroid;
-
-proc sql noprint;
-    create table potentialu as
-    select extrau.centroid, stop, miles, noacc.linename
-    from extrau, noacc
-    where extrau.centroid=noacc.centroid;
-proc means noprint data=potentialu; var miles; class linename centroid;
-    output out=nearu minid(miles(stop))=stop min=;
-data nearu (drop=linename); set nearu;
-    if centroid > 0 and stop > 0 and linename ^= ' ';
-    proc sort nodupkey; by stop centroid;
-
-* Add extra links to core links, set miles=0.65;
-proc sort data=extrax; by stop centroid;
-data addx (keep=centroid stop miles mode); merge extrax nearx (in=hit); by stop centroid;
+* Create list of stops (by route) within zones which do not have both access and egress;
+proc sort data=accegr; by linename centroid;
+data needlink; merge accegr noacc (in=hit); by linename centroid;
     if hit;
+    proc sort; by stop centroid;
+
+* Prepare all potential extra links;
+data allextra (drop=mode); set extrau extrax;
+    proc sort nodupkey; by stop centroid;
+
+* Merge with extra links, sort by ascending length by linename-centroid & keep shortest link; 
+data needlink; merge needlink (in=hit) allextra; by stop centroid;
+    if hit;
+    proc sort; by linename centroid miles;
+data needlink; set needlink; by linename centroid miles;
+    if first.centroid;
+  
+* Add needlink to corex and coreu;
+data finlistx (keep=stop centroid miles mode); set corex needlink;
     mode = 'x';
     if 0.55 < miles <= 1.25 then miles = 0.65;
     else if miles > 1.25 then miles = 0.7;
     proc sort nodupkey; by stop centroid;
     
-proc sort data=extrau; by stop centroid;
-data addu (keep=centroid stop miles mode); merge extrau nearu (in=hit); by stop centroid;
-    if hit;
+data finlistu (keep=stop centroid miles mode); set coreu needlink;
     mode = 'u';
     if 0.55 < miles <= 1.25 then miles = 0.65;
     else if miles > 1.25 then miles = 0.7;
     proc sort nodupkey; by stop centroid;
-    
-data finlistx (keep=stop centroid miles mode); set corex addx;
-    proc sort; by stop centroid;
-data finlistu (keep=stop centroid miles mode); set coreu addu;
-    proc sort; by stop centroid;
-    
+
 * Verify every bus line has access to centroids of all stop zones;
 data ckaccegr; merge stopzn finlistu (in=hitu) finlistx (in=hitx); by stop centroid;
     if hitu then acc = 1;
@@ -380,7 +348,7 @@ data ckacceg2; set ckacceg2;
     if centroid > 0 and linename ^= ' ' and (acc = 0 or egr = 0);
     proc print noobs; var linename centroid acc egr;
     title "BUS LINES MISSING ZONE ACCESS/EGRESS LINKS";
-    
+
 * Switch directionality of u links to reflect access, not egress;
 data finlistu (drop=t); set finlistu;
     t = stop; stop = centroid; centroid = t;  ** Reverse direction;
