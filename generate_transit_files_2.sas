@@ -1,10 +1,10 @@
 /*
-   generate_transit_files_2.sas
-   authors: cheither & npeterson
-   revised: 4/22/15
-   ----------------------------------------------------------------------------
-   Program creates bus transit network batchin files. Bus transit network is
-   built using a modified version of MHN processing procedures.
+    generate_transit_files_2.sas
+    authors: cheither & npeterson
+    revised: 6/24/15
+    ----------------------------------------------------------------------------
+    Program creates bus transit network batchin files. Bus transit network is
+    built using a modified version of MHN processing procedures.
 
 */
 options noxwait;
@@ -25,7 +25,7 @@ options noxwait;
 %let misslink=%scan(&sysparm,14,$);
 %let linkdict=%scan(&sysparm,15,$);
 %let shrt=%scan(&sysparm,16,$);
-%let patherr=%scan(&sysparm,17,$);
+%let pathfail=%scan(&sysparm,17,$);
 %let outtxt=%scan(&sysparm,18,$);
 %let shrtpath=%sysfunc(tranwrd(&shrt,/,\));
 %let pypath=%sysfunc(tranwrd(&progdir./pypath.txt,/,\));
@@ -371,7 +371,7 @@ data _null_; set hold nobs=totobs; call symput('tothold',left(put(totobs,8.))); 
 
               data _null_; set nopath nobs=totobs; call symput('patherr',left(put(totobs,8.))); run;
               %if &patherr>0 %then %do;
-                 proc printto print="&patherr";
+                 proc printto print="&pathfail";
                  proc print noobs data=nopath; title "***** SHORTEST PATH ERROR: NO PATH FOUND, REVIEW CODING *****";
                  proc printto print="&outtxt";
               %end;
