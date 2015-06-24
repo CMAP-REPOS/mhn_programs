@@ -1,7 +1,7 @@
 /*
     generate_transit_files_3.sas
     authors: cheither & npeterson
-    revised: 6/22/15
+    revised: 6/23/15
     ----------------------------------------------------------------------------
     Program creates batchin file of mode c, m, u, v, w, x, y and z links.
 
@@ -29,7 +29,7 @@ filename in9 "&dirpath.\c1z.txt";
 filename in10 "&dirpath.\c2z.txt";
 filename in11 "&dirpath.\metraz.txt";
 filename in12 "&dirpath.\mz.txt";
-filename in13 "&dirpath.\buscentroids.txt";  *** NEW C15Q3;
+filename in13 "&dirpath.\buscentroids.txt";
 
 ** OUTPUT FILES **;
 filename out1 "&dirpath.\access.network_&tod";
@@ -265,49 +265,125 @@ data finlist; set finlist;
     retain ord 1;
     ord + 1;
     if centroid ^= match then ord = 1;
-    if miles > 0.55 then miles = 0.65;  ** Use 0.65 miles for long access links;
     output;
 
-/* FORCE CONNECTIONS IN ZONES WITH ONLY BUS STOPS BEYOND THE REGULAR DISTANCE THRESHOLD. */
-data centdist(drop=dist); infile in13 dlm=',' missover;
+/* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
+/* MODE x - IN CBD MAX. OF 8 PER ZONE, OUTSIDE CBD MAX. OF 2 PER ZONE */
+data corex extrax; set finlist;
+    mode = 'x';
+    if miles > 0.55 then output extrax;
+    else if centroid in (&zone1:&zone2) and ord > 8 then output extrax;
+    else if centroid not in (&zone1:&zone2) and ord > 2 then output extrax;
+    else output corex;
+
+/* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
+/* MODE u - MAXIMUM OF 3 PER ZONE */
+data coreu extrau; set finlist;
+    mode = 'u';
+    if miles > 0.55 then output extrau;
+    else if ord > 3 then output extrau;
+    else output coreu;
+
+/* ADD EXTRA u/x LINKS TO ENSURE ROUTES HAVE ACCESS TO ALL ZONES THEY STOP IN */
+data zndist(drop=dist); infile in13 dlm=',' missover;
     input stop centroid dist;
     miles = round(dist / 5280, 0.01);
     proc sort; by stop;
 
 proc sort data=stops; by stop;
-data stopcent(keep=linename stop centroid miles); merge stops (in=hit) centdist; by stop;
+data stopzn (keep=linename stop centroid); merge stops (in=hit) zndist; by stop;
     if hit;  ** Only keep actual stops (dwtime > 0);
+    proc sort; by stop centroid;
+    
+* Identify all stops by line that have access and egress to centroid via core u/x links;
+proc sort data=corex; by stop centroid;
+proc sort data=coreu; by stop centroid;
+
+data accegr; merge stopzn coreu(in=hit1) corex(in=hit2); by stop centroid;
+    acc = hit1;
+    egr = hit2;
+
+proc means noprint data=accegr; var acc; class linename centroid; output out=noacc max=;
+data noacc (keep=linename centroid); set noacc;
+    if acc = 0 and centroid > 0 and linename ^= ' ';
     proc sort; by centroid;
 
-proc sort data=finlist; by centroid;
-data stopcent(keep=linename stop centroid miles); merge stopcent finlist (in=hit); by centroid;
-    if hit then delete;  ** Remove links in zones that already have access;
+proc means noprint data=accegr; var egr; class linename centroid; output out=noegr max=;
+data noegr (keep=linename centroid); set noegr;
+    if egr = 0 and centroid > 0 and linename ^= ' ';
+    proc sort; by centroid;
 
-proc means noprint data=stopcent; var miles; class centroid; output out=nearstop minid(miles(stop))=stop min=;
-data nearstop(keep=centroid stop miles); set nearstop;
-    if centroid > 0;
-    miles = 0.7;  ** Assign a blanket distance of 0.7 miles;
-    ord = 1;  ** Set ord=1 to force inclusion;
+* Filter out extra access links to other zones;
+proc sort data=extrax; by stop centroid;
+data extrax(keep=centroid stop miles); merge extrax (in=hit1) stopzn (in=hit2); by stop centroid;
+    if hit1 and hit2;
+    proc sort; by centroid;
+    
+proc sort data=extrau; by stop centroid;
+data extrau(keep=centroid stop miles); merge extrau (in=hit1) stopzn (in=hit2); by stop centroid;
+    if hit1 and hit2;
+    proc sort; by centroid;
 
-data finlist; set finlist nearstop;  ** Append NEARSTOPS to FINLIST;
+* Identify shortest extra u/x link for each required line & centroid pair;
+proc sql noprint;
+    create table potentialx as
+    select extrax.centroid, stop, miles, noegr.linename
+    from extrax, noegr
+    where extrax.centroid=noegr.centroid;
+proc means noprint data=potentialx; var miles; class linename centroid;
+    output out=nearx minid(miles(stop))=stop min=;
+data nearx (drop=linename); set nearx;
+    if centroid > 0 and stop > 0 and linename ^= ' ';
+    proc sort nodupkey; by stop centroid;
 
-/* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
-/* MODE x - IN CBD MAX. OF 8 PER ZONE, OUTSIDE CBD MAX. OF 9 PER ZONE */
-data finlistx(drop=match ord); set finlist;
-    if &zone1 <= centroid <= &zone2 and ord > 8 then delete;
-    if centroid < &zone1 and ord > 9 then delete;
-    if centroid > &zone2 and ord > 9 then delete;
+proc sql noprint;
+    create table potentialu as
+    select extrau.centroid, stop, miles, noacc.linename
+    from extrau, noacc
+    where extrau.centroid=noacc.centroid;
+proc means noprint data=potentialu; var miles; class linename centroid;
+    output out=nearu minid(miles(stop))=stop min=;
+data nearu (drop=linename); set nearu;
+    if centroid > 0 and stop > 0 and linename ^= ' ';
+    proc sort nodupkey; by stop centroid;
+
+* Add extra links to core links, set miles=0.65;
+proc sort data=extrax; by stop centroid;
+data addx (keep=centroid stop miles mode); merge extrax nearx (in=hit); by stop centroid;
+    if hit;
     mode = 'x';
-
-/* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
-/* MODE u - IN CBD MAX. OF 3 PER ZONE, OUTSIDE CBD MAX. OF 9 PER ZONE */
-data finlistu(drop=match ord t); set finlist;
-    if &zone1 <= centroid <= &zone2 and ord > 3 then delete;
-    if centroid < &zone1 and ord > 9 then delete;
-    if centroid > &zone2 and ord > 9 then delete;
+    if 0.55 < miles <= 1.25 then miles = 0.65;
+    else if miles > 1.25 then miles = 0.7;
+    proc sort nodupkey; by stop centroid;
+    
+proc sort data=extrau; by stop centroid;
+data addu (keep=centroid stop miles mode); merge extrau nearu (in=hit); by stop centroid;
+    if hit;
     mode = 'u';
+    if 0.55 < miles <= 1.25 then miles = 0.65;
+    else if miles > 1.25 then miles = 0.7;
+    proc sort nodupkey; by stop centroid;
+    
+data finlistx (keep=stop centroid miles mode); set corex addx;
+    proc sort; by stop centroid;
+data finlistu (keep=stop centroid miles mode); set coreu addu;
+    proc sort; by stop centroid;
+    
+* Verify every bus line has access to centroids of all stop zones;
+data ckaccegr; merge stopzn finlistu (in=hitu) finlistx (in=hitx); by stop centroid;
+    if hitu then acc = 1;
+    else acc = 0;
+    if hitx then egr = 1;
+    else egr = 0;
+proc means noprint data=ckaccegr; var acc egr; class linename centroid; output out=ckacceg2 max=;
+data ckacceg2; set ckacceg2;
+    if centroid > 0 and linename ^= ' ' and (acc = 0 or egr = 0);
+    proc print noobs; var linename centroid acc egr;
+    title "BUS LINES MISSING ZONE ACCESS/EGRESS LINKS";
+    
+* Switch directionality of u links to reflect access, not egress;
+data finlistu (drop=t); set finlistu;
     t = stop; stop = centroid; centroid = t;  ** Reverse direction;
-    output;
 
 
 /* -------- v & y -------- */
