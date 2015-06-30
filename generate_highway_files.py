@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 12/2/14
+    Revised: 6/30/15
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -21,7 +21,7 @@ from MHN import MasterHighwayNetwork  # Custom class for MHN processing function
 # -----------------------------------------------------------------------------
 mhn_gdb_path = arcpy.GetParameterAsText(0)   # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
-scen_code = arcpy.GetParameterAsText(1)      # String, default = '100'
+scen_list = arcpy.GetParameterAsText(1)      # List of strings, e.g. ['100', '200']
 root_path = arcpy.GetParameterAsText(2)      # String, no default
 create_tollsys_flag = arcpy.GetParameter(3)  # Boolean, default = True
 if os.path.exists(root_path):
@@ -117,11 +117,6 @@ else:
 # -----------------------------------------------------------------------------
 #  Write data relevant to specified scenario and pass to SAS for processing.
 # -----------------------------------------------------------------------------
-if scen_code == 'ALL':
-    scen_list = sorted(MHN.scenario_years.keys())
-else:
-    scen_list = [scen_code]
-
 for scen in scen_list:
     # Set scenario-specific parameters.
     scen_year = MHN.scenario_years[scen]

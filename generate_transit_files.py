@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 6/24/15
+    Revised: 6/30/15
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -31,7 +31,7 @@ arcpy.env.qualifiedFieldNames = False  # Joined attributes will not have fc name
 
 mhn_gdb_path = arcpy.GetParameterAsText(0)  # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
-scen_code = arcpy.GetParameterAsText(1)     # String, default = '100'
+scen_list = arcpy.GetParameterAsText(1)     # List of strings, e.g. ['100', '200']
 root_path = arcpy.GetParameterAsText(2)     # String, no default
 ct_ramp = arcpy.GetParameter(3)             # Boolean, default = False
 
@@ -110,13 +110,11 @@ rep_runs_dict = {}
 bus_fc_dict = {MHN.bus_base: 'base',
                MHN.bus_current: 'current'}
 
-# Remove base or current from bus_fc_dict, if not used for specified scenario.
-if scen_code == 'ALL':
-    pass
-elif MHN.scenario_years[scen_code] <= MHN.bus_years['base']:
-    del bus_fc_dict[MHN.bus_current]
-else:
+# Remove base or current from bus_fc_dict, if not used for specified scenarios.
+if not any(MHN.scenario_years[scen] <= MHN.bus_years['base'] for scen in scen_list):
     del bus_fc_dict[MHN.bus_base]
+if not any(MHN.scenario_years[scen] > MHN.bus_years['base'] for scen in scen_list):
+    del bus_fc_dict[MHN.bus_current]
 
 # Identify representative runs for bus_base and/or bus_current, as relevant.
 for bus_fc in bus_fc_dict:
@@ -186,7 +184,7 @@ for bus_fc in bus_fc_dict:
     all_runs_itin_miles_dict[which_bus] = all_runs_itin_miles
 
 # Generate future itinerary joined with MILES, if necessary.
-if scen_code != '100':
+if any(MHN.scenario_years[scen] > MHN.base_year for scen in scen_list):
     arcpy.AddMessage('-- bus_future_itin + MILES')
     future_runs_itin_view = 'future_runs_itin_view'
     arcpy.MakeTableView_management(MHN.route_systems[MHN.bus_future][0], future_runs_itin_view)
@@ -202,11 +200,6 @@ if scen_code != '100':
 # -----------------------------------------------------------------------------
 #  Iterate through scenarios, if more than one requested.
 # -----------------------------------------------------------------------------
-if scen_code == 'ALL':
-    scen_list = sorted(MHN.scenario_years.keys())
-else:
-    scen_list = [scen_code]
-
 for scen in scen_list:
     # Set scenario-specific parameters.
     scen_year = MHN.scenario_years[scen]
