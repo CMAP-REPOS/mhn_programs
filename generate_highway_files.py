@@ -19,11 +19,11 @@ from MHN import MasterHighwayNetwork  # Custom class for MHN processing function
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
-mhn_gdb_path = arcpy.GetParameterAsText(0)   # MHN geodatabase
+mhn_gdb_path = arcpy.GetParameterAsText(0)          # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
-scen_list = arcpy.GetParameterAsText(1)      # List of strings, e.g. ['100', '200']
-root_path = arcpy.GetParameterAsText(2)      # String, no default
-create_tollsys_flag = arcpy.GetParameter(3)  # Boolean, default = True
+scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
+root_path = arcpy.GetParameterAsText(2)             # String, no default
+create_tollsys_flag = arcpy.GetParameter(3)         # Boolean, default = True
 if os.path.exists(root_path):
     hwy_path = MHN.ensure_dir(os.path.join(root_path, 'highway'))
 else:

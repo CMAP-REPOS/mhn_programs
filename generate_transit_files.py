@@ -29,11 +29,11 @@ from MHN import MasterHighwayNetwork  # Custom class for MHN processing function
 # -----------------------------------------------------------------------------
 arcpy.env.qualifiedFieldNames = False  # Joined attributes will not have fc name prefix
 
-mhn_gdb_path = arcpy.GetParameterAsText(0)  # MHN geodatabase
+mhn_gdb_path = arcpy.GetParameterAsText(0)          # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
-scen_list = arcpy.GetParameterAsText(1)     # List of strings, e.g. ['100', '200']
-root_path = arcpy.GetParameterAsText(2)     # String, no default
-ct_ramp = arcpy.GetParameter(3)             # Boolean, default = False
+scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
+root_path = arcpy.GetParameterAsText(2)             # String, no default
+ct_ramp = arcpy.GetParameter(3)                     # Boolean, default = False
 
 out_tod_periods = sorted(MHN.tod_periods.keys())
 
