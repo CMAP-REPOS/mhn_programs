@@ -80,7 +80,7 @@ data routes; infile in1 dsd missover firstobs=2;
     order = 0;
     proc sort; by linename;
 
- *** Process Future Scenario Bus coding ***;
+*** Process Future Scenario Bus coding ***;
 %macro future;
     %if &scen > &basescen %then %do;
         %if &tod = 1 %then %let hdwymult = 4;
@@ -142,9 +142,9 @@ data routes; infile in1 dsd missover firstobs=2;
 
                 if (&tp = 2 or &tp = 4) then x = 60;
                 else x = 90;
-                if headway > 0 then hfin = headway;  *** -- Priority 1: use coded headway for Peak Periods;
+                if headway > 0 then hfin = headway;   *** -- Priority 1: use coded headway for Peak Periods;
                 else if exhdw > 0 then hfin = exhdw;  *** -- Priority 2: use existing TOD headway for transit line;
-                else hfin = max(modeavg, mult, x);  *** -- Priority 3: maximum of mode average/multiplier/90 minutes;
+                else hfin = max(modeavg, mult, x);    *** -- Priority 3: maximum of mode average/multiplier/90 minutes;
                 headway = round(hfin, 0.1);
 
             data routes(drop=new del keeptod exhdw modeavg mult hfin); set rte1 rte2;
@@ -154,6 +154,13 @@ data routes; infile in1 dsd missover firstobs=2;
 %mend future;
 %future
 run;
+
+* - - - - - - - - - - - - - - - - - *;
+** REPORT HEADWAY PROBLEMS **;
+data check; set routes(where=(headway = 0));
+    proc print; var linename headway;
+    title "NETWORK &scen No Headway On Bus Lines";
+* - - - - - - - - - - - - - - - - - *;
 
 
 *----------------------------------------;
@@ -171,8 +178,8 @@ data itins; merge itins r(in=hit); by linename;
     if hit;
 
 * - - - - - - - - - - - - - - - - - *;
-**REPORT LAYOVER PROBLEMS**;
-**A MAXIMUM OF TWO LAYOVERS ARE ALLOWED PER TRANSIT LINE **;
+** REPORT LAYOVER PROBLEMS **;
+** A MAXIMUM OF TWO LAYOVERS ARE ALLOWED PER TRANSIT LINE **;
 data check; set itins(where=(layover > 0));
 proc freq; tables linename / noprint out=check;
 data check; set check;
