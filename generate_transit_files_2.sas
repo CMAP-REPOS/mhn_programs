@@ -102,7 +102,7 @@ data routes; infile in1 dsd missover firstobs=2;
             call symput('newln', left(put(newobs, 8.))); run;
 
         %if &newln > 0 %then %do;  *** execute block only if there are future lines for time period;
-            data rep1(keep=replace del); set rep(where=(replace is not null & (timeper = "0" or timeper ? "&tp")));
+            data rep1(keep=replace del); set rep(where=(replace is not null and (timeper = "0" or timeper ? "&tp")));
                 del = 1;
                 proc sort nodupkey; by replace;
 
@@ -114,7 +114,7 @@ data routes; infile in1 dsd missover firstobs=2;
                 if substr(linename, 2, 2) = '99' then del = .;  *** reset value for future bus so not included in existing headway calculation;
                 proc sort; by linename;
 
-            data rte1; set routes(where=(del is null & keeptod is null & new is null));  *** current coding moving through to final file;
+            data rte1; set routes(where=(del is null and keeptod is null and new is null));  *** current coding moving through to final file;
 
             data exist; set routes(where=(del = 1));  *** lines being replaced;
                 proc summary nway; class replace; var headway;
@@ -137,7 +137,7 @@ data routes; infile in1 dsd missover firstobs=2;
                 ** ## Final Time Period Headway Calculation ## **;
                 if headway > 0 then mult = headway * &hdwymult;
                 else mult = -1;  *** -- store TOD headway based on multiplier;
-                if (&tp ^= 3 & &tp ^= 7) then headway = -1;  *** -- headway coded in route table only for Peak Periods;
+                if (&tp ^= 3 and &tp ^= 7) then headway = -1;  *** -- headway coded in route table only for Peak Periods;
                 if headway = 0 then headway = -1;  *** -- coded value of zero means use existing headways;
 
                 if (&tp = 2 or &tp = 4) then x = 60;
