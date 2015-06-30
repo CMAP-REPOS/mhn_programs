@@ -92,7 +92,7 @@ arcpy.Delete_management(overlap_transact_view)
 overlap_network_attr = [
     'ANODE', 'BNODE', 'ABB', 'DIRECTIONS', 'TYPE1', 'TYPE2', 'AMPM1', 'AMPM2', 'POSTEDSPEED1', 'POSTEDSPEED2',
     'THRULANES1', 'THRULANES2', 'THRULANEWIDTH1', 'THRULANEWIDTH2', 'PARKLANES1', 'PARKLANES2', 'SIGIC',
-    'CLTL','RRGRADECROSS', 'TOLLDOLLARS', 'MODES', 'MILES'
+    'CLTL', 'RRGRADECROSS', 'TOLLDOLLARS', 'MODES', 'MILES'
 ]
 overlap_network_query = ''' "BASELINK" = '1' OR "ABB" IN ('{0}') '''.format("','".join((abb for abb in overlap_project_arcs if abb[-1] != '1')))
 overlap_network_view = MHN.make_skinny_table_view(MHN.arc, 'overlap_network_view', overlap_network_attr, overlap_network_query)
@@ -200,14 +200,10 @@ for scen in scen_list:
     with open(scen_ampeak_l1, 'r') as l1:
         for r in l1:
             attr = r.split()
-            if attr[0] == 'a'and attr[7] in ('2', '4'): # Ignore comments, t-record and non-mainline links
+            if attr[0] == 'a'and attr[7] in ('2', '4'):  # Ignore comments, t-record and non-mainline links
                 ab = '{0}-{1}'.format(attr[1], attr[2])
                 lanemiles = float(attr[3]) * int(attr[6])
                 mainline_lanemiles[ab] = lanemiles
-    #with open(r'C:\WorkSpace\Temp\mainline_lanemiles.csv', 'w') as w:
-    #    w.write('AB,LANEMILES\n')
-    #    for ab in sorted(mainline_lanemiles.keys()):
-    #        w.write('{0},{1}\n'.format(ab, mainline_lanemiles[ab]))
 
     scen_mcp_tipids = {}
     scen_mcp_query = ''' "COMPLETION_YEAR" <= {0} AND "MCP_ID" <> '' '''.format(scen_year)

@@ -337,7 +337,7 @@ for scen in scen_list:
         with open(hwy_n1, 'r') as n1:
             for row in n1:
                 attr = row.split()
-                if attr[0] == 'a': # ignore comments and 'a*', which are centroids
+                if attr[0] == 'a':  # ignore comments and 'a*', which are centroids
                     scen_nodes.add(attr[1])
 
         itin_endpoints = set()
