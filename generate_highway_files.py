@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 12/2/14
+    Revised: 6/30/15
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -19,11 +19,11 @@ from MHN import MasterHighwayNetwork  # Custom class for MHN processing function
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
-mhn_gdb_path = arcpy.GetParameterAsText(0)   # MHN geodatabase
+mhn_gdb_path = arcpy.GetParameterAsText(0)          # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
-scen_code = arcpy.GetParameterAsText(1)      # String, default = '100'
-root_path = arcpy.GetParameterAsText(2)      # String, no default
-create_tollsys_flag = arcpy.GetParameter(3)  # Boolean, default = True
+scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
+root_path = arcpy.GetParameterAsText(2)             # String, no default
+create_tollsys_flag = arcpy.GetParameter(3)         # Boolean, default = True
 if os.path.exists(root_path):
     hwy_path = MHN.ensure_dir(os.path.join(root_path, 'highway'))
 else:
@@ -92,7 +92,7 @@ arcpy.Delete_management(overlap_transact_view)
 overlap_network_attr = [
     'ANODE', 'BNODE', 'ABB', 'DIRECTIONS', 'TYPE1', 'TYPE2', 'AMPM1', 'AMPM2', 'POSTEDSPEED1', 'POSTEDSPEED2',
     'THRULANES1', 'THRULANES2', 'THRULANEWIDTH1', 'THRULANEWIDTH2', 'PARKLANES1', 'PARKLANES2', 'SIGIC',
-    'CLTL','RRGRADECROSS', 'TOLLDOLLARS', 'MODES', 'MILES'
+    'CLTL', 'RRGRADECROSS', 'TOLLDOLLARS', 'MODES', 'MILES'
 ]
 overlap_network_query = ''' "BASELINK" = '1' OR "ABB" IN ('{0}') '''.format("','".join((abb for abb in overlap_project_arcs if abb[-1] != '1')))
 overlap_network_view = MHN.make_skinny_table_view(MHN.arc, 'overlap_network_view', overlap_network_attr, overlap_network_query)
@@ -117,11 +117,6 @@ else:
 # -----------------------------------------------------------------------------
 #  Write data relevant to specified scenario and pass to SAS for processing.
 # -----------------------------------------------------------------------------
-if scen_code == 'ALL':
-    scen_list = sorted(MHN.scenario_years.keys())
-else:
-    scen_list = [scen_code]
-
 for scen in scen_list:
     # Set scenario-specific parameters.
     scen_year = MHN.scenario_years[scen]
@@ -205,14 +200,10 @@ for scen in scen_list:
     with open(scen_ampeak_l1, 'r') as l1:
         for r in l1:
             attr = r.split()
-            if attr[0] == 'a'and attr[7] in ('2', '4'): # Ignore comments, t-record and non-mainline links
+            if attr[0] == 'a'and attr[7] in ('2', '4'):  # Ignore comments, t-record and non-mainline links
                 ab = '{0}-{1}'.format(attr[1], attr[2])
                 lanemiles = float(attr[3]) * int(attr[6])
                 mainline_lanemiles[ab] = lanemiles
-    #with open(r'C:\WorkSpace\Temp\mainline_lanemiles.csv', 'w') as w:
-    #    w.write('AB,LANEMILES\n')
-    #    for ab in sorted(mainline_lanemiles.keys()):
-    #        w.write('{0},{1}\n'.format(ab, mainline_lanemiles[ab]))
 
     scen_mcp_tipids = {}
     scen_mcp_query = ''' "COMPLETION_YEAR" <= {0} AND "MCP_ID" <> '' '''.format(scen_year)

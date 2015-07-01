@@ -42,9 +42,9 @@ class MasterHighwayNetwork(object):
     max_poe = max(centroid_ranges['POE'])
 
     scenario_years = {
-        '100': 2010,
+        '100': 2010,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
         '200': 2015,
-        # '300': 2020,
+        '300': 2020,  # No longer in use for conformity, as of C13Q3
         '400': 2025,
         '500': 2030,
         '600': 2040
