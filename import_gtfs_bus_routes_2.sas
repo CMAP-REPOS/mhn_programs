@@ -152,7 +152,7 @@ data pseudo; infile datalines missover dsd;
    * Premium service has a $2.25 surcharge even for pass-holders;
 *============================================================================*;
 data pacezf; infile datalines missover dsd;
-    input mode $1. route_id $ zonefr;
+    input mode $ route_id $ zonefr;
     datalines;
         Q,237,225
         Q,282,225
