@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 4/10/15
+    Revised: 6/30/15
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -29,11 +29,11 @@ from MHN import MasterHighwayNetwork  # Custom class for MHN processing function
 # -----------------------------------------------------------------------------
 arcpy.env.qualifiedFieldNames = False  # Joined attributes will not have fc name prefix
 
-mhn_gdb_path = arcpy.GetParameterAsText(0)  # MHN geodatabase
+mhn_gdb_path = arcpy.GetParameterAsText(0)          # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
-scen_code = arcpy.GetParameterAsText(1)     # String, default = '100'
-root_path = arcpy.GetParameterAsText(2)     # String, no default
-ct_ramp = arcpy.GetParameter(3)             # Boolean, default = False
+scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
+root_path = arcpy.GetParameterAsText(2)             # String, no default
+ct_ramp = arcpy.GetParameter(3)                     # Boolean, default = False
 
 out_tod_periods = sorted(MHN.tod_periods.keys())
 
@@ -110,13 +110,11 @@ rep_runs_dict = {}
 bus_fc_dict = {MHN.bus_base: 'base',
                MHN.bus_current: 'current'}
 
-# Remove base or current from bus_fc_dict, if not used for specified scenario.
-if scen_code == 'ALL':
-    pass
-elif MHN.scenario_years[scen_code] <= MHN.bus_years['base']:
-    del bus_fc_dict[MHN.bus_current]
-else:
+# Remove base or current from bus_fc_dict, if not used for specified scenarios.
+if not any(MHN.scenario_years[scen] <= MHN.bus_years['base'] for scen in scen_list):
     del bus_fc_dict[MHN.bus_base]
+if not any(MHN.scenario_years[scen] > MHN.bus_years['base'] for scen in scen_list):
+    del bus_fc_dict[MHN.bus_current]
 
 # Identify representative runs for bus_base and/or bus_current, as relevant.
 for bus_fc in bus_fc_dict:
@@ -186,7 +184,7 @@ for bus_fc in bus_fc_dict:
     all_runs_itin_miles_dict[which_bus] = all_runs_itin_miles
 
 # Generate future itinerary joined with MILES, if necessary.
-if scen_code != '100':
+if any(MHN.scenario_years[scen] > MHN.base_year for scen in scen_list):
     arcpy.AddMessage('-- bus_future_itin + MILES')
     future_runs_itin_view = 'future_runs_itin_view'
     arcpy.MakeTableView_management(MHN.route_systems[MHN.bus_future][0], future_runs_itin_view)
@@ -202,11 +200,6 @@ if scen_code != '100':
 # -----------------------------------------------------------------------------
 #  Iterate through scenarios, if more than one requested.
 # -----------------------------------------------------------------------------
-if scen_code == 'ALL':
-    scen_list = sorted(MHN.scenario_years.keys())
-else:
-    scen_list = [scen_code]
-
 for scen in scen_list:
     # Set scenario-specific parameters.
     scen_year = MHN.scenario_years[scen]
@@ -344,7 +337,7 @@ for scen in scen_list:
         with open(hwy_n1, 'r') as n1:
             for row in n1:
                 attr = row.split()
-                if attr[0] == 'a': # ignore comments and 'a*', which are centroids
+                if attr[0] == 'a':  # ignore comments and 'a*', which are centroids
                     scen_nodes.add(attr[1])
 
         itin_endpoints = set()
@@ -673,6 +666,21 @@ for scen in scen_list:
 
             return out_csv
 
+        def distance_to_zone_centroid(pts_fc, pts_node_field, pts_zone_field, centroids_fc, centroids_node_field, out_csv):
+            ''' Create a CSV of each point in pts_fc, the zone it's in, and the
+                distance to that zone's centroid. '''
+            centroid_sr = arcpy.Describe(centroids_fc).spatialReference
+            centroid_geom = {r[0]: r[1].projectAs(centroid_sr) for r in arcpy.da.SearchCursor(centroids_fc, [centroids_node_field, 'SHAPE@'])}
+            w = open(out_csv, 'wb')
+            with arcpy.da.SearchCursor(pts_fc, [pts_node_field, pts_zone_field, 'SHAPE@']) as c:
+                for node, zone, pt_geom in c:
+                    distance = pt_geom.projectAs(centroid_sr).distanceTo(centroid_geom[zone])
+                    w.write('{0},{1},{2}\n'.format(node, zone, distance))
+            w.close()
+            del centroid_geom
+            return out_csv
+
+
         # -- Mode c: 1/8 mile inside CBD; 1/2 mile outside CBD.
         cbddist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_cbd_lyr, 'cta_stop_xy_PNT_ID', 660, os.path.join(scen_tran_path, 'cbddist.txt'))
         ctadist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_noncbd_lyr, 'cta_stop_xy_PNT_ID', 2640, os.path.join(scen_tran_path, 'ctadist.txt'))
@@ -682,11 +690,14 @@ for scen in scen_list:
         metrapace_txt = calculate_distances(pace_bus_xy, 'pace_bus_xy_PNT_ID', metra_stop_xy_z, 'metra_stop_xy_PNT_ID', 2904, os.path.join(scen_tran_path, 'metrapace.txt'))
 
         # -- Modes u, v, w, x, y & z.
-        busz_txt = calculate_distances(bus_cbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 1320, os.path.join(scen_tran_path, 'busz.txt'))
-        busz2_txt = calculate_distances(bus_noncbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'busz2.txt'))
+        busz_txt = calculate_distances(bus_cbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 7920, os.path.join(scen_tran_path, 'busz.txt'))  # Large search distance; results will be heavily trimmed
+        busz2_txt = calculate_distances(bus_noncbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz2.txt'))  # Large search distance; results will be heavily trimmed
         ctaz_txt = calculate_distances(cta_cbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz.txt'))
         ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz2.txt'))
         metraz_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'metraz.txt'))
+
+        bcent_txt = distance_to_zone_centroid(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', MHN.zone_attr, centroid_fc, 'NODE', os.path.join(scen_tran_path, 'buscentroids.txt'))
+
         c1z_txt = MHN.write_attribute_csv(cta_cbd_fc, os.path.join(scen_tran_path, 'c1z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
         c2z_txt = MHN.write_attribute_csv(cta_noncbd_fc, os.path.join(scen_tran_path, 'c2z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
         mz_txt = MHN.write_attribute_csv(metra_stop_xy_z, os.path.join(scen_tran_path, 'mz.txt'), ['metra_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
@@ -715,6 +726,7 @@ for scen in scen_list:
             os.remove(ctaz_txt)
             os.remove(ctaz2_txt)
             os.remove(metraz_txt)
+            os.remove(bcent_txt)
             os.remove(c1z_txt)
             os.remove(c2z_txt)
             os.remove(mz_txt)
