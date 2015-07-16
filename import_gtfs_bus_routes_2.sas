@@ -1,7 +1,7 @@
 /*
    import_gtfs_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 7/14/15
+   revised: 7/16/15
    ----------------------------------------------------------------------------
    Program is called by import_gtfs_bus_routes.py & formats bus itineraries
    to build with arcpy.
@@ -96,6 +96,7 @@ filename out5 "&rteprcss";
    * each entry represents 1 direction only;
 *============================================================================*;
 data pseudo; infile datalines missover dsd;
+    length mode $ 1;
     input mode $ route_id $ itinerary_a itinerary_b pnode1 pnode2 newlink;
     datalines;
         E,2,15992,16258,21309,,2
@@ -142,7 +143,7 @@ data pseudo; infile datalines missover dsd;
         Q,895,20136,21624,10037,11730,3
         Q,895,13323,9873,11465,9747,3
         Q,895,20136,13323,9799,11449,3
-        ;
+    ;
     proc sort; by mode route_id;
 
 
@@ -152,6 +153,7 @@ data pseudo; infile datalines missover dsd;
    * Premium service has a $2.25 surcharge even for pass-holders;
 *============================================================================*;
 data pacezf; infile datalines missover dsd;
+    length mode $ 1;
     input mode $ route_id $ zonefr;
     datalines;
         Q,237,225
@@ -449,13 +451,15 @@ data _null_; set chk nobs=tmfix; call symput('timefix', left(put(tmfix, 8.))); r
 
 ** Estimate times for Pace segments where dep_time = arr_time **;
 data node; infile in5 dlm=',' firstobs=2;
-    input itinerary_a ax ay;  proc sort; by itinerary_a;
-data nodeb; set node; rename itinerary_a=itinerary_b ax=bx ay=by; proc sort; by itinerary_b;
+    input itinerary_a ax ay;
+    proc sort; by itinerary_a;
+data nodeb; set node; rename itinerary_a=itinerary_b ax=bx ay=by;
+    proc sort; by itinerary_b;
 
 proc sort data=pace; by itinerary_a;
 data pace; merge pace(in=hit) node; by itinerary_a; if hit; proc sort; by itinerary_b;
 data pace; merge pace(in=hit) nodeb; by itinerary_b; if hit;
-    ** Calculate Euclidean distance between nodes;
+    ** Calculate Euclidean distance (in miles) between nodes;
     eucdist = sqrt((ax - bx)**2 + (ay - by)**2) / 5280;
     proc sort; by newline order;
 data pace; set pace; by newline order;
@@ -482,11 +486,14 @@ data pace; set pace;
     proc sort; by itinerary_a;
 
 ** Attach Node Coordinates to Calculate Distance **;
-data node; infile in5 dlm=',' firstobs=2;
+/*data node; infile in5 dlm=',' firstobs=2;
     input itinerary_a ax ay;  proc sort; by itinerary_a;
-data nodeb; set node; rename itinerary_a=itinerary_b ax=bx ay=by; proc sort; by itinerary_b;
-data pace; merge pace(in=hit) node; by itinerary_a; if hit; proc sort; by itinerary_b;
-data pace(drop=dt ax ay bx by); merge pace(in=hit) nodeb; by itinerary_b; if hit;
+data nodeb; set node; rename itinerary_a=itinerary_b ax=bx ay=by; proc sort; by itinerary_b;*/
+data pace; merge pace(in=hit) node; by itinerary_a;
+    if hit;
+    proc sort; by itinerary_b;
+data pace(drop=dt ax ay bx by); merge pace(in=hit) nodeb; by itinerary_b;
+    if hit;
     dist = sqrt((ax - bx)**2 + (ay - by)**2) / 5280;
     proc sort; by newline order grupo;
 proc summary nway data=pace; class grupo; var dist ltime;
