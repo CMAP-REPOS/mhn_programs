@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 12/22/14
+    Revised: 7/16/15
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -541,6 +541,50 @@ class MasterHighwayNetwork(object):
             return int(n_str)
         else:
             return None
+
+
+    def validate_itin_times(self, itin_table):
+        ''' Perform some auto QC on the DEP_TIME, ARR_TIME & LINE_SERV_TIME
+            values for each row in an itin table, based on the MILES values
+            of the corresponding MHN arc and the original DEP_TIME/ARR_TIME
+            values themselves. Any segments where ARR_TIME = DEP_TIME will
+            have travel time estimated by distance of link, at 30mph. '''
+        abb_miles_dict = self.make_attribute_dict(self.arc, 'ABB', attr_list=['MILES'])
+
+        # Loop to update times for each row, as appropriate
+        sql = (None, 'ORDER BY TRANSIT_LINE, ITIN_ORDER')
+        cursor_fields = ['TRANSIT_LINE', 'ITIN_ORDER', 'ABB', 'DEP_TIME', 'ARR_TIME', 'LINE_SERV_TIME']
+        with arcpy.da.UpdateCursor(itin_table, cursor_fields, sql_clause=sql) as cursor:
+            prev_arr_time = 0
+            for row in cursor:
+                route = row[0]
+                row_order = row[1]
+                abb = row[2]
+                dep_time = row[3]
+                arr_time = row[4]
+                ltime = row[5]
+
+                # Adjust dep_time & arr_time to accommodate changes to last segment
+                if row_order > 1 and dep_time < prev_arr_time:
+                    discrep_d = prev_arr_time - dep_time
+                    dep_time += discrep_d
+                    if arr_time < dep_time:
+                        discrep_a = dep_time - arr_time  # Likely = discrep_d, but may be lower
+                        arr_time += discrep_a
+
+                # Re-estimate segment travel time (@ 30mph) when dep_time = arr_time
+                if dep_time == arr_time:
+                    segment_length = abb_miles_dict[abb]['MILES']
+                    time_est = int(round(segment_length / 30 * 60 * 60))  # Seconds
+                    arr_time += time_est
+                    ltime = round(time_est / 60., 1)  # Minutes (1 d.p.)
+
+                # Update row with adjusted values and update prev_arr_time
+                row[3:6] = [dep_time, arr_time, ltime]
+                cursor.updateRow(row)
+                prev_arr_time = arr_time
+
+        return itin_table
 
 
     def write_arc_flag_file(self, flag_file, flag_query):

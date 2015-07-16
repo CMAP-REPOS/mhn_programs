@@ -2,7 +2,7 @@
 '''
     import_gtfs_bus_routes.py
     Author: npeterson
-    Revised: 9/2/14
+    Revised: 7/16/15
     ---------------------------------------------------------------------------
     This program is used to update the itineraries of bus routes, with data
     from specified header & itinerary coding CSVs.
@@ -187,6 +187,9 @@ with arcpy.da.InsertCursor(temp_itin_table, itin_fields) as cursor:
         cursor.insertRow(arc_attr)
     raw_itin.close()
 os.remove(itin_csv)
+
+# Validate segment travel times.
+MHN.validate_itin_times(temp_itin_table)
 
 # Update itinerary F_MEAS & T_MEAS.
 MHN.calculate_itin_measures(temp_itin_table)
