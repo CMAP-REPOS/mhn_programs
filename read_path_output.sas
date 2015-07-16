@@ -81,7 +81,8 @@ data newitin(drop=newa newb set impute totmi i linkmi); set newitin2; by newline
     if impute = 1 then do;
         itinerary_a = newa;
         itinerary_b = newb;   
-        ltime = round((arr_time - dep_time) / 60 * linkmi / totmi, 0.1);
+        ltime = round(ltime * linkmi / totmi, 0.1);
+        *ltime = round((arr_time - dep_time) / 60 * linkmi / totmi, 0.1);
         imputed = impute;
         if i > 2 then do;
             zfare = 0;  ** Restrict zone fares to the first segment in the set;
