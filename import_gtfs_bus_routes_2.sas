@@ -405,7 +405,7 @@ data pace(drop=zonefr); merge pace(in=hit) qroute; by newline; if hit;
     dt = lag(dep_time);
     proc sort; by newline order;
 
-** Estimate Times for Pace Lines where first dep_time=last arr_time **;
+/*** Estimate Times for Pace Lines where first dep_time=last arr_time **;
 data first(keep=newline dep_time); set pace; by newline order;
     if first.newline;
 data last(keep=newline arr_time); set pace; by newline order;
@@ -444,8 +444,36 @@ data _null_; set chk nobs=tmfix; call symput('timefix', left(put(tmfix, 8.))); r
         run;
     %end;
 %mend sametime;
-%sametime
+%sametime*/
 /* end macro*/
+
+** Estimate times for Pace segments where dep_time = arr_time **;
+data node; infile in5 dlm=',' firstobs=2;
+    input itinerary_a ax ay;  proc sort; by itinerary_a;
+data nodeb; set node; rename itinerary_a=itinerary_b ax=bx ay=by; proc sort; by itinerary_b;
+
+proc sort data=pace; by itinerary_a;
+data pace; merge pace(in=hit) node; by itinerary_a; if hit; proc sort; by itinerary_b;
+data pace; merge pace(in=hit) nodeb; by itinerary_b; if hit;
+    ** Calculate Euclidean distance between nodes;
+    eucdist = sqrt((ax - bx)**2 + (ay - by)**2) / 5280;
+    proc sort; by newline order;
+data pace; set pace; by newline order;
+    nl_lag = lag(newline);
+	retain discrep 0;
+    ** Reset discrepancy for new lines;
+    if newline ^= nl_lag then discrep = 0;
+	** Increment departure & arrival time by current discrepancy;
+	arr_time + discrep;
+	dep_time + discrep;
+    ** Ensure segment time > 0 seconds. If time = 0, assume 30mph & Euclidean distance;
+    if arr_time = dep_time then do;
+        time_est = round(eucdist / 30 * 60 * 60, 1);
+        ltime = round(time_est / 60, 0.1);
+        arr_time = dep_time + time_est;
+		discrep + time_est;
+    end;
+data pace(drop=eucdist time_est nl_lag discrep); set pace;
 
 data pace; set pace;
     retain grupo 0;
