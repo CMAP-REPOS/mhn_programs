@@ -577,7 +577,7 @@ class MasterHighwayNetwork(object):
                     segment_length = abb_miles_dict[abb]['MILES']
                     time_est = int(round(segment_length / 30 * 60 * 60))  # Seconds
                     arr_time += time_est
-                    ltime = round(time_est / 60., 1)  # Minutes (1 d.p.)
+                    ltime = max(round(time_est / 60., 1), 0.1)  # Minutes (1 d.p.)
 
                 # Update row with adjusted values and update prev_arr_time
                 row[3:6] = [dep_time, arr_time, ltime]
