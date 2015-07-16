@@ -1,7 +1,7 @@
 /*
    import_gtfs_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 7/14/15
+   revised: 7/16/15
    ----------------------------------------------------------------------------
    Program is called by import_gtfs_bus_routes.py & formats bus itineraries
    to build with arcpy.
@@ -96,6 +96,7 @@ filename out5 "&rteprcss";
    * each entry represents 1 direction only;
 *============================================================================*;
 data pseudo; infile datalines missover dsd;
+    length mode $ 1;
     input mode $ route_id $ itinerary_a itinerary_b pnode1 pnode2 newlink;
     datalines;
         E,2,15992,16258,21309,,2
@@ -142,7 +143,7 @@ data pseudo; infile datalines missover dsd;
         Q,895,20136,21624,10037,11730,3
         Q,895,13323,9873,11465,9747,3
         Q,895,20136,13323,9799,11449,3
-        ;
+    ;
     proc sort; by mode route_id;
 
 
@@ -152,6 +153,7 @@ data pseudo; infile datalines missover dsd;
    * Premium service has a $2.25 surcharge even for pass-holders;
 *============================================================================*;
 data pacezf; infile datalines missover dsd;
+    length mode $ 1;
     input mode $ route_id $ zonefr;
     datalines;
         Q,237,225
