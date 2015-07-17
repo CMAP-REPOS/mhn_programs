@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 7/16/15
+    Revised: 7/17/15
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -147,9 +147,9 @@ class MasterHighwayNetwork(object):
 
         # Directories
         self.root_dir = os.path.dirname(self.gdb)
-        self.imp_dir = os.path.join(self.root_dir, 'import')
-        self.out_dir = os.path.join(self.root_dir, 'output')
-        self.temp_dir = os.path.join(self.root_dir, 'temp')
+        self.imp_dir = self.ensure_dir(os.path.join(self.root_dir, 'import'))
+        self.out_dir = self.ensure_dir(os.path.join(self.root_dir, 'output'))
+        self.temp_dir = self.ensure_dir(os.path.join(self.root_dir, 'temp'))
         self.script_dir = sys.path[0]  # Directory containing this module
         if os.path.basename(self.script_dir) == 'utilities':
             self.prog_dir = os.path.dirname(self.script_dir)
