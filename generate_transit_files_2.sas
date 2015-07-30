@@ -145,9 +145,17 @@ data routes; infile in1 dsd missover firstobs=2;
                 if headway > 0 then hfin = headway;   *** -- Priority 1: use coded headway for Peak Periods;
                 else if exhdw > 0 then hfin = exhdw;  *** -- Priority 2: use existing TOD headway for transit line;
                 else hfin = max(modeavg, mult, x);    *** -- Priority 3: maximum of mode average/multiplier/90 minutes;
+
+                ** Limit headway to length of time period;
+                if &tod = 1 then maxtime = 600;
+                else if &tod in (2, 4) then maxtime = 60;
+                else if &tod = 5 then maxtime = 240;
+                else maxtime = 120;
+                hfin = min(hfin, maxtime);
+    
                 headway = round(hfin, 0.1);
 
-            data routes(drop=new del keeptod exhdw modeavg mult hfin); set rte1 rte2;
+            data routes(drop=new del keeptod exhdw modeavg mult hfin maxtime); set rte1 rte2;
                 proc sort; by linename;
         %end;
     %end;
