@@ -1,7 +1,7 @@
 /*
    import_gtfs_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 7/30/15
+   revised: 8/3/15
    ----------------------------------------------------------------------------
    Program is called by import_gtfs_bus_routes.py & formats bus itineraries
    to build with arcpy.
@@ -54,15 +54,16 @@ options noxwait;
 %let progdir = %scan(&sysparm, 6, $);
 %let head = %scan(&sysparm, 7, $);
 %let itin = %scan(&sysparm, 8, $);
-%let linkdict = %scan(&sysparm, 9, $);
-%let shrtpath = %scan(&sysparm, 10, $);
-%let ptherrtx = %scan(&sysparm, 11, $);
-%let holdchck = %scan(&sysparm, 12, $);
-%let holdtime = %scan(&sysparm, 13, $);
-%let rteprcss = %scan(&sysparm, 14, $);
-%let counter = %scan(&sysparm, 15, $);
-%let maxzn = %scan(&sysparm, 16, $);
-%let lst = %scan(&sysparm, 17, $);
+%let pseudo = %scan(&sysparm, 9, $);
+%let linkdict = %scan(&sysparm, 10, $);
+%let shrtpath = %scan(&sysparm, 11, $);
+%let ptherrtx = %scan(&sysparm, 12, $);
+%let holdchck = %scan(&sysparm, 13, $);
+%let holdtime = %scan(&sysparm, 14, $);
+%let rteprcss = %scan(&sysparm, 15, $);
+%let counter = %scan(&sysparm, 16, $);
+%let maxzn = %scan(&sysparm, 17, $);
+%let lst = %scan(&sysparm, 18, $);
 %let pypath = %sysfunc(tranwrd(&progdir./pypath.txt, /, \));
 %let count = 1;
 %let tothold = 0;
@@ -90,100 +91,21 @@ filename out4 "&holdtime";
 filename out5 "&rteprcss";
 
 *============================================================================*;
-  ** LIST PSEUDO-NODES USED TO LOCATE ROUTE CORRECTLY **;
-   * these are inserted into routes to force them to pass through specific nodes;
-   * pnode1 & 2 are forced locations, newlink is number of segments inserted (number of pnodes + 1);
-   * each entry represents 1 direction only;
-   * last edited by ncapapas on 7/30/15;
+  ** IMPORT PSEUDO-NODES USED TO LOCATE ROUTE CORRECTLY **;
+   * These are inserted into routes to force them to pass through specific nodes;
+   * Pnode1 & 2 are forced locations, newlink is number of segments inserted (number of pnodes + 1);
+   * Each entry represents 1 direction only;
+   * Switched to CSV import after C15Q3;
 *============================================================================*;
-data pseudo; infile datalines missover dsd;
+data pseudo; infile "&pseudo" firstobs=2 missover dsd;
     length mode $ 1;
     input mode $ route_id $ itinerary_a itinerary_b pnode1 pnode2 newlink;
-    datalines;
-        E,2,15992,16258,21309,,2
-        E,2,15992,16279,21317,,2
-        E,2,16258,15992,21308,,2
-        E,2,16279,15992,21312,,2
-        E,33,15184,15886,21263,,2
-        E,33,15886,15184,21263,,2
-        E,134,15514,21852,21258,20896,3
-        E,134,21855,15514,20898,21257,3
-        E,135,19900,21852,19903,20896,3
-        E,135,21855,15418,20898,15485,3
-        E,136,20050,21852,20051,20896,3
-        E,136,21855,15215,20898,20054,3
-        E,143,15886,15514,21257,,2
-        E,143,15514,15886,21258,,2
-        E,145,15886,15418,15485,,2
-        E,145,19900,15886,19903,,2
-        E,146,15886,15418,15485,,2
-        E,146,19900,15886,19903,,2
-        E,148,15886,15215,20054,,2
-        E,148,15215,15886,20051,,2
-        P,392,13501,20285,13468,20289,3
-        P,392,20284,13501,20298,21122,3
-        P,395,11804,22292,20322,20348,3
-        P,395,22292,20324,12997,11847,3
-        P,626,13528,11381,12924,12424,3
-        P,626,11381,13528,12424,12924,3
-        P,626,13148,13528,13512,,2
-        P,626,13528,13148,20637,,2
-        P,890,14746,20324,20374,11847,3
-        P,890,11804,14746,20322,20388,3
-        P,892,16898,20324,16786,20374,3
-        P,892,11804,16898,20371,16787,3
-        Q,600,9842,21624,10037,11730,3
-        Q,600,21624,9842,11899,10038,3
-        Q,672,7976,8123,8121,,2
-        Q,672,8123,7976,8121,,2
-        Q,888,15981,11313,15489,11475,3
-        Q,888,11313,15981,11460,15488,3
-        Q,895,13323,19876,11602,21662,3
-        Q,895,19876,13323,11891,11747,3
-        Q,895,12170,9873,11899,10038,3
-        Q,895,20136,21624,10037,11730,3
-        Q,895,13323,9873,11465,9747,3
-        Q,895,20136,13323,9799,11449,3
-        P,353,16090,16119,20872,20844,3
-        P,353,16119,16090,16312,20866,3
-        Q,610,21624,7992,10590,8005,3
-        Q,610,21624,8003,10590,8005,3
-        Q,610,21624,8646,10590,8005,3
-        Q,610,7992,21624,21561,11730,3
-        Q,610,8646,21624,8684,11730,3
-        Q,610,21539,21624,21561,11730,3
-        P,606,11158,21624,21589,12031,3
-        P,616,11977,10546,21588,10590,3
-        P,616,10572,21624,10589,11730,3
-        P,619,11780,12028,20728,12062,3
-        P,619,11948,11780,12043,12053,3
-        P,620,13637,12028,20650,20631,3
-        P,620,11948,13637,13405,13568,3
-        Q,755,13062,9316,9476,9970,3
-        Q,755,14734,8054,14742,21106,3
-        P,757,13001,10857,23973,10799,3
-        P,757,10857,13001,20161,20225,3
-        P,850,9677,15693,21163,15677,3
-        P,850,15897,9677,21289,10262,3
-        P,851,9477,15693,15415,15677,3
-        P,851,9618,15693,15415,15677,3
-        P,851,15897,9477,21289,20282,3
-        Q,855,11520,15693,14768,15677,3
-        Q,855,15897,8054,21289,20282,3
-        P,877,14816,14952,14751,,2
-        P,877,13956,11313,20252,20234,3
-        P,877,11313,13956,11314,11460,3
-        P,877,14952,14816,21184,14660,3
-        E,X98,13066,13508,13450,13670,3
-        Q,675,8123,8306,8121,,2
-        Q,675,8306,8123,8121,,2
-    ;
     proc sort; by mode route_id;
 
 
 *============================================================================*;
   ** PACE ZONE FARES LIST **;
-   * from Pace Year 2011 fare sheet on pacebus.com;
+   * From Pace Year 2011 fare sheet on pacebus.com;
    * Premium service has a $2.25 surcharge even for pass-holders;
 *============================================================================*;
 data pacezf; infile datalines missover dsd;
@@ -204,7 +126,7 @@ data pacezf; infile datalines missover dsd;
         Q,855,225
     ;
     proc sort; by mode route_id;
-    
+
 /*---------------------------------------------------------------------------*/
 
 ** READ IN BUS CODING **;
@@ -660,7 +582,7 @@ data temp; set hold nobs=totobs; call symput('tothold', left(put(totobs, 8.))); 
 %macro itinfix;
     %if &tothold > 0 %then %do;
         data short(keep=itinerary_a itinerary_b); set hold; proc sort nodupkey; by itinerary_a itinerary_b;
-        
+
         /* This file can be used for troubleshooting & verification with short_path.txt */
         proc export data=short outfile="&holdchck" dbms=csv replace;
         data short; set short; num = _n_;
@@ -761,7 +683,7 @@ data check; set newitin(where=(ltime = 0)); proc print; title "BAD LINE TIMES";
 ** Ensure transit not coded on centroid links **;
 data bad; set newitin(where=(itinerary_a <= &maxzn or itinerary_b <= &maxzn));
     proc print; var itinerary_a itinerary_b line order; title 'TRANSIT CODING ON CENTROID CONNECTORS';
-    
+
 /*---------------------------------------------------------------------------*/
 
 *--------------------------------;
@@ -832,9 +754,9 @@ data check; set section;
     z = lag(itinerary_b);
     if itinerary_a ^= z & ordnew > 1 then output;
     proc print; var line ordnew itinerary_a itinerary_b z; title 'Itinerary Gaps';
-    
+
 /*---------------------------------------------------------------------------*/
- 
+
 ** -- Logic to refine paths by condensing excessive doubling back in itineraries.                           -- **;
 **    For example: a bus traveling around Woodfield Mall may keep fluctuating between selecting nodes A & B    **;
 **    as the closest to the actual stop locations, thereby causing multiple successive instances of traveling  **;
