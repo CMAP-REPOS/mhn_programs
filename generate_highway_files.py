@@ -271,13 +271,13 @@ for scen in scen_list:
                     writer.write(' '.join(['r', fnode, tnode]) + '\n')
                     n = 0  # Before for-loop, will not be reset if an arc is multi-part for some reason
                     for part in arc:
-                        vertex = part.next()
+                        vertex = next(part)
                         while vertex:
                             n += 1
                             writer.write(' '.join(['a', fnode, tnode, str(n), str(vertex.X), str(vertex.Y)]) + '\n')
-                            vertex = part.next()
+                            vertex = next(part)
                             if not vertex:
-                                vertex = part.next()
+                                vertex = next(part)
             return None
 
         arcs_mem = os.path.join(MHN.mem, 'arcs')

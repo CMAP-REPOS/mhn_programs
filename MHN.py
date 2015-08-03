@@ -27,18 +27,18 @@ class MasterHighwayNetwork(object):
     }
 
     centroid_ranges = {
-        'CBD':     xrange(   1,   48),  # NB. xrange(i,j) includes i & excludes j
-        'Chicago': xrange(   1,  310),
-        'Cook':    xrange(   1,  855),
-        'McHenry': xrange( 855,  959),
-        'Lake':    xrange( 959, 1134),
-        'Kane':    xrange(1134, 1279),
-        'DuPage':  xrange(1279, 1503),
-        'Will':    xrange(1503, 1691),
-        'Kendall': xrange(1691, 1712),
-        'CMAP':    xrange(   1, 1712),
-        'MHN':     xrange(   1, 1962),
-        'POE':     xrange(1945, 1962)
+        'CBD'    : range(   1,   48),  # NB. range(i,j) includes i & excludes j
+        'Chicago': range(   1,  310),
+        'Cook'   : range(   1,  855),
+        'McHenry': range( 855,  959),
+        'Lake'   : range( 959, 1134),
+        'Kane'   : range(1134, 1279),
+        'DuPage' : range(1279, 1503),
+        'Will'   : range(1503, 1691),
+        'Kendall': range(1691, 1712),
+        'CMAP'   : range(   1, 1712),
+        'MHN'    : range(   1, 1962),
+        'POE'    : range(1945, 1962)
     }
 
     min_node_id =  5001  # 1-5000 reserved for zone centroids/POEs
@@ -56,8 +56,8 @@ class MasterHighwayNetwork(object):
         '600': 2040
     }
 
-    min_year = min((year for scen, year in scenario_years.iteritems()))
-    max_year = max((year for scen, year in scenario_years.iteritems()))
+    min_year = min(year for scen, year in scenario_years.items())
+    max_year = max(year for scen, year in scenario_years.items())
 
     tod_periods = {
         '1':  ('8PM-6AM',                                   # 1: overnight
@@ -363,7 +363,7 @@ class MasterHighwayNetwork(object):
                 if node == end:
                     return p_cost, path
                 if node in graph.keys():
-                    for (b_node, b_cost) in graph[node].iteritems():
+                    for (b_node, b_cost) in graph[node].items():
                         heapq.heappush(queue, (p_cost + b_cost, b_node, path))
 
 
@@ -429,7 +429,7 @@ class MasterHighwayNetwork(object):
 
 
     @staticmethod
-    def make_skinny(is_geo, in_obj, out_obj, keep_fields_list=None, where_clause=''):
+    def make_skinny(is_geo, in_obj, out_obj, keep_fields_list=None, where_clause=None):
         ''' Make an ArcGIS Feature Layer or Table View, containing only the fields
             specified in keep_fields_list, using an optional SQL query. Default
             will create a layer/view with NO fields. '''
@@ -450,9 +450,9 @@ class MasterHighwayNetwork(object):
         return out_obj
 
     # Wrapper functions for make_skinny()
-    def make_skinny_feature_layer(self, fc, lyr, keep_fields_list=None, where_clause=''):
+    def make_skinny_feature_layer(self, fc, lyr, keep_fields_list=None, where_clause=None):
         return self.make_skinny(True, fc, lyr, keep_fields_list, where_clause)
-    def make_skinny_table_view(self, table, view, keep_fields_list=None, where_clause=''):
+    def make_skinny_table_view(self, table, view, keep_fields_list=None, where_clause=None):
         return self.make_skinny(False, table, view, keep_fields_list, where_clause)
 
 
