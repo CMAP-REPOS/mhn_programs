@@ -27,7 +27,7 @@ class MasterHighwayNetwork(object):
     }
 
     centroid_ranges = {
-        'CBD':     range(   1,   48),  # NB. xrange(i,j) includes i & excludes j
+        'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
         'Chicago': range(   1,  310),
         'Cook':    range(   1,  855),
         'McHenry': range( 855,  959),
