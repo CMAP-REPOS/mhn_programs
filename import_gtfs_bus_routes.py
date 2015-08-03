@@ -2,7 +2,7 @@
 '''
     import_gtfs_bus_routes.py
     Author: npeterson
-    Revised: 7/16/15
+    Revised: 8/3/15
     ---------------------------------------------------------------------------
     This program is used to update the itineraries of bus routes, with data
     from specified header & itinerary coding CSVs.
@@ -19,9 +19,10 @@ from MHN import MasterHighwayNetwork  # Custom class for MHN processing function
 # -----------------------------------------------------------------------------
 mhn_gdb_path = arcpy.GetParameterAsText(0)    # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
-raw_header_csv = arcpy.GetParameterAsText(1)  # Bus header coding CSV
-raw_itin_csv = arcpy.GetParameterAsText(2)    # Bus itin coding CSV
-which_bus = arcpy.GetParameterAsText(3)       # Import to base or current?
+which_bus = arcpy.GetParameterAsText(1)       # Import to base or current?
+raw_header_csv = arcpy.GetParameterAsText(2)  # Bus header coding CSV
+raw_itin_csv = arcpy.GetParameterAsText(3)    # Bus itin coding CSV
+pseudo_csv = arcpy.GetParameterAsText(4)	  # Bus pseudonode CSV
 sas1_name = 'import_gtfs_bus_routes_2'
 
 #arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
@@ -131,10 +132,12 @@ arcpy.Delete_management(nodes_view)
 arcpy.AddMessage('{0}Validating coding in {1} & {2}...'.format('\n', raw_header_csv, raw_itin_csv))
 
 sas1_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas1_name))
-sas1_args = [raw_header_csv, raw_itin_csv, transact_csv, network_csv, nodes_csv,
-             MHN.prog_dir, header_csv, itin_csv, link_dict_txt, short_path_txt,
-             path_err_txt, hold_check_csv, hold_times_csv, routes_processed_csv,
-             str(min_route_id), str(MHN.max_poe), sas1_lst]
+sas1_args = [
+    raw_header_csv, raw_itin_csv, transact_csv, network_csv, nodes_csv,
+    MHN.prog_dir, header_csv, itin_csv, pseudo_csv, link_dict_txt,
+    short_path_txt, path_err_txt, hold_check_csv, hold_times_csv,
+    routes_processed_csv, str(min_route_id), str(MHN.max_poe), sas1_lst
+]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
     MHN.die('{0} did not run!'.format(sas1_sas))
