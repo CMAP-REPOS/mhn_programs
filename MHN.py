@@ -65,8 +65,8 @@ class MasterHighwayNetwork(object):
         # '600': 2040,
     }
 
-    min_year = min((year for scen, year in scenario_years.iteritems()))
-    max_year = max((year for scen, year in scenario_years.iteritems()))
+    min_year = min(year for scen, year in scenario_years.items())
+    max_year = max(year for scen, year in scenario_years.items())
 
     tod_periods = {
         '1':  ('8PM-6AM',                                   # 1: overnight
@@ -386,7 +386,7 @@ class MasterHighwayNetwork(object):
                 if node == end:
                     return p_cost, path
                 if node in graph.keys():
-                    for (b_node, b_cost) in graph[node].iteritems():
+                    for (b_node, b_cost) in graph[node].items():
                         heapq.heappush(queue, (p_cost + b_cost, b_node, path))
 
 
@@ -452,7 +452,7 @@ class MasterHighwayNetwork(object):
 
 
     @staticmethod
-    def make_skinny(is_geo, in_obj, out_obj, keep_fields_list=None, where_clause=''):
+    def make_skinny(is_geo, in_obj, out_obj, keep_fields_list=None, where_clause=None):
         ''' Make an ArcGIS Feature Layer or Table View, containing only the fields
             specified in keep_fields_list, using an optional SQL query. Default
             will create a layer/view with NO fields. '''
@@ -473,9 +473,9 @@ class MasterHighwayNetwork(object):
         return out_obj
 
     # Wrapper functions for make_skinny()
-    def make_skinny_feature_layer(self, fc, lyr, keep_fields_list=None, where_clause=''):
+    def make_skinny_feature_layer(self, fc, lyr, keep_fields_list=None, where_clause=None):
         return self.make_skinny(True, fc, lyr, keep_fields_list, where_clause)
-    def make_skinny_table_view(self, table, view, keep_fields_list=None, where_clause=''):
+    def make_skinny_table_view(self, table, view, keep_fields_list=None, where_clause=None):
         return self.make_skinny(False, table, view, keep_fields_list, where_clause)
 
 

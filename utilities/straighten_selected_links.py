@@ -41,4 +41,8 @@ if check_selection(links):
                 new_link.add(new_part)
             cursor.updateRow([arcpy.Polyline(new_link)])
 
-arcpy.RefreshActiveView()
+try:
+    arcpy.RefreshActiveView()
+except:
+    # Must be using ArcGIS Pro...
+    pass
