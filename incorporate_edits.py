@@ -450,7 +450,7 @@ for ABB_tuple in split_dict:
     ordered_ABBs = order_ABBs(unordered_ABBs, anode)  # A list of tuples: (ABB, length_ratio)
     for ABB_list in ordered_ABBs:
         index = ordered_ABBs.index(ABB_list)
-        start_ratio = sum([ordered_ABBs[i][1] for i in xrange(index)])
+        start_ratio = sum([ordered_ABBs[i][1] for i in range(index)])
         ABB_list.append(start_ratio)  # Append start_ratio to track "how far along" each segment begins...
     for ABB, length_ratio, start_ratio in ordered_ABBs:
         index = ordered_ABBs.index([ABB, length_ratio, start_ratio])
@@ -722,4 +722,9 @@ arcpy.Compact_management(MHN.gdb)
 arcpy.Delete_management(MHN.mem)
 arcpy.Delete_management(backup_gdb)
 arcpy.AddMessage('\nChanges successfully applied!\n')
-arcpy.RefreshActiveView()
+
+try:
+    arcpy.RefreshActiveView()
+except:
+    # Must be using ArcGIS Pro...
+    pass
