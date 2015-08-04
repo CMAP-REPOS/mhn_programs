@@ -2,7 +2,7 @@
 '''
     straighten_selected_links.py
     Author: npeterson
-    Revised: 7/23/13
+    Revised: 8/4/15
     ---------------------------------------------------------------------------
     Delete all non-endpoint vertices for selected links.
 
@@ -14,7 +14,7 @@ import arcpy
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
-links = arcpy.GetParameter(0)
+links = arcpy.GetParameterAsText(0)
 
 def check_selection(lyr):
     ''' Check whether specified layer has a selection. '''
