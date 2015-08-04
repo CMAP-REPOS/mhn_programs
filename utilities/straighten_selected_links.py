@@ -18,7 +18,6 @@ links = arcpy.GetParameterAsText(0)
 
 def check_selection(lyr):
     ''' Check whether specified layer has a selection. '''
-    import arcpy
     desc = arcpy.Describe(lyr)
     selected = desc.FIDSet
     if len(selected) == 0:
