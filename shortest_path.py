@@ -8,8 +8,12 @@
     graph read in from a CSV. It is essentially a wrapper of the MHN module's
     find_shortest_path() function, to facilitate calls from SAS programs.
 
+    This script will be called using the system's default python installation
+    (whatever is returned by the command "ftype Python.File" in cmd.exe), and
+    not necessarily the ArcGIS version.
+
 '''
-from __future__ import print_function
+from __future__ import print_function  # Keep in case system Python is 2.x
 import csv
 import sys
 import heapq
