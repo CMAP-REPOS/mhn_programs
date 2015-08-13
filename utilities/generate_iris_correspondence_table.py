@@ -30,11 +30,11 @@ mhn_id_field = 'ABB'                         # MHN unique ID field
 out_workspace = arcpy.GetParameterAsText(3)  # Output directory
 table_name = 'mhn2iris_{0}.dbf'              # Output match table; format with timestamp at time of creation
 
-mhn_buffer_dist = 150  # Only match IRIS links coming within this distance (ft) of a HERE link
+mhn_buffer_dist = 150  # Only match IRIS links coming within this distance (ft) of an MHN link
 densify_distance = 25  # Minimum distance (ft) between road vertices
-near_distance = 60     # Maximum distance (ft) between IRIS/HERE vertices to consider match
+near_distance = 60     # Maximum distance (ft) between IRIS/MHN vertices to consider match
 min_match_count = 5    # Minimum number of vertex matches to consider line match
-min_fuzz_score = 60    # Minimum fuzzy string match score for IRIS/HERE names to consider line match
+min_fuzz_score = 60    # Minimum fuzzy string match score for IRIS/MHN names to consider line match
 
 #arcpy.AddWarning('\nCurrently generating IRIS correspondence for {0}.'.format(MHN.gdb))
 
@@ -128,7 +128,7 @@ arcpy.MakeFeatureLayer_management(iris_mem_fc, iris_mem_lyr)
 arcpy.SelectLayerByLocation_management(iris_mem_lyr, 'INTERSECT', illinois_lyr)
 
 # Copy IRIS & MHN links into temp GDB, projecting IRIS to match MHN projection
-arcpy.AddMessage('Copying IRIS & HERE links to geodatabase...')
+arcpy.AddMessage('Copying IRIS & MHN links to geodatabase...')
 mhn_fc = os.path.join(temp_gdb, 'mhn')
 mhn_keep_fields = [mhn_id_field, 'ROADNAME', 'TYPE1']
 base_mhn_sql = ''' "BASELINK" = '1' AND "TYPE1" <> '6' '''
