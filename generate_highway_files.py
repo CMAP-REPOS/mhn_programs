@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 6/30/15
+    Revised: 8/21/15
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -24,6 +24,7 @@ MHN = MasterHighwayNetwork(mhn_gdb_path)
 scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
 root_path = arcpy.GetParameterAsText(2)             # String, no default
 create_tollsys_flag = arcpy.GetParameter(3)         # Boolean, default = True
+abm_output = arcpy.GetParameter(4)                     # Boolean, default = False
 if os.path.exists(root_path):
     hwy_path = MHN.ensure_dir(os.path.join(root_path, 'highway'))
 else:
@@ -54,12 +55,34 @@ MHN.delete_if_exists(sas1_lst)
 
 
 # -----------------------------------------------------------------------------
-#  Write tollsys.flag file if desired.
+#  Write tollsys.flag file, if desired.
 # -----------------------------------------------------------------------------
-if create_tollsys_flag:
+if create_tollsys_flag or abm_output:
     arcpy.AddMessage('\nGenerating tollsys.flag file...')
     tollsys_flag = os.path.join(hwy_path, 'tollsys.flag')
     MHN.write_arc_flag_file(tollsys_flag, '"TOLLSYS" = 1')
+
+
+# -----------------------------------------------------------------------------
+# Generate any scenario-independent, ABM-specific files, if desired.
+# -----------------------------------------------------------------------------
+if abm_output:
+
+    arcpy.AddMessage('\nGenerating hwy_node_zones.csv file...')
+    def generate_node_zones_csv(out_csv):
+        ''' Write a CSV listing the zone and subzone each node falls in. '''
+        out_attr = ['NODE', MHN.zone_attr, MHN.subzone_attr]
+        node_lyr = 'node_lyr'
+        MHN.make_skinny_table_view(MHN.node, node_lyr, out_attr)
+        with open(out_csv, 'wb') as w:
+            w.write('node,zone09,subzone09\n')
+            with arcpy.da.SearchCursor(node_lyr, out_attr, sql_clause=(None, 'ORDER BY NODE')) as c:
+                for r in c:
+                    w.write('{0},{1},{2}\n'.format(*r))
+        return out_csv
+
+    node_zones_csv = os.path.join(hwy_path, 'hwy_node_zones.csv')
+    generate_node_zones_csv(node_zones_csv)
 
 
 # -----------------------------------------------------------------------------
