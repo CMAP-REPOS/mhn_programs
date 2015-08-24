@@ -24,7 +24,7 @@ MHN = MasterHighwayNetwork(mhn_gdb_path)
 scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
 root_path = arcpy.GetParameterAsText(2)             # String, no default
 create_tollsys_flag = arcpy.GetParameter(3)         # Boolean, default = True
-abm_output = arcpy.GetParameter(4)                     # Boolean, default = False
+abm_output = arcpy.GetParameter(4)                  # Boolean, default = False
 if os.path.exists(root_path):
     hwy_path = MHN.ensure_dir(os.path.join(root_path, 'highway'))
 else:

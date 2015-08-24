@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 6/30/15
+    Revised: 8/24/15
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -33,7 +33,7 @@ mhn_gdb_path = arcpy.GetParameterAsText(0)          # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
 scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
 root_path = arcpy.GetParameterAsText(2)             # String, no default
-ct_ramp = arcpy.GetParameter(3)                     # Boolean, default = False
+abm_output = arcpy.GetParameter(3)                  # Boolean, default = False
 
 out_tod_periods = sorted(MHN.tod_periods.keys())
 
@@ -270,7 +270,7 @@ for scen in scen_list:
         arcpy.Delete_management(bus_lyr)
 
         # Export header info of representative bus runs in current TOD.
-        if ct_ramp:
+        if abm_output:
             rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'CT_VEH', 'SPEED', 'GROUP_HEADWAY']  # CT_VEH instead of VEHICLE_TYPE
         else:
             rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'GROUP_HEADWAY']
