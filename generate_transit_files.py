@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 8/24/15
+    Revised: 9/3/15
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -734,6 +734,7 @@ for scen in scen_list:
 
         ### End of TOD loop ###
 
+
     # -------------------------------------------------------------------------
     # Merge scenario highway and rail linkshape files into linkshape_X00.in.
     # -------------------------------------------------------------------------
@@ -762,6 +763,91 @@ for scen in scen_list:
     w.close()
 
     ### End of scenario loop ###
+
+
+# -------------------------------------------------------------------------
+# Create additional ABM inputs, if desired.
+# -------------------------------------------------------------------------
+def get_line_ids_from_itin(itin):
+    ''' Parse an itinerary batchin file to obtain line IDs. '''
+    line_ids = set()
+    with open(itin, 'rb') as r:
+        for line in r:
+            # Lines starting with "a" contain header info
+            if line.startswith('a'):
+                attr = line.strip().split()
+                line_id = attr[1].replace("'", "")
+                line_ids.add(line_id)
+    return line_ids
+
+def get_scen_line_ids():
+    ''' Read each of the time-of-day itinerary files to identify each
+        line modeled in all scenarios. '''
+    line_ids = set()
+    for scen in scen_list:
+        scen_tran_path = os.path.join(tran_path, scen)
+        for tod in out_tod_periods:
+            bus = os.path.join(scen_tran_path, 'bus.itinerary_{0}'.format(tod))
+            rail = os.path.join(scen_tran_path, 'rail.itinerary_{0}'.format(tod))
+            line_ids.update(get_line_ids_from_itin(bus))
+            line_ids.update(get_line_ids_from_itin(rail))
+    return line_ids
+
+if abm_output:
+    arcpy.AddMessage('\nGenerating ABM input files...')
+
+    easeb_csv = os.path.join(tran_path, 'boarding_ease_by_line_id.csv')
+    prof_csv = os.path.join(tran_path, 'productivity_bonus_by_line_id.csv')
+    relim_csv = os.path.join(tran_path, 'relim_by_line_id.csv')
+
+    scen_line_ids = get_scen_line_ids()
+
+    # Ease of boarding CSV
+    with open(easeb_csv, 'wb') as w:
+        w.write('tline,@easeb\n')
+        for line_id in sorted(scen_line_ids):
+
+            # @easeb = 2 (kneeling) for buses
+            if line_id[0] in ('b', 'e', 'l', 'p', 'q'):
+                w.write('{0},2.0\n'.format(line_id))
+
+            # @easeb = 3 (level boarding) for CTA rail and Metra Electric/South Shore
+            elif line_id[0] == 'c' or line_id[:3] in ('mme', 'mss'):
+                w.write('{0},3.0\n'.format(line_id))
+
+            # @easeb = 1 (stairs) for all other Metra lines
+            else:
+                w.write('{0},1.0\n'.format(line_id))
+
+    # Productivity bonus (by user class) CSV
+    with open(prof_csv, 'wb') as w:
+        w.write('tline,@prof1,@prof2,@prof3\n')
+        for line_id in sorted(scen_line_ids):
+
+            # Local bus productivity bonus (0, 0, 0)
+            if line_id[0] in ('b', 'p', 'l'):
+                w.write('{0},0.0,0.0,0.0\n'.format(line_id))
+
+            # Express bus productivity bonus (-0.05, -0.1, -0.1)
+            elif line_id[0] in ('e', 'q'):
+                w.write('{0},-0.05,-0.1,-0.1\n'.format(line_id))
+
+            # CTA rail productivity bonus (0, 0, 0)
+            elif line_id[0] == 'c':
+                w.write('{0},0.0,0.0,0.0\n'.format(line_id))
+
+            # Metra productivity bonus (-0.05, -0.1, -0.25)
+            else:
+                w.write('{0},-0.05,-0.1,-0.25\n'.format(line_id))
+
+    # Reliability impact CSV
+    with open(relim_csv, 'wb') as w:
+        w.write('tline,@relim\n')
+        for line_id in sorted(scen_line_ids):
+
+            # @relim = 1.0 for all lines
+            w.write('{0},1.0\n'.format(line_id))
+
 
 # -----------------------------------------------------------------------------
 #  Clean up script-level data.
