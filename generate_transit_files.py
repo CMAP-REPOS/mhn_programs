@@ -807,15 +807,15 @@ if abm_output:
         w.write('tline,@easeb\n')
         for line_id in sorted(scen_line_ids):
 
-            # @easeb = 2 (kneeling) for buses
-            if line_id[0] in ('b', 'e', 'l', 'p', 'q'):
-                w.write('{0},2.0\n'.format(line_id))
-
             # @easeb = 3 (level boarding) for CTA rail and Metra Electric/South Shore
-            elif line_id[0] == 'c' or line_id[:3] in ('mme', 'mss'):
+            if line_id[0] == 'c' or line_id[:3] in ('mme', 'mss'):
                 w.write('{0},3.0\n'.format(line_id))
 
-            # @easeb = 1 (stairs) for all other Metra lines
+            # @easeb = 2 (kneeling) for buses
+            elif line_id[0] in ('b', 'e', 'l', 'p', 'q'):
+                w.write('{0},2.0\n'.format(line_id))
+
+            # @easeb = 1 (stairs) for remaining Metra lines
             else:
                 w.write('{0},1.0\n'.format(line_id))
 
