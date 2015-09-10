@@ -286,11 +286,11 @@ filename in4 "&dir.\&scen.\nodes.csv";
         if blvd = 1 then mode = 'ASH';  ** No trucks. Trumps trkres codes;
         
         ** Vertical clearance restrictions added 9/9/15 by NFerguson **;
-        if vertclrn < 162
+        if 0 < vertclrn < 162
             then mode = compress(mode, 'h'); ** Minimum 13'6" clearance for heavy trucks;
-        if vertclrn < 150
+        if 0 < vertclrn < 150
             then mode = compress(mode, 'm'); ** Minimum 12'6" clearance for medium trucks;
-        if vertclrn < 138
+        if 0 < vertclrn < 138
             then mode = compress(mode, 'l'); ** Minimum 11'6" clearance for light trucks;
 
         proc sort; by anode bnode;
