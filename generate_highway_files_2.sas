@@ -1,7 +1,7 @@
 /*
     generate_highway_files_2.sas
     Authors: cheither, npeterson & tschmidt
-    Revised: 5/21/15
+    Revised: 8/21/15
     ---------------------------------------------------------------------------
     Program uses base conditions and project data from the MHN to build Emme
     scenario highway networks. Emme batchin files are the output of this
@@ -15,6 +15,7 @@ options pagesize=50 linesize=125;
 %let scen = %scan(&sysparm, 2, $);
 %let maxz = %scan(&sysparm, 3, $);
 %let baseyr = %scan(&sysparm, 4, $);
+%let abm = %scan(&sysparm, 5, $);
 
 /* ------------------------------------------------------------------------------ */
 *** INPUT FILES ***;
@@ -701,5 +702,23 @@ data links; set network2(where=(ampm1 not in (2,4)));
 %report(7)  ** pm peak **;        run;
 %output(8)  ** post-shoulder **;  run;
 %report(8)  ** post-shoulder **;  run;
+
+*--------------------------------------------------;
+  ** WRITE ANY ABM FILES, IF DESIRED **;
+*--------------------------------------------------;
+%macro writeabm;
+    %if &abm = 1 %then %do;
+        
+        * Generate toll file;
+        filename out6 "&dir.\&scen.\toll";
+        data toll (keep=anode bnode toll); set network;
+            label anode='inode'
+                  bnode='jnode'
+                  toll='@toll';
+            proc export outfile=out6 dbms=csv label replace;
+        
+        %end;
+    %mend writeabm;
+%writeabm
 
 run;
