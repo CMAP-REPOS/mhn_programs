@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 9/15/2015
+    Revised: 9/22/2015
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -122,7 +122,7 @@ arcpy.AddMessage('Selecting IRIS links in Illinois modeling zones...')
 iris_mem_fc = os.path.join(MHN.mem, 'iris')
 iris_keep_fields = [
     iris_id_field, 'ROAD_NAME', 'MARKED_RT', 'MARKED_RT2', 'FCNAME', 'INVENTORY',
-    'BEG_STA', 'END_STA', 'AADT', 'AADT_YR', 'HCV', 'HCV_MU_YR'
+    'BEG_STA', 'END_STA'
 ]
 iris_lyr = MHN.make_skinny_feature_layer(iris_fc, 'iris_lyr', iris_keep_fields)
 arcpy.CopyFeatures_management(iris_lyr, iris_mem_fc)
@@ -221,8 +221,7 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
 
     matched_iris_ids = set([str(row[0]) for row in arcpy.da.SearchCursor(near_freq_table, [near_iris_field])])
     iris_fields = [
-        'ROAD_NAME', 'MARKED_RT', 'MARKED_RT2', 'INVENTORY', 'BEG_STA', 'END_STA',
-        'AADT', 'AADT_YR', 'HCV', 'HCV_MU_YR'
+        'ROAD_NAME', 'MARKED_RT', 'MARKED_RT2', 'INVENTORY', 'BEG_STA', 'END_STA'
     ]
     iris_clip_lyr = MHN.make_skinny_feature_layer(iris_subset_fc, 'iris_clip_lyr', iris_fields)
     arcpy.SelectLayerByAttribute_management(iris_clip_lyr, 'NEW_SELECTION', ''' "{0}" IN ({1}) '''.format(iris_id_field, ','.join(matched_iris_ids)))
@@ -245,10 +244,6 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
             start_mp = round(iris_attr_dict[iris_id]['BEG_STA'], 2)
             end_mp = round(iris_attr_dict[iris_id]['END_STA'], 2)
             iris_id2 = '{0}-{1}-{2}'.format(iris_inv, start_mp, end_mp)
-            iris_aadt = int(iris_attr_dict[iris_id]['AADT'])
-            iris_aadt_yr = int(iris_attr_dict[iris_id]['AADT_YR'])
-            iris_hcv = int(iris_attr_dict[iris_id]['HCV'])
-            iris_hcv_yr = int(iris_attr_dict[iris_id]['HCV_MU_YR'])
 
             # Score names on similarity, ignoring non-"lower" matches (e.g. Lower Wacker Dr)
             if 'LOWER' not in mhn_name.split() and 'LOWER' in iris_name.split():
@@ -270,8 +265,7 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
 
             # Construct potential match's attribute tuple
             attr = (
-                iris_id, freq, fuzz_score, mhn_name, iris_combo, iris_id2,
-                iris_aadt, iris_aadt_yr, iris_hcv, iris_hcv_yr
+                iris_id, freq, fuzz_score, mhn_name, iris_combo, iris_id2
             )
 
             # Make initial match if min match count and fuzz_score are okay
@@ -421,16 +415,12 @@ arcpy.AddField_management(match_table, 'FUZZ_SCORE', 'LONG')
 arcpy.AddField_management(match_table, 'MHN_NAME', 'TEXT', field_length=50)
 arcpy.AddField_management(match_table, 'IRIS_NAME', 'TEXT', field_length=50)
 arcpy.AddField_management(match_table, 'IRIS_ID', 'TEXT', field_length=30)
-arcpy.AddField_management(match_table, 'IRIS_AADT', 'LONG')
-arcpy.AddField_management(match_table, 'AADT_YR', 'LONG')
-arcpy.AddField_management(match_table, 'IRIS_HCV', 'LONG')
-arcpy.AddField_management(match_table, 'HCV_YR', 'LONG')
 arcpy.AddField_management(match_table, 'SUBSET', 'TEXT', field_length=20)
 
 # Insert matches from each dict into table.
 match_fields = [
-    match_mhn_field, match_iris_field, 'FREQUENCY', 'FUZZ_SCORE', 'MHN_NAME', 'IRIS_NAME',
-    'IRIS_ID', 'IRIS_AADT', 'AADT_YR', 'IRIS_HCV', 'HCV_YR', 'SUBSET'
+    match_mhn_field, match_iris_field, 'FREQUENCY', 'FUZZ_SCORE', 'MHN_NAME',
+    'IRIS_NAME', 'IRIS_ID', 'SUBSET'
 ]
 with arcpy.da.InsertCursor(match_table, match_fields) as cursor:
 
