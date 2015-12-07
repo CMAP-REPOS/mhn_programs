@@ -138,7 +138,7 @@ class MasterHighwayNetwork(object):
 
 
     def __init__(self, mhn_gdb_path, zone_gdb_path=None):
-        arcpy.env.OverwriteOutput = True
+        arcpy.env.overwriteOutput = True
 
         # -----------------------------------------------------------------------------
         #  SET GDB-SPECIFIC VARIABLES
