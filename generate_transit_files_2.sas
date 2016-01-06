@@ -1,7 +1,7 @@
 /*
     generate_transit_files_2.sas
     authors: cheither & npeterson
-    revised: 6/30/15
+    revised: 1/6/16
     ----------------------------------------------------------------------------
     Program creates bus transit network batchin files. Bus transit network is
     built using a modified version of MHN processing procedures.
@@ -36,7 +36,6 @@ options noxwait;
 %let count = 1;
 %let search = 5280;  * search distance for shortest path file;
 %let patherr = 0;
-%let hdwymult = 2;   * headway multiplier for future bus, TOD periods 2,4,6,8;
 %let badnode = 0;
 
 %macro time;
@@ -83,8 +82,11 @@ data routes; infile in1 dsd missover firstobs=2;
 *** Process Future Scenario Bus coding ***;
 %macro future;
     %if &scen > &basescen %then %do;
-        %if &tod = 1 %then %let hdwymult = 4;
-        %if &tod = 5 %then %let hdwymult = 3;
+        * Set headway multipliers for each time period;
+        %let hdwymult = 2;  * For peak shoulders;
+        %if &tp = 3 or &tp = 7 %then %let hdwymult = 1;
+        %else %if &tp = 1 %then %let hdwymult = 4;
+        %else %if &tp = 5 %then %let hdwymult = 3;
 
         data routes; set routes;
             length replace $8.;
@@ -134,28 +136,28 @@ data routes; infile in1 dsd missover firstobs=2;
                 proc sort; by mode;  *** attach existing line headway for period;
             data rte2(drop=_type_ _freq_); merge rte2(in=hit) modeavg; by mode;
                 if hit;  *** attach average time period headway for mode;
+                
                 ** ## Final Time Period Headway Calculation ## **;
-                if headway > 0 then mult = headway * &hdwymult;
-                else mult = -1;  *** -- store TOD headway based on multiplier;
-                if (&tp ^= 3 and &tp ^= 7) then headway = -1;  *** -- headway coded in route table only for Peak Periods;
-                if headway = 0 then headway = -1;  *** -- coded value of zero means use existing headways;
-
-                if (&tp = 2 or &tp = 4) then x = 60;
-                else x = 90;
-                if headway > 0 then hfin = headway;   *** -- Priority 1: use coded headway for Peak Periods;
+                if headway > 0 then headway = headway * &hdwymult;  *** -- apply TOD headway multiplier to coded headway;
+                else headway = -1;  *** -- coded value of zero means use existing headways;
+                
+                if headway > 0 then do;               *** -- Priority 1: use coded headway (or existing headway, if shorter);
+                    if exhdw > 0 then hfin = min(headway, exhdw);
+                    else hfin = headway;
+                end;
                 else if exhdw > 0 then hfin = exhdw;  *** -- Priority 2: use existing TOD headway for transit line;
-                else hfin = max(modeavg, mult, x);    *** -- Priority 3: maximum of mode average/multiplier/90 minutes;
+                else hfin = max(modeavg, 90);         *** -- Priority 3: maximum of mode average/90 minutes;
 
                 ** Limit headway to length of time period;
-                if &tod = 1 then maxtime = 600;
-                else if &tod in (2, 4) then maxtime = 60;
-                else if &tod = 5 then maxtime = 240;
+                if &tp = 1 then maxtime = 600;
+                else if &tp in (2, 4) then maxtime = 60;
+                else if &tp = 5 then maxtime = 240;
                 else maxtime = 120;
                 hfin = min(hfin, maxtime);
     
                 headway = round(hfin, 0.1);
 
-            data routes(drop=new del keeptod exhdw modeavg mult hfin maxtime); set rte1 rte2;
+            data routes(drop=new del keeptod exhdw modeavg hfin maxtime); set rte1 rte2;
                 proc sort; by linename;
         %end;
     %end;
