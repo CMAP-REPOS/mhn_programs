@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 9/3/15
+    Revised: 2/23/16
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -237,6 +237,7 @@ for scen in scen_list:
         cta_stop = os.path.join(scen_tran_path, 'ctastop.pnt')
         metra_stop = os.path.join(scen_tran_path, 'metrastop.pnt')
         itin_final = os.path.join(scen_tran_path, 'itin.final')
+        rail_access = os.path.join(scen_tran_path, 'railaccess.txt')
 
         if tod == 'am':  # Use TOD 3 highways for AM transit
             hwy_l1 = os.path.join(scen_hwy_path, '{0}03.l1'.format(scen))
@@ -484,11 +485,12 @@ for scen in scen_list:
         # ---------------------------------------------------------------------
         # Generate rail stop data from rail batchin files.
         # ---------------------------------------------------------------------
-        def generate_rail_pnt_files(itin_batchin, ntwk_batchin, cta_pnt, metra_pnt):
+        def generate_rail_pnt_files(itin_batchin, ntwk_batchin, cta_pnt, metra_pnt, rail_acc):
 
             # Read in rail network node coordinates
             node_coords = {}
 
+            acc_w = open(rail_acc, 'wb')
             with open(ntwk_batchin, 'rb') as network:
                 section = ''
 
@@ -507,6 +509,17 @@ for scen in scen_list:
                         x = float(attr[2])
                         y = float(attr[3])
                         node_coords[node] = (x, y)
+
+                    # Save hardcoded rail access links to a file
+                    elif section == 'links' and attr[0] == 'a':
+                        anode = attr[1]
+                        bnode = attr[2]
+                        mode = attr[4]
+                        if mode in ('v', 'y', 'w', 'z'):
+                            acc_w.write('{0},{1},{2}\n'.format(anode, bnode, mode))
+
+            acc_w.close()
+
 
             # Determine rail network nodes that serve as stops for CTA/Metra
             cta_stops = set()
@@ -562,7 +575,7 @@ for scen in scen_list:
 
             return None
 
-        generate_rail_pnt_files(rail_itin, rail_net, cta_stop, metra_stop)
+        generate_rail_pnt_files(rail_itin, rail_net, cta_stop, metra_stop, rail_access)
 
 
         # ---------------------------------------------------------------------
@@ -731,6 +744,7 @@ for scen in scen_list:
             os.remove(c2z_txt)
             os.remove(mz_txt)
             os.remove(itin_final)
+            os.remove(rail_access)
 
         ### End of TOD loop ###
 

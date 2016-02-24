@@ -1,7 +1,7 @@
 /*
     generate_transit_files_3.sas
     authors: cheither & npeterson
-    revised: 6/24/15
+    revised: 2/23/16
     ----------------------------------------------------------------------------
     Program creates batchin file of mode c, m, u, v, w, x, y and z links.
 
@@ -30,6 +30,7 @@ filename in10 "&dirpath.\c2z.txt";
 filename in11 "&dirpath.\metraz.txt";
 filename in12 "&dirpath.\mz.txt";
 filename in13 "&dirpath.\buscentroids.txt";
+filename in14 "&dirpath.\railaccess.txt";
 
 ** OUTPUT FILES **;
 filename out1 "&dirpath.\access.network_&tod";
@@ -510,6 +511,15 @@ data all; merge c m u v w x y z; by anode bnode;
     modes = compress(mode1 || mode2 || mode3 || mode4 || mode5 || mode6 || mode7 || mode8);
     if miles = 0 then miles = 0.01;
 
+** Filter out access links already in rail.network_{tod};   
+data railacc; infile in14 dlm=',' missover;
+    input anode bnode accmode $;
+    proc sort; by anode bnode;
+    
+data all(drop=accmode); merge all (in=hit1) railacc (in=hit2); by anode bnode;
+    if hit1 and not hit2;
+
+** Write final output;
 data print1; set all;
     file out1;
     if _n_ = 1 then do;
