@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 8/21/15
+    Revised: 8/15/16
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -344,7 +344,8 @@ with arcpy.da.UpdateCursor(new_nodes_CZ, ['NODE', MHN.zone_attr, MHN.subzone_att
             zoned_node[3] = 99
             zoned_nodes_cursor.updateRow(zoned_node)
         # Set appropriate external values
-        elif node > MHN.max_poe and capzone == 0:
+        elif node > MHN.max_poe and zone == 0:
+            zoned_node[1] = 9999
             zoned_node[3] = 11
             zoned_nodes_cursor.updateRow(zoned_node)
         #elif node < MHN.min_poe and node != zone:
