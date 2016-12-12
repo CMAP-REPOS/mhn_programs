@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 2/23/16
+    Revised: 12/12/16
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -255,7 +255,9 @@ for scen in scen_list:
 
         # Export table of Park-n-Ride nodes
         pnr_view = 'pnr_view'
-        MHN.make_skinny_table_view(MHN.pnr, pnr_view, ['NODE', 'COST', 'SPACES'])
+        pnr_fields = ['NODE', 'COST', 'SPACES', 'SCENARIO']
+        pnr_sql = ''' "SCENARIO" LIKE '%{0}%' '''.format(scen[0])
+        MHN.make_skinny_table_view(MHN.pnr, pnr_view, pnr_fields, pnr_sql)
         pnr_csv = os.path.join(scen_tran_path, 'pnr.csv')
         MHN.write_attribute_csv(pnr_view, pnr_csv)
 
@@ -299,7 +301,10 @@ for scen in scen_list:
             bus_future_lyr = 'future_lyr'
             arcpy.MakeFeatureLayer_management(MHN.bus_future, bus_future_lyr)
             bus_future_id_field = MHN.route_systems[MHN.bus_future][1]
-            bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
+            if abm_output:
+                bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
+            else:
+                bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'CT_VEH', 'SPEED', 'HEADWAY']  # CT_VEH instead of VEHICLE_TYPE
             bus_future_query = ''' "SCENARIO" LIKE '%{0}%' '''.format(scen[0])  # SCENARIO field contains first character of applicable scenario codes
             bus_future_view = MHN.make_skinny_table_view(bus_future_lyr, 'bus_future_view', bus_future_attr, bus_future_query)
             bus_future_csv = os.path.join(scen_tran_path, 'bus_future.csv')
