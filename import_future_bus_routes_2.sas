@@ -1,7 +1,7 @@
 /*
    import_future_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 7/18/14
+   revised: 12/12/16
    ----------------------------------------------------------------------------
    Program is called by import_future_bus_routes.py and formats bus itineraries
    to build with arcpy.
@@ -85,7 +85,8 @@ data rte; set rte (keep=tr_line des mode veh_type headway speed scenario replace
         scenario='SCENARIO'
         replace='REPLACE'
         tod='TOD'
-        nt='NOTES';
+        nt='NOTES'
+        ct_veh='CT_VEH';
    proc sort; by tr_line;
    proc export outfile=out1 dbms=csv label replace;
 

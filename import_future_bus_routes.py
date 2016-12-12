@@ -2,7 +2,7 @@
 '''
     import_future_bus_routes.py
     Author: npeterson
-    Revised: 9/2/14
+    Revised: 12/12/16
     ---------------------------------------------------------------------------
     Import future bus route coding from an Excel spreadsheet, with "header" and
     "itinerary" worksheets. SAS can currently only handle .xls and not .xlsx.
@@ -176,7 +176,7 @@ header_attr = {}
 
 route_fields = (
     common_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'HEADWAY', 'SPEED',
-    'SCENARIO', 'REPLACE', 'TOD', 'NOTES'
+    'SCENARIO', 'REPLACE', 'TOD', 'NOTES', 'CT_VEH'
 )
 
 with open(future_route_csv, 'r') as raw_routes:
