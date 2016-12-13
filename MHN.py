@@ -45,6 +45,7 @@ class MasterHighwayNetwork(object):
         '100': 2010,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
         '200': 2015,
         '300': 2020,  # No longer in use for conformity, as of C13Q3
+        #'300': 2017,  # Coming soon...
         '400': 2025,
         '500': 2030,
         '600': 2040
