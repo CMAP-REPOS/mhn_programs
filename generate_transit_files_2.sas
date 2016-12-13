@@ -1,7 +1,7 @@
 /*
     generate_transit_files_2.sas
     authors: cheither & npeterson
-    revised: 1/6/16
+    revised: 12/13/16
     ----------------------------------------------------------------------------
     Program creates bus transit network batchin files. Bus transit network is
     built using a modified version of MHN processing procedures.
@@ -136,11 +136,11 @@ data routes; infile in1 dsd missover firstobs=2;
                 proc sort; by mode;  *** attach existing line headway for period;
             data rte2(drop=_type_ _freq_); merge rte2(in=hit) modeavg; by mode;
                 if hit;  *** attach average time period headway for mode;
-                
+
                 ** ## Final Time Period Headway Calculation ## **;
                 if headway > 0 then headway = headway * &hdwymult;  *** -- apply TOD headway multiplier to coded headway;
                 else headway = -1;  *** -- coded value of zero means use existing headways;
-                
+
                 if headway > 0 then do;               *** -- Priority 1: use coded headway (or existing headway, if shorter);
                     if exhdw > 0 then hfin = min(headway, exhdw);
                     else hfin = headway;
@@ -154,7 +154,7 @@ data routes; infile in1 dsd missover firstobs=2;
                 else if &tp = 5 then maxtime = 240;
                 else maxtime = 120;
                 hfin = min(hfin, maxtime);
-    
+
                 headway = round(hfin, 0.1);
 
             data routes(drop=new del keeptod exhdw modeavg hfin maxtime); set rte1 rte2;
@@ -200,7 +200,7 @@ data check; set check;
 
 data verify; set itins;
     proc sort; by itina itinb;
-    
+
 *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*;
 
 ** -- Adjust Itinerary Coding if it Contains Nodes not Available in the Network, If Necessary -- **;
@@ -274,8 +274,8 @@ data nodes; merge nodes(in=hit) ndzone; by itina;
     if hit;
 
 *** Join Park-n-Ride data to nodes;
-data pnr; infile pnrnd dsd missover firstobs=2;
-    input itina pcost pspac;
+data pnr (drop=scens); infile pnrnd dsd missover firstobs=2;
+    input itina pcost pspac scens;
     proc sort; by itina;
 data nodes; merge nodes pnr; by itina;
     if pcost = . then pcost = 0;
@@ -573,7 +573,7 @@ data chk; merge chk nodes(in=hit); by itina;
     if not hit;
     proc print; title "Still Bad Nodes";
 
-    
+
 *=====================================================================;
   ** CREATE MODE b (BusBusWalk) LINKS **;
 *=====================================================================;
