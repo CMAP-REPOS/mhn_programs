@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 7/17/15
+    Revised: 12/19/16
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -37,6 +37,9 @@ class MasterHighwayNetwork(object):
         'MHN'    : xrange(   1, 1962),
         'POE'    : xrange(1945, 1962)
     }
+
+    min_node_id =  5001  # 1-5000 reserved for zone centroids/POEs
+    max_node_id = 29999  # 30000+ reserved for MRN nodes
 
     min_poe = min(centroid_ranges['POE'])
     max_poe = max(centroid_ranges['POE'])
