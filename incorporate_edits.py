@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 8/15/16
+    Revised: 12/19/16
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -146,7 +146,13 @@ arcpy.MakeFeatureLayer_management(new_nodes_NODE, new_nodes_NODE_lyr)
 # -----------------------------------------------------------------------------
 #  Determine the current highest NODE value.
 # -----------------------------------------------------------------------------
-max_node_id = max((r[0] for r in arcpy.da.SearchCursor(new_nodes_NODE, ['NODE'])))
+valid_node_ids = set(xrange(MHN.min_node_id, MHN.max_node_id + 1))
+taken_node_ids = set(r[0] for r in arcpy.da.SearchCursor(new_nodes_NODE, ['NODE']))
+available_node_ids = sorted(valid_node_ids - taken_node_ids)
+if len(available_node_ids) == 0:
+    arcpy.AddWarning('\nWARNING: All valid node IDs ({0}-{1}) are currently in use. No new nodes can be added.\n'.format(MHN.min_node_id, MHN.max_node_id))
+elif len(available_node_ids) < 100:
+    arcpy.AddWarning('\nWARNING: Only {0} valid node IDs ({1}-{2}) are still available.\n'.format(len(available_node_ids), MHN.min_node_id, MHN.max_node_id))
 
 
 # -----------------------------------------------------------------------------
@@ -190,12 +196,15 @@ else:
                     # Assign all nodes in same location the same ID:
                     xy = new_node_NODE[1]
                     if xy not in new_node_id_dict:
-                        max_node_id += 1
-                        new_node_id_dict[xy] = max_node_id
+                        try:
+                            next_avail_id = available_node_ids.pop(0)
+                        except IndexError:
+                            MHN.die('ERROR: All valid node IDs ({0}-{1}) are already in use! New node(s) cannot be assigned an ID!'.format(MHN.min_node_id, MHN.max_node_id))
+                        new_node_id_dict[xy] = next_avail_id
                         if (anode,bnode,baselink) in split_dict:
-                            split_dict[(anode,bnode,baselink)].append(max_node_id)
+                            split_dict[(anode,bnode,baselink)].append(next_avail_id)
                         else:
-                            split_dict[(anode,bnode,baselink)] = [max_node_id]
+                            split_dict[(anode,bnode,baselink)] = [next_avail_id]
                     new_node_NODE[0] = new_node_id_dict[xy]
                     new_nodes_NODE_cursor.updateRow(new_node_NODE)
 
@@ -297,8 +306,11 @@ with arcpy.da.UpdateCursor(new_nodes, ['OID@','SHAPE@','NODE'], '"NODE" IS NULL 
         if intersect_count > 0:
             null_nodes_cursor.deleteRow()
         else:
-            max_node_id += 1
-            null_node[2] = max_node_id
+            try:
+                next_avail_id = available_node_ids.pop(0)
+            except IndexError:
+                MHN.die('ERROR: All valid node IDs ({0}-{1}) are already in use! New node(s) cannot be assigned an ID!'.format(MHN.min_node_id, MHN.max_node_id))
+            null_node[2] = next_avail_id
             null_nodes_cursor.updateRow(null_node)
 arcpy.AddMessage('-- New NODE values assigned')
 
