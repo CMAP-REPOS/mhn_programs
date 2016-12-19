@@ -39,7 +39,7 @@ class MasterHighwayNetwork(object):
     }
 
     min_node_id =  5001  # 1-5000 reserved for zone centroids/POEs
-    max_node_id = 5002  # 30000+ reserved for MRN nodes
+    max_node_id = 29999  # 30000+ reserved for MRN nodes
 
     min_poe = min(centroid_ranges['POE'])
     max_poe = max(centroid_ranges['POE'])
