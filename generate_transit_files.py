@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 12/13/16
+    Revised: 12/20/16
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -111,9 +111,9 @@ bus_fc_dict = {MHN.bus_base: 'base',
                MHN.bus_current: 'current'}
 
 # Remove base or current from bus_fc_dict, if not used for specified scenarios.
-if not any(MHN.scenario_years[scen] <= MHN.bus_years['base'] for scen in scen_list):
+if not any(MHN.scenario_years[scen] < MHN.bus_years['current'] for scen in scen_list):
     del bus_fc_dict[MHN.bus_base]
-if not any(MHN.scenario_years[scen] > MHN.bus_years['base'] for scen in scen_list):
+if not any(MHN.scenario_years[scen] >= MHN.bus_years['current'] for scen in scen_list):
     del bus_fc_dict[MHN.bus_current]
 
 # Identify representative runs for bus_base and/or bus_current, as relevant.
@@ -203,7 +203,7 @@ if any(MHN.scenario_years[scen] > MHN.base_year for scen in scen_list):
 for scen in scen_list:
     # Set scenario-specific parameters.
     scen_year = MHN.scenario_years[scen]
-    if scen_year <= MHN.bus_years['base']:
+    if scen_year < MHN.bus_years['current']:
         bus_fc = MHN.bus_base
         which_bus = 'base'
     else:
