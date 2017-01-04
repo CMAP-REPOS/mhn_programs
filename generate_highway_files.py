@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 6/30/15
+    Revised: 8/21/15
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -24,6 +24,7 @@ MHN = MasterHighwayNetwork(mhn_gdb_path)
 scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
 root_path = arcpy.GetParameterAsText(2)             # String, no default
 create_tollsys_flag = arcpy.GetParameter(3)         # Boolean, default = True
+abm_output = arcpy.GetParameter(4)                  # Boolean, default = False
 if os.path.exists(root_path):
     hwy_path = MHN.ensure_dir(os.path.join(root_path, 'highway'))
 else:
@@ -54,12 +55,34 @@ MHN.delete_if_exists(sas1_lst)
 
 
 # -----------------------------------------------------------------------------
-#  Write tollsys.flag file if desired.
+#  Write tollsys.flag file, if desired.
 # -----------------------------------------------------------------------------
-if create_tollsys_flag:
+if create_tollsys_flag or abm_output:
     arcpy.AddMessage('\nGenerating tollsys.flag file...')
     tollsys_flag = os.path.join(hwy_path, 'tollsys.flag')
     MHN.write_arc_flag_file(tollsys_flag, '"TOLLSYS" = 1')
+
+
+# -----------------------------------------------------------------------------
+# Generate any scenario-independent, ABM-specific files, if desired.
+# -----------------------------------------------------------------------------
+if abm_output:
+
+    # hwy_node_zones.csv
+    arcpy.AddMessage('\nGenerating hwy_node_zones.csv file...')
+    def generate_node_zones_csv(out_csv):
+        ''' Write a CSV listing the zone and subzone each node falls in. '''
+        out_attr = ['NODE', MHN.zone_attr, MHN.subzone_attr]
+        node_lyr = 'node_lyr'
+        MHN.make_skinny_table_view(MHN.node, node_lyr, out_attr)
+        with open(out_csv, 'wb') as w:
+            w.write('node,zone09,subzone09\n')
+            with arcpy.da.SearchCursor(node_lyr, out_attr, sql_clause=(None, 'ORDER BY NODE')) as c:
+                for r in c:
+                    w.write('{0},{1},{2}\n'.format(*r))
+        return out_csv
+    node_zones_csv = os.path.join(hwy_path, 'hwy_node_zones.csv')
+    generate_node_zones_csv(node_zones_csv)
 
 
 # -----------------------------------------------------------------------------
@@ -171,7 +194,7 @@ for scen in scen_list:
     hwy_anodes = [abb.split('-')[0] for abb in hwy_abb_2]
     hwy_bnodes = [abb.split('-')[1] for abb in hwy_abb_2]
     hwy_nodes_list = list(set(hwy_anodes).union(set(hwy_bnodes)))
-    hwy_nodes_attr = ['NODE', 'POINT_X', 'POINT_Y', 'Zone09', 'CapacityZone09']
+    hwy_nodes_attr = ['NODE', 'POINT_X', 'POINT_Y', MHN.zone_attr, MHN.capzone_attr]
     hwy_nodes_query = '"NODE" IN ({0})'.format(','.join(hwy_nodes_list))
     hwy_nodes_view = MHN.make_skinny_table_view(MHN.node, 'hwy_nodes_view', hwy_nodes_attr, hwy_nodes_query)
     MHN.write_attribute_csv(hwy_nodes_view, hwy_nodes_csv, hwy_nodes_attr)
@@ -179,7 +202,7 @@ for scen in scen_list:
 
     # Process attribute tables with generate_highway_files_2.sas.
     sas2_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas2_name))
-    sas2_args = [hwy_path, scen, str(MHN.max_poe), str(MHN.base_year)]
+    sas2_args = [hwy_path, scen, MHN.max_poe, MHN.base_year, int(abm_output)]
     MHN.submit_sas(sas2_sas, sas2_log, sas2_lst, sas2_args)
     if not os.path.exists(sas2_log):
         MHN.die('{0} did not run!'.format(sas2_sas))
@@ -193,6 +216,8 @@ for scen in scen_list:
         os.remove(hwy_network_csv)
         os.remove(hwy_nodes_csv)
         arcpy.AddMessage('-- Scenario {0} l1, l2, n1, n2 files generated successfully.'.format(scen))
+        if abm_output:
+            arcpy.AddMessage('-- Scenario {0} ABM toll file generated successfully.'.format(scen))
 
     # Calculate scenario mainline links' AM Peak lane-miles, and create mcp_stats.txt.
     scen_ampeak_l1 = os.path.join(scen_path, '{0}03.l1'.format(scen))

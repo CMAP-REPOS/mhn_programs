@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 12/10/14
+    Revised: 12/19/16
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -13,7 +13,7 @@
       - Ensure that all nodes have a unique ID (maintaining existing IDs
         whenever possible) and that no nodes overlap each other.
 
-    Requires an ArcGIS 10.1+ Desktop Advanced license!
+    Requires an ArcGIS for Desktop 10.1+ Advanced license!
 
 '''
 import os
@@ -146,7 +146,13 @@ arcpy.MakeFeatureLayer_management(new_nodes_NODE, new_nodes_NODE_lyr)
 # -----------------------------------------------------------------------------
 #  Determine the current highest NODE value.
 # -----------------------------------------------------------------------------
-max_node_id = max((r[0] for r in arcpy.da.SearchCursor(new_nodes_NODE, ['NODE'])))
+valid_node_ids = set(xrange(MHN.min_node_id, MHN.max_node_id + 1))
+taken_node_ids = set(r[0] for r in arcpy.da.SearchCursor(new_nodes_NODE, ['NODE']))
+available_node_ids = sorted(valid_node_ids - taken_node_ids)
+if len(available_node_ids) == 0:
+    arcpy.AddWarning('\nWARNING: All valid node IDs ({0}-{1}) are currently in use. No new nodes can be added.\n'.format(MHN.min_node_id, MHN.max_node_id))
+elif len(available_node_ids) < 100:
+    arcpy.AddWarning('\nWARNING: Only {0} valid node IDs ({1}-{2}) are still available.\n'.format(len(available_node_ids), MHN.min_node_id, MHN.max_node_id))
 
 
 # -----------------------------------------------------------------------------
@@ -190,12 +196,15 @@ else:
                     # Assign all nodes in same location the same ID:
                     xy = new_node_NODE[1]
                     if xy not in new_node_id_dict:
-                        max_node_id += 1
-                        new_node_id_dict[xy] = max_node_id
+                        try:
+                            next_avail_id = available_node_ids.pop(0)
+                        except IndexError:
+                            MHN.die('ERROR: All valid node IDs ({0}-{1}) are already in use! New node(s) cannot be assigned an ID!'.format(MHN.min_node_id, MHN.max_node_id))
+                        new_node_id_dict[xy] = next_avail_id
                         if (anode,bnode,baselink) in split_dict:
-                            split_dict[(anode,bnode,baselink)].append(max_node_id)
+                            split_dict[(anode,bnode,baselink)].append(next_avail_id)
                         else:
-                            split_dict[(anode,bnode,baselink)] = [max_node_id]
+                            split_dict[(anode,bnode,baselink)] = [next_avail_id]
                     new_node_NODE[0] = new_node_id_dict[xy]
                     new_nodes_NODE_cursor.updateRow(new_node_NODE)
 
@@ -297,8 +306,11 @@ with arcpy.da.UpdateCursor(new_nodes, ['OID@','SHAPE@','NODE'], '"NODE" IS NULL 
         if intersect_count > 0:
             null_nodes_cursor.deleteRow()
         else:
-            max_node_id += 1
-            null_node[2] = max_node_id
+            try:
+                next_avail_id = available_node_ids.pop(0)
+            except IndexError:
+                MHN.die('ERROR: All valid node IDs ({0}-{1}) are already in use! New node(s) cannot be assigned an ID!'.format(MHN.min_node_id, MHN.max_node_id))
+            null_node[2] = next_avail_id
             null_nodes_cursor.updateRow(null_node)
 arcpy.AddMessage('-- New NODE values assigned')
 
@@ -324,34 +336,35 @@ else:
 #  Update node/arc attributes.
 # -----------------------------------------------------------------------------
 # Calculate node ZONE and AREATYPE using Identity tool.
-new_nodes_Z = os.path.join(MHN.mem, 'new_nodes_Z')
 new_nodes_CZ = os.path.join(MHN.mem, 'new_nodes_CZ')
-zone_lyr = MHN.make_skinny_feature_layer(MHN.zone, 'zone_lyr', [MHN.zone_attr])
-arcpy.Identity_analysis(new_nodes, zone_lyr, new_nodes_Z, 'NO_FID')
-capzone_lyr = MHN.make_skinny_feature_layer(MHN.capzone, 'capzone_lyr', [MHN.capzone_attr])
-arcpy.Identity_analysis(new_nodes_Z, capzone_lyr, new_nodes_CZ, 'NO_FID')
-arcpy.Delete_management(new_nodes_Z)
+subzone_lyr = MHN.make_skinny_feature_layer(MHN.subzone, 'subzone_lyr', [MHN.zone_attr, MHN.subzone_attr, MHN.capzone_attr])
+arcpy.Identity_analysis(new_nodes, subzone_lyr, new_nodes_CZ, 'NO_FID')
+
 arcpy.DeleteIdentical_management(new_nodes_CZ, ['Shape', 'NODE'])  # Delete (arbitrarily) duplicates created from nodes lying exactly on border of 2+ zones/capzones
-with arcpy.da.UpdateCursor(new_nodes_CZ, ['NODE', MHN.zone_attr, MHN.capzone_attr]) as zoned_nodes_cursor:
+with arcpy.da.UpdateCursor(new_nodes_CZ, ['NODE', MHN.zone_attr, MHN.subzone_attr, MHN.capzone_attr]) as zoned_nodes_cursor:
     for zoned_node in zoned_nodes_cursor:
         node = zoned_node[0]
         zone = zoned_node[1]
-        capzone = zoned_node[2]
+        subzone = zoned_node[2]
+        capzone = zoned_node[3]
         if MHN.min_poe <= node <= MHN.max_poe and zone > 0:
             MHN.die('POE {0} is in zone {1}! Please move it outside of the modeling area.'.format(str(node), str(zone)))
             raise arcpy.ExecuteError
+        # Set appropriate POE values
         elif MHN.min_poe <= node <= MHN.max_poe and zone == 0:
-            zoned_node[1] = node
-            zoned_node[2] = 99
+            zoned_node[1] = node  # POE "zone" = node ID
+            zoned_node[3] = 99
             zoned_nodes_cursor.updateRow(zoned_node)
-        elif node > MHN.max_poe and capzone == 0:
-            zoned_node[2] = 11
+        # Set appropriate external values
+        elif node > MHN.max_poe and zone == 0:
+            zoned_node[1] = 9999
+            zoned_node[3] = 11
             zoned_nodes_cursor.updateRow(zoned_node)
         #elif node < MHN.min_poe and node != zone:
         #    arcpy.AddWarning('WARNING -- Zone ' + str(node) + ' centroid is in zone ' + str(zone) + '! Please verify that this is intentional.')
         else:
             pass
-arcpy.AddMessage('-- Node {0} & {1} fields recalculated'.format(MHN.zone_attr, MHN.capzone_attr))
+arcpy.AddMessage('-- Node {0}, {1} & {2} fields recalculated'.format(MHN.zone_attr, MHN.subzone_attr, MHN.capzone_attr))
 
 # Calculate arc ANODE and BNODE values.
 anodes_id = os.path.join(MHN.mem, 'anodes_id')

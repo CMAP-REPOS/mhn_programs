@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 7/17/15
+    Revised: 12/20/16
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -21,22 +21,28 @@ class MasterHighwayNetwork(object):
     # -----------------------------------------------------------------------------
     base_year = 2010  # BASELINK=1 network year, not necessarily scenario 100 (i.e. base_year was recently 2009, while scenario 100 was 2010)
 
-    bus_years = {'base': 2010, 'current': 2014}
+    bus_years = {
+        'base':    2015,
+        'current': 2016
+    }
 
     centroid_ranges = {
-        'CBD'    : range(   1,   48),  # NB. range(i,j) includes i & excludes j
+        'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
         'Chicago': range(   1,  310),
-        'Cook'   : range(   1,  855),
+        'Cook':    range(   1,  855),
         'McHenry': range( 855,  959),
-        'Lake'   : range( 959, 1134),
-        'Kane'   : range(1134, 1279),
-        'DuPage' : range(1279, 1503),
-        'Will'   : range(1503, 1691),
+        'Lake':    range( 959, 1134),
+        'Kane':    range(1134, 1279),
+        'DuPage':  range(1279, 1503),
+        'Will':    range(1503, 1691),
         'Kendall': range(1691, 1712),
-        'CMAP'   : range(   1, 1712),
-        'MHN'    : range(   1, 1962),
-        'POE'    : range(1945, 1962)
+        'CMAP':    range(   1, 1712),
+        'MHN':     range(   1, 1962),
+        'POE':     range(1945, 1962)
     }
+
+    min_node_id =  5001  # 1-5000 reserved for zone centroids/POEs
+    max_node_id = 29999  # 30000+ reserved for MRN nodes
 
     min_poe = min(centroid_ranges['POE'])
     max_poe = max(centroid_ranges['POE'])
@@ -44,7 +50,7 @@ class MasterHighwayNetwork(object):
     scenario_years = {
         '100': 2010,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
         '200': 2015,
-        '300': 2020,  # No longer in use for conformity, as of C13Q3
+        '300': 2020,
         '400': 2025,
         '500': 2030,
         '600': 2040
@@ -54,21 +60,21 @@ class MasterHighwayNetwork(object):
     max_year = max(year for scen, year in scenario_years.items())
 
     tod_periods = {
-        '1' : ('8PM-6AM',                                   # 1: overnight
+        '1':  ('8PM-6AM',                                   # 1: overnight
                '"STARTHOUR" >= 20 OR "STARTHOUR" <= 5'),
-        '2' : ('6AM-7AM',                                   # 2: AM shoulder 1
+        '2':  ('6AM-7AM',                                   # 2: AM shoulder 1
                '"STARTHOUR" = 6'),
-        '3' : ('7AM-9AM',                                   # 3: AM peak
+        '3':  ('7AM-9AM',                                   # 3: AM peak
                '"STARTHOUR" IN (7, 8)'),
-        '4' : ('9AM-10AM',                                  # 4: AM shoulder 2
+        '4':  ('9AM-10AM',                                  # 4: AM shoulder 2
                '"STARTHOUR" = 9'),
-        '5' : ('10AM-2PM',                                  # 5: midday
+        '5':  ('10AM-2PM',                                  # 5: midday
                '"STARTHOUR" >= 10 AND "STARTHOUR" <= 13'),
-        '6' : ('2PM-4PM',                                   # 6: PM shoulder 1
+        '6':  ('2PM-4PM',                                   # 6: PM shoulder 1
                '"STARTHOUR" IN (14, 15)'),
-        '7' : ('4PM-6PM',                                   # 7: PM peak
+        '7':  ('4PM-6PM',                                   # 7: PM peak
                '"STARTHOUR" IN (16, 17)'),
-        '8' : ('6PM-8PM',                                   # 8: PM shoulder 2
+        '8':  ('6PM-8PM',                                   # 8: PM shoulder 2
                '"STARTHOUR" IN (18, 19)'),
         'am': ('7AM-9AM',                                   # am: Same as TOD 3, but for buses w/ >50% service in period
                '"AM_SHARE" >= 0.5')
@@ -138,7 +144,7 @@ class MasterHighwayNetwork(object):
 
 
     def __init__(self, mhn_gdb_path, zone_gdb_path=None):
-        arcpy.env.OverwriteOutput = True
+        arcpy.env.overwriteOutput = True
 
         # -----------------------------------------------------------------------------
         #  SET GDB-SPECIFIC VARIABLES

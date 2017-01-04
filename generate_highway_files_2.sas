@@ -1,7 +1,7 @@
 /*
     generate_highway_files_2.sas
-    Authors: cheither, npeterson & tschmidt
-    Revised: 5/21/15
+    Authors: cheither, npeterson, nferguson & tschmidt
+    Revised: 9/10/15
     ---------------------------------------------------------------------------
     Program uses base conditions and project data from the MHN to build Emme
     scenario highway networks. Emme batchin files are the output of this
@@ -15,6 +15,7 @@ options pagesize=50 linesize=125;
 %let scen = %scan(&sysparm, 2, $);
 %let maxz = %scan(&sysparm, 3, $);
 %let baseyr = %scan(&sysparm, 4, $);
+%let abm = %scan(&sysparm, 5, $);
 
 /* ------------------------------------------------------------------------------ */
 *** INPUT FILES ***;
@@ -272,17 +273,25 @@ filename in4 "&dir.\&scen.\nodes.csv";
         ** Codes not listed below are TOD-specific, assigned later. **;
         ** Edit by TSchmidt & NPeterson 5/21/14 **;
         if trkres in (1, 18)
-           then mode = 'ASH';  ** No trucks;
+            then mode = 'ASH';  ** No trucks;
         else if trkres in (2:4, 9:11, 13, 25:26, 35, 37)
-             then mode = 'ASHTb';  ** No trucks except B-plates;
+            then mode = 'ASHTb';  ** No trucks except B-plates;
         else if trkres in (7:8, 14, 16:17, 19, 27, 29, 31, 34, 38:47, 49)
-             then mode = 'ASHTlb';  ** No medium or heavy trucks;
+            then mode = 'ASHTlb';  ** No medium or heavy trucks;
         else if trkres in (5, 30, 48)
-             then mode = 'ASHTmlb';  ** No heavy trucks;
-        /* else if trkres in (6, 15, 20, 22:24, 28, 32:33, 36)
-             then mode = 'ASHThmlb'; */ ** Already set implicitly by modes=2 **;
+            then mode = 'ASHTmlb';  ** No heavy trucks;
+        /*else if trkres in (6, 15, 20, 22:24, 28, 32:33, 36)
+             then mode = 'ASHThmlb';*/ ** Already set implicitly by modes=2 **;
 
         if blvd = 1 then mode = 'ASH';  ** No trucks. Trumps trkres codes;
+        
+        ** Vertical clearance restrictions added 9/9/15 by NFerguson **;
+        if 0 < vertclrn < 162
+            then mode = compress(mode, 'h'); ** Minimum 13'6" clearance for heavy trucks;
+        if 0 < vertclrn < 150
+            then mode = compress(mode, 'm'); ** Minimum 12'6" clearance for medium trucks;
+        if 0 < vertclrn < 138
+            then mode = compress(mode, 'l'); ** Minimum 11'6" clearance for light trucks;
 
         proc sort; by anode bnode;
 
@@ -465,7 +474,7 @@ data coord; infile in4 dlm=',' dsd firstobs=2;
     ** UPDATE TIME-OF-DAY TRUCK RESTRICTIONS **;
     ** Edit by TSchmidt 9/12/2014 **;
     data links&tod; set links&tod;
-        if &tod = 1 then do;	**-- Currently only overnight restrictions --**;
+        if &tod = 1 then do;    **-- Currently only overnight restrictions --**;
             if trkres in (21)
                 then mode = 'ASH';  ** No trucks;
             else if trkres in (12)
@@ -701,5 +710,23 @@ data links; set network2(where=(ampm1 not in (2,4)));
 %report(7)  ** pm peak **;        run;
 %output(8)  ** post-shoulder **;  run;
 %report(8)  ** post-shoulder **;  run;
+
+*--------------------------------------------------;
+  ** WRITE ANY ABM FILES, IF DESIRED **;
+*--------------------------------------------------;
+%macro writeabm;
+    %if &abm = 1 %then %do;
+        
+        * Generate toll file;
+        filename out6 "&dir.\&scen.\toll";
+        data toll (keep=anode bnode toll); set network;
+            label anode='inode'
+                  bnode='jnode'
+                  toll='@toll';
+            proc export outfile=out6 dbms=csv label replace;
+        
+        %end;
+    %mend writeabm;
+%writeabm
 
 run;

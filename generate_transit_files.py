@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 6/30/15
+    Revised: 12/20/16
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -33,7 +33,7 @@ mhn_gdb_path = arcpy.GetParameterAsText(0)          # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
 scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
 root_path = arcpy.GetParameterAsText(2)             # String, no default
-ct_ramp = arcpy.GetParameter(3)                     # Boolean, default = False
+abm_output = arcpy.GetParameter(3)                  # Boolean, default = False
 
 out_tod_periods = sorted(MHN.tod_periods.keys())
 
@@ -111,9 +111,9 @@ bus_fc_dict = {MHN.bus_base: 'base',
                MHN.bus_current: 'current'}
 
 # Remove base or current from bus_fc_dict, if not used for specified scenarios.
-if not any(MHN.scenario_years[scen] <= MHN.bus_years['base'] for scen in scen_list):
+if not any(MHN.scenario_years[scen] < MHN.bus_years['current'] for scen in scen_list):
     del bus_fc_dict[MHN.bus_base]
-if not any(MHN.scenario_years[scen] > MHN.bus_years['base'] for scen in scen_list):
+if not any(MHN.scenario_years[scen] >= MHN.bus_years['current'] for scen in scen_list):
     del bus_fc_dict[MHN.bus_current]
 
 # Identify representative runs for bus_base and/or bus_current, as relevant.
@@ -203,7 +203,7 @@ if any(MHN.scenario_years[scen] > MHN.base_year for scen in scen_list):
 for scen in scen_list:
     # Set scenario-specific parameters.
     scen_year = MHN.scenario_years[scen]
-    if scen_year <= MHN.bus_years['base']:
+    if scen_year < MHN.bus_years['current']:
         bus_fc = MHN.bus_base
         which_bus = 'base'
     else:
@@ -237,6 +237,7 @@ for scen in scen_list:
         cta_stop = os.path.join(scen_tran_path, 'ctastop.pnt')
         metra_stop = os.path.join(scen_tran_path, 'metrastop.pnt')
         itin_final = os.path.join(scen_tran_path, 'itin.final')
+        rail_access = os.path.join(scen_tran_path, 'railaccess.txt')
 
         if tod == 'am':  # Use TOD 3 highways for AM transit
             hwy_l1 = os.path.join(scen_hwy_path, '{0}03.l1'.format(scen))
@@ -254,7 +255,9 @@ for scen in scen_list:
 
         # Export table of Park-n-Ride nodes
         pnr_view = 'pnr_view'
-        MHN.make_skinny_table_view(MHN.pnr, pnr_view, ['NODE', 'COST', 'SPACES'])
+        pnr_fields = ['NODE', 'COST', 'SPACES', 'SCENARIO']
+        pnr_sql = ''' "SCENARIO" LIKE '%{0}%' '''.format(scen[0])
+        MHN.make_skinny_table_view(MHN.pnr, pnr_view, pnr_fields, pnr_sql)
         pnr_csv = os.path.join(scen_tran_path, 'pnr.csv')
         MHN.write_attribute_csv(pnr_view, pnr_csv)
 
@@ -270,7 +273,7 @@ for scen in scen_list:
         arcpy.Delete_management(bus_lyr)
 
         # Export header info of representative bus runs in current TOD.
-        if ct_ramp:
+        if abm_output:
             rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'CT_VEH', 'SPEED', 'GROUP_HEADWAY']  # CT_VEH instead of VEHICLE_TYPE
         else:
             rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'GROUP_HEADWAY']
@@ -298,7 +301,10 @@ for scen in scen_list:
             bus_future_lyr = 'future_lyr'
             arcpy.MakeFeatureLayer_management(MHN.bus_future, bus_future_lyr)
             bus_future_id_field = MHN.route_systems[MHN.bus_future][1]
-            bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
+            if abm_output:
+                bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'CT_VEH', 'SPEED', 'HEADWAY']  # CT_VEH instead of VEHICLE_TYPE
+            else:
+                bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
             bus_future_query = ''' "SCENARIO" LIKE '%{0}%' '''.format(scen[0])  # SCENARIO field contains first character of applicable scenario codes
             bus_future_view = MHN.make_skinny_table_view(bus_future_lyr, 'bus_future_view', bus_future_attr, bus_future_query)
             bus_future_csv = os.path.join(scen_tran_path, 'bus_future.csv')
@@ -484,11 +490,12 @@ for scen in scen_list:
         # ---------------------------------------------------------------------
         # Generate rail stop data from rail batchin files.
         # ---------------------------------------------------------------------
-        def generate_rail_pnt_files(itin_batchin, ntwk_batchin, cta_pnt, metra_pnt):
+        def generate_rail_pnt_files(itin_batchin, ntwk_batchin, cta_pnt, metra_pnt, rail_acc):
 
             # Read in rail network node coordinates
             node_coords = {}
 
+            acc_w = open(rail_acc, 'wb')
             with open(ntwk_batchin, 'rb') as network:
                 section = ''
 
@@ -507,6 +514,17 @@ for scen in scen_list:
                         x = float(attr[2])
                         y = float(attr[3])
                         node_coords[node] = (x, y)
+
+                    # Save hardcoded rail access links to a file
+                    elif section == 'links' and attr[0] == 'a':
+                        anode = attr[1]
+                        bnode = attr[2]
+                        mode = attr[4]
+                        if mode in ('v', 'y', 'w', 'z'):
+                            acc_w.write('{0},{1},{2}\n'.format(anode, bnode, mode))
+
+            acc_w.close()
+
 
             # Determine rail network nodes that serve as stops for CTA/Metra
             cta_stops = set()
@@ -562,7 +580,7 @@ for scen in scen_list:
 
             return None
 
-        generate_rail_pnt_files(rail_itin, rail_net, cta_stop, metra_stop)
+        generate_rail_pnt_files(rail_itin, rail_net, cta_stop, metra_stop, rail_access)
 
 
         # ---------------------------------------------------------------------
@@ -731,8 +749,10 @@ for scen in scen_list:
             os.remove(c2z_txt)
             os.remove(mz_txt)
             os.remove(itin_final)
+            os.remove(rail_access)
 
         ### End of TOD loop ###
+
 
     # -------------------------------------------------------------------------
     # Merge scenario highway and rail linkshape files into linkshape_X00.in.
@@ -762,6 +782,91 @@ for scen in scen_list:
     w.close()
 
     ### End of scenario loop ###
+
+
+# -------------------------------------------------------------------------
+# Create additional ABM inputs, if desired.
+# -------------------------------------------------------------------------
+def get_line_ids_from_itin(itin):
+    ''' Parse an itinerary batchin file to obtain line IDs. '''
+    line_ids = set()
+    with open(itin, 'rb') as r:
+        for line in r:
+            # Lines starting with "a" contain header info
+            if line.startswith('a'):
+                attr = line.strip().split()
+                line_id = attr[1].replace("'", "")
+                line_ids.add(line_id)
+    return line_ids
+
+def get_scen_line_ids():
+    ''' Read each of the time-of-day itinerary files to identify each
+        line modeled in all scenarios. '''
+    line_ids = set()
+    for scen in scen_list:
+        scen_tran_path = os.path.join(tran_path, scen)
+        for tod in out_tod_periods:
+            bus = os.path.join(scen_tran_path, 'bus.itinerary_{0}'.format(tod))
+            rail = os.path.join(scen_tran_path, 'rail.itinerary_{0}'.format(tod))
+            line_ids.update(get_line_ids_from_itin(bus))
+            line_ids.update(get_line_ids_from_itin(rail))
+    return line_ids
+
+if abm_output:
+    arcpy.AddMessage('\nGenerating ABM input files...')
+
+    easeb_csv = os.path.join(tran_path, 'boarding_ease_by_line_id.csv')
+    prof_csv = os.path.join(tran_path, 'productivity_bonus_by_line_id.csv')
+    relim_csv = os.path.join(tran_path, 'relim_by_line_id.csv')
+
+    scen_line_ids = get_scen_line_ids()
+
+    # Ease of boarding CSV
+    with open(easeb_csv, 'wb') as w:
+        w.write('tline,@easeb\n')
+        for line_id in sorted(scen_line_ids):
+
+            # @easeb = 3 (level boarding) for CTA rail and Metra Electric/South Shore
+            if line_id[0] == 'c' or line_id[:3] in ('mme', 'mss'):
+                w.write('{0},3.0\n'.format(line_id))
+
+            # @easeb = 2 (kneeling) for buses
+            elif line_id[0] in ('b', 'e', 'l', 'p', 'q'):
+                w.write('{0},2.0\n'.format(line_id))
+
+            # @easeb = 1 (stairs) for remaining Metra lines
+            else:
+                w.write('{0},1.0\n'.format(line_id))
+
+    # Productivity bonus (by user class) CSV
+    with open(prof_csv, 'wb') as w:
+        w.write('tline,@prof1,@prof2,@prof3\n')
+        for line_id in sorted(scen_line_ids):
+
+            # Local bus productivity bonus (0, 0, 0)
+            if line_id[0] in ('b', 'p', 'l'):
+                w.write('{0},0.0,0.0,0.0\n'.format(line_id))
+
+            # Express bus productivity bonus (-0.05, -0.1, -0.1)
+            elif line_id[0] in ('e', 'q'):
+                w.write('{0},-0.05,-0.1,-0.1\n'.format(line_id))
+
+            # CTA rail productivity bonus (0, 0, 0)
+            elif line_id[0] == 'c':
+                w.write('{0},0.0,0.0,0.0\n'.format(line_id))
+
+            # Metra productivity bonus (-0.05, -0.1, -0.25)
+            else:
+                w.write('{0},-0.05,-0.1,-0.25\n'.format(line_id))
+
+    # Reliability impact CSV
+    with open(relim_csv, 'wb') as w:
+        w.write('tline,@relim\n')
+        for line_id in sorted(scen_line_ids):
+
+            # @relim = 1.0 for all lines
+            w.write('{0},1.0\n'.format(line_id))
+
 
 # -----------------------------------------------------------------------------
 #  Clean up script-level data.

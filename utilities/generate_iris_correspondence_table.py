@@ -2,7 +2,7 @@
 '''
     generate_iris_correspondence_table.py
     Author: npeterson
-    Revised: 9/2/2014
+    Revised: 9/22/2015
     ---------------------------------------------------------------------------
     Generate an "mhn2iris" correspondence table from the current MHN. Useful
     after extensive geometric updates or network expansion.
@@ -120,7 +120,10 @@ illinois_lyr = MHN.make_skinny_feature_layer(MHN.zone, 'illinois_lyr', il_zones_
 # Select IRIS links intersecting Illinois zones
 arcpy.AddMessage('Selecting IRIS links in Illinois modeling zones...')
 iris_mem_fc = os.path.join(MHN.mem, 'iris')
-iris_keep_fields = [iris_id_field, 'ROAD_NAME', 'MARKED_RT', 'MARKED_RT2', 'FCNAME']
+iris_keep_fields = [
+    iris_id_field, 'ROAD_NAME', 'MARKED_RT', 'MARKED_RT2', 'FCNAME', 'INVENTORY',
+    'BEG_STA', 'END_STA'
+]
 iris_lyr = MHN.make_skinny_feature_layer(iris_fc, 'iris_lyr', iris_keep_fields)
 arcpy.CopyFeatures_management(iris_lyr, iris_mem_fc)
 iris_mem_lyr = 'iris_mem_lyr'
@@ -217,9 +220,12 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
             mhn_attr_dict[row[0]]['LENGTH'] = row[1]
 
     matched_iris_ids = set([str(row[0]) for row in arcpy.da.SearchCursor(near_freq_table, [near_iris_field])])
-    iris_clip_lyr = MHN.make_skinny_feature_layer(iris_subset_fc, 'iris_clip_lyr', ['ROAD_NAME', 'MARKED_RT', 'MARKED_RT2'])
+    iris_fields = [
+        'ROAD_NAME', 'MARKED_RT', 'MARKED_RT2', 'INVENTORY', 'BEG_STA', 'END_STA'
+    ]
+    iris_clip_lyr = MHN.make_skinny_feature_layer(iris_subset_fc, 'iris_clip_lyr', iris_fields)
     arcpy.SelectLayerByAttribute_management(iris_clip_lyr, 'NEW_SELECTION', ''' "{0}" IN ({1}) '''.format(iris_id_field, ','.join(matched_iris_ids)))
-    iris_attr_dict = MHN.make_attribute_dict(iris_clip_lyr, iris_id_field, ['ROAD_NAME', 'MARKED_RT', 'MARKED_RT2'])
+    iris_attr_dict = MHN.make_attribute_dict(iris_clip_lyr, iris_id_field, iris_fields)
 
     # Create the match dictionary
     match_dict = {}
@@ -234,6 +240,10 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
             iris_rte = clean_rte(iris_attr_dict[iris_id]['MARKED_RT'])
             iris_rte2 = clean_rte(iris_attr_dict[iris_id]['MARKED_RT2'])
             iris_combo = '{0} {1} {2}'.format(iris_rte, iris_rte2, iris_name).strip()
+            iris_inv = iris_attr_dict[iris_id]['INVENTORY'].strip()
+            start_mp = round(iris_attr_dict[iris_id]['BEG_STA'], 2)
+            end_mp = round(iris_attr_dict[iris_id]['END_STA'], 2)
+            iris_id2 = '{0}-{1}-{2}'.format(iris_inv, start_mp, end_mp)
 
             # Score names on similarity, ignoring non-"lower" matches (e.g. Lower Wacker Dr)
             if 'LOWER' not in mhn_name.split() and 'LOWER' in iris_name.split():
@@ -253,32 +263,37 @@ def match_subset_of_links(mhn_vertices_lyr, iris_vertices_lyr, ignore_names=Fals
             else:
                 arc_min_freq = subset_min_match_count
 
+            # Construct potential match's attribute tuple
+            attr = (
+                iris_id, freq, fuzz_score, mhn_name, iris_combo, iris_id2
+            )
+
             # Make initial match if min match count and fuzz_score are okay
             if mhn_id not in match_dict:
                 if freq >= arc_min_freq:
 
                     # Give the benefit of the doubt when ignoring names or either is unnamed
                     if ignore_names or not (mhn_name and iris_combo):
-                        match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
+                        match_dict[mhn_id] = attr
 
                     # Otherwise only match if fuzz_score is above minimum threshold
                     elif fuzz_score > min_fuzz_score:
-                        match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
+                        match_dict[mhn_id] = attr
 
             # Consider replacing match if new match count is at least as high
             elif freq > match_dict[mhn_id][1]:
 
                 # Give the benefit of the doubt when ignoring names or either is unnamed
                 if ignore_names or not (iris_combo and mhn_name):
-                    match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
+                    match_dict[mhn_id] = attr
 
                 # Otherwise only match if fuzz_score is better (and above minimum threshold)
                 elif fuzz_score > max(min_fuzz_score, match_dict[mhn_id][2]):
-                    match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
+                    match_dict[mhn_id] = attr
 
             elif freq == match_dict[mhn_id][1]:
                 if fuzz_score > max(min_fuzz_score, match_dict[mhn_id][2]):
-                    match_dict[mhn_id] = (iris_id, freq, fuzz_score, mhn_name, iris_combo)
+                    match_dict[mhn_id] = attr
 
     return match_dict
 
@@ -334,8 +349,10 @@ arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_blvd_vertices_lyr, mhn_bl
 iris_arts_vertices_lyr = 'iris_arts_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_arts_vertices_lyr, iris_arts_qry)
 
-blvd_near_distance = max(near_distance, 200)  # Greater distance to capture both directions (IRIS only has one side)
-blvd_match_dict = match_subset_of_links(mhn_blvd_vertices_lyr, iris_arts_vertices_lyr, subset_near_distance=blvd_near_distance)
+blvd_match_dict = match_subset_of_links(
+    mhn_blvd_vertices_lyr, iris_arts_vertices_lyr,
+    subset_near_distance=max(near_distance, 200),  # Greater distance to capture both directions (IRIS only has one side)
+)
 
 
 # -- REMAINING ARTERIALS --
@@ -344,7 +361,9 @@ arcpy.AddMessage('\nMatching IRIS arterials to remaining MHN arterials...')
 mhn_arts_vertices_lyr = 'mhn_arts_vertices_lyr'
 arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_arts_vertices_lyr, mhn_arts_qry)
 
-arts_match_dict = match_subset_of_links(mhn_arts_vertices_lyr, iris_arts_vertices_lyr)
+arts_match_dict = match_subset_of_links(
+    mhn_arts_vertices_lyr, iris_arts_vertices_lyr
+)
 
 
 # -- RAMPS --
@@ -356,8 +375,11 @@ arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_ramp_vertices_lyr, mhn_ra
 iris_ramp_vertices_lyr = 'iris_ramp_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_ramp_vertices_lyr, iris_ramp_qry)
 
-ramp_min_match_count = max(min_match_count, 20)  # Require more matches to compensate lack of name-matching
-ramp_match_dict = match_subset_of_links(mhn_ramp_vertices_lyr, iris_ramp_vertices_lyr, ignore_names=True, subset_min_match_count=ramp_min_match_count)
+ramp_match_dict = match_subset_of_links(
+    mhn_ramp_vertices_lyr, iris_ramp_vertices_lyr,
+    ignore_names=True,
+    subset_min_match_count=max(min_match_count, 20),  # Require more matches to compensate lack of name-matching
+)
 
 
 # -- EXPRESSWAYS --
@@ -369,9 +391,12 @@ arcpy.MakeFeatureLayer_management(mhn_vertices_fc, mhn_expy_vertices_lyr, mhn_ex
 iris_expy_vertices_lyr = 'iris_expy_vertices_lyr'
 arcpy.MakeFeatureLayer_management(iris_vertices_fc, iris_expy_vertices_lyr, iris_expy_qry)
 
-expy_near_distance = max(near_distance, 250)  # Greater distance to capture both directions (IRIS only has one side)
-expy_min_match_count = max(min_match_count, 20)  # Require more matches to compensate lack of name-matching
-expy_match_dict = match_subset_of_links(mhn_expy_vertices_lyr, iris_expy_vertices_lyr, ignore_names=True, subset_near_distance=expy_near_distance, subset_min_match_count=expy_min_match_count)
+expy_match_dict = match_subset_of_links(
+    mhn_expy_vertices_lyr, iris_expy_vertices_lyr,
+    ignore_names=True,
+    subset_near_distance=max(near_distance, 250),  # Greater distance to capture both directions (IRIS only has one side)
+    subset_min_match_count=max(min_match_count, 20),  # Require more matches to compensate lack of name-matching
+)
 
 
 # -----------------------------------------------------------------------------
@@ -389,25 +414,31 @@ arcpy.AddField_management(match_table, 'FREQUENCY', 'LONG')
 arcpy.AddField_management(match_table, 'FUZZ_SCORE', 'LONG')
 arcpy.AddField_management(match_table, 'MHN_NAME', 'TEXT', field_length=50)
 arcpy.AddField_management(match_table, 'IRIS_NAME', 'TEXT', field_length=50)
+arcpy.AddField_management(match_table, 'IRIS_ID', 'TEXT', field_length=30)
+arcpy.AddField_management(match_table, 'SUBSET', 'TEXT', field_length=20)
 
 # Insert matches from each dict into table.
-with arcpy.da.InsertCursor(match_table, [match_mhn_field, match_iris_field, 'FREQUENCY', 'FUZZ_SCORE', 'MHN_NAME', 'IRIS_NAME']) as cursor:
+match_fields = [
+    match_mhn_field, match_iris_field, 'FREQUENCY', 'FUZZ_SCORE', 'MHN_NAME',
+    'IRIS_NAME', 'IRIS_ID', 'SUBSET'
+]
+with arcpy.da.InsertCursor(match_table, match_fields) as cursor:
 
     # 1. Insert boulevard/divided arterial matches:
     for mhn_id in blvd_match_dict.keys():
-        cursor.insertRow([mhn_id] + list(blvd_match_dict[mhn_id]))
+        cursor.insertRow([mhn_id] + list(blvd_match_dict[mhn_id]) + ['BOULEVARD'])
 
     # 2. Insert other arterial matches:
     for mhn_id in arts_match_dict.keys():
-        cursor.insertRow([mhn_id] + list(arts_match_dict[mhn_id]))
+        cursor.insertRow([mhn_id] + list(arts_match_dict[mhn_id]) + ['ARTERIAL'])
 
     # 3. Insert ramp matches:
     for mhn_id in ramp_match_dict.keys():
-        cursor.insertRow([mhn_id] + list(ramp_match_dict[mhn_id]))
+        cursor.insertRow([mhn_id] + list(ramp_match_dict[mhn_id]) + ['RAMP'])
 
     # 4. Insert expressway matches:
     for mhn_id in expy_match_dict.keys():
-        cursor.insertRow([mhn_id] + list(expy_match_dict[mhn_id]))
+        cursor.insertRow([mhn_id] + list(expy_match_dict[mhn_id]) + ['EXPRESSWAY'])
 
 table_name = table_name.format(MHN.timestamp('%Y%m%d'))
 output_table = arcpy.TableToTable_conversion(match_table, out_workspace, table_name)

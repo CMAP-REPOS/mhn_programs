@@ -1,7 +1,7 @@
 /*
    import_gtfs_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 8/3/15
+   revised: 12/16/16
    ----------------------------------------------------------------------------
    Program is called by import_gtfs_bus_routes.py & formats bus itineraries
    to build with arcpy.
@@ -370,7 +370,10 @@ data last(keep=newline arr_time); set pace; by newline order;
     if last.newline;
 data chk; merge first last; by newline;
     if dep_time=arr_time;
-data _null_; set chk nobs=tmfix; call symput('timefix', left(put(tmfix, 8.))); run;
+proc sql noprint;
+    select count(*) into :timefix from work.chk;
+    quit;
+run;
 
 %macro sametime;
     %if &timefix > 0 %then %do;
