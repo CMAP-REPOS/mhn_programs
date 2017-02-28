@@ -1,7 +1,7 @@
 /*
     generate_highway_files_2.sas
     Authors: cheither, npeterson, nferguson & tschmidt
-    Revised: 9/10/15
+    Revised: 2/27/17
     ---------------------------------------------------------------------------
     Program uses base conditions and project data from the MHN to build Emme
     scenario highway networks. Emme batchin files are the output of this
@@ -245,10 +245,12 @@ filename in4 "&dir.\&scen.\nodes.csv";
     data network; update network delete; by abb;
         if action = 3 then delete;
 
+    /*
     *** -- Update toll values to January 2012 rates -- ***;
     %if &scen > 100 %then %do;
         toll = round(toll * 1.875, 0.05);
     %end;
+    */
 
     *** -- Revert max speed limit to 65 MPH for pre-2014 scenarios -- ***;
     %if &scen = 100 %then %do;
@@ -284,7 +286,7 @@ filename in4 "&dir.\&scen.\nodes.csv";
              then mode = 'ASHThmlb';*/ ** Already set implicitly by modes=2 **;
 
         if blvd = 1 then mode = 'ASH';  ** No trucks. Trumps trkres codes;
-        
+
         ** Vertical clearance restrictions added 9/9/15 by NFerguson **;
         if 0 < vertclrn < 162
             then mode = compress(mode, 'h'); ** Minimum 13'6" clearance for heavy trucks;
@@ -716,7 +718,7 @@ data links; set network2(where=(ampm1 not in (2,4)));
 *--------------------------------------------------;
 %macro writeabm;
     %if &abm = 1 %then %do;
-        
+
         * Generate toll file;
         filename out6 "&dir.\&scen.\toll";
         data toll (keep=anode bnode toll); set network;
@@ -724,7 +726,7 @@ data links; set network2(where=(ampm1 not in (2,4)));
                   bnode='jnode'
                   toll='@toll';
             proc export outfile=out6 dbms=csv label replace;
-        
+
         %end;
     %mend writeabm;
 %writeabm
