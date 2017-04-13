@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 12/19/16
+    Revised: 4/13/17
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -146,7 +146,7 @@ arcpy.MakeFeatureLayer_management(new_nodes_NODE, new_nodes_NODE_lyr)
 # -----------------------------------------------------------------------------
 #  Determine the current highest NODE value.
 # -----------------------------------------------------------------------------
-valid_node_ids = set(xrange(MHN.min_node_id, MHN.max_node_id + 1))
+valid_node_ids = set(range(MHN.min_node_id, MHN.max_node_id + 1))
 taken_node_ids = set(r[0] for r in arcpy.da.SearchCursor(new_nodes_NODE, ['NODE']))
 available_node_ids = sorted(valid_node_ids - taken_node_ids)
 if len(available_node_ids) == 0:
