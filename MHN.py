@@ -27,18 +27,18 @@ class MasterHighwayNetwork(object):
     }
 
     centroid_ranges = {
-        'CBD'    : range(   1,   48),  # NB. range(i,j) includes i & excludes j
+        'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
         'Chicago': range(   1,  310),
-        'Cook'   : range(   1,  855),
+        'Cook':    range(   1,  855),
         'McHenry': range( 855,  959),
-        'Lake'   : range( 959, 1134),
-        'Kane'   : range(1134, 1279),
-        'DuPage' : range(1279, 1503),
-        'Will'   : range(1503, 1691),
+        'Lake':    range( 959, 1134),
+        'Kane':    range(1134, 1279),
+        'DuPage':  range(1279, 1503),
+        'Will':    range(1503, 1691),
         'Kendall': range(1691, 1712),
-        'CMAP'   : range(   1, 1712),
-        'MHN'    : range(   1, 1962),
-        'POE'    : range(1945, 1962)
+        'CMAP':    range(   1, 1712),
+        'MHN':     range(   1, 1962),
+        'POE':     range(1945, 1962)
     }
 
     min_node_id =  5001  # 1-5000 reserved for zone centroids/POEs
