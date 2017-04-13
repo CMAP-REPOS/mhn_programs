@@ -11,7 +11,7 @@
       route-id, linename, itin_a1-itin_b1-dwcode1, itin_a2-itin_b2-dwcode2, ...
 
 '''
-from __future__ import print_function
+from __future__ import print_function  # Keep in case system Python is 2.x
 import csv
 import os
 import sys

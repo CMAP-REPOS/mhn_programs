@@ -2,7 +2,7 @@
 '''
     shortest_path.py
     Authors: cheither & npeterson
-    Revised: 3/27/13
+    Revised: 4/13/17
     ---------------------------------------------------------------------------
     This script finds the shortest path between two nodes, using a network
     graph read in from a CSV. It is essentially a wrapper of the MHN module's
@@ -58,7 +58,7 @@ def find_shortest_path(graph, start, end):
             if node == end:
                 return p_cost, path
             if node in graph.keys():
-                for (b_node, b_cost) in graph[node].iteritems():
+                for (b_node, b_cost) in graph[node].items():
                     heapq.heappush(queue, (p_cost + b_cost, b_node, path))
 
 graph = {}
