@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 8/21/15
+    Revised: 4/18/17
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -75,7 +75,7 @@ if abm_output:
         out_attr = ['NODE', MHN.zone_attr, MHN.subzone_attr]
         node_lyr = 'node_lyr'
         MHN.make_skinny_table_view(MHN.node, node_lyr, out_attr)
-        with open(out_csv, 'wb') as w:
+        with open(out_csv, 'wt') as w:
             w.write('node,zone09,subzone09\n')
             with arcpy.da.SearchCursor(node_lyr, out_attr, sql_clause=(None, 'ORDER BY NODE')) as c:
                 for r in c:
