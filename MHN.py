@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 12/20/16
+    Revised: 4/21/17
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -48,12 +48,21 @@ class MasterHighwayNetwork(object):
     max_poe = max(centroid_ranges['POE'])
 
     scenario_years = {
-        '100': 2010,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
-        '200': 2015,
-        '300': 2020,
-        '400': 2025,
-        '500': 2030,
-        '600': 2040
+        '100': 2015,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
+        '200': 2020,
+        '300': 2025,
+        '400': 2030,
+        '500': 2035,
+        '600': 2040,
+        '700': 2050,
+
+        ### Old codes (C17Q1 and earlier):
+        # '100': 2010,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
+        # '200': 2015,
+        # '300': 2020,
+        # '400': 2025,
+        # '500': 2030,
+        # '600': 2040,
     }
 
     min_year = min((year for scen, year in scenario_years.iteritems()))
