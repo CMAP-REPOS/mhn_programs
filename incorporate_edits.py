@@ -3,7 +3,6 @@
     incorporate_edits.py
     Author: npeterson
     Revised: 5/4/17
->>>>>>> xrange => range
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
