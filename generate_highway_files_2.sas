@@ -1,7 +1,7 @@
 /*
     generate_highway_files_2.sas
     Authors: cheither, npeterson, nferguson & tschmidt
-    Revised: 2/27/17
+    Revised: 4/24/17
     ---------------------------------------------------------------------------
     Program uses base conditions and project data from the MHN to build Emme
     scenario highway networks. Emme batchin files are the output of this
@@ -250,13 +250,13 @@ filename in4 "&dir.\&scen.\nodes.csv";
     %if &scen > 100 %then %do;
         toll = round(toll * 1.875, 0.05);
     %end;
-    */
 
     *** -- Revert max speed limit to 65 MPH for pre-2014 scenarios -- ***;
     %if &scen = 100 %then %do;
         posted1 = min(posted1, 65);
         posted2 = min(posted2, 65);
     %end;
+    */
 
     *- - - - - - - - - - -*;
      %skip: ;
