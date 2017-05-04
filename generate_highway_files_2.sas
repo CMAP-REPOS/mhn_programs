@@ -1,7 +1,7 @@
 /*
     generate_highway_files_2.sas
     Authors: cheither, npeterson, nferguson & tschmidt
-    Revised: 4/24/17
+    Revised: 5/4/17
     ---------------------------------------------------------------------------
     Program uses base conditions and project data from the MHN to build Emme
     scenario highway networks. Emme batchin files are the output of this
@@ -368,7 +368,7 @@ data check; set emme2;
 
 ** VERIFY THAT EACH TOLL LINK HAS A TOLL AMOUNT **;
 data check; set emme2;
-    if (type1 = 7 and toll = 0) or (type1 ^= 7 and toll > 0);
+    if type1 = 7 and toll = 0;
     proc print; var anode bnode type1 toll;
     title "SUSPICIOUS TOLL CHARGES";
 
@@ -481,6 +481,14 @@ data coord; infile in4 dlm=',' dsd firstobs=2;
                 then mode = 'ASH';  ** No trucks;
             else if trkres in (12)
                 then mode = 'ASHTb';  ** No trucks except B-plates;
+        end;
+        
+    ** UPDATE TOLL COST FOR DISTANCE-BASED TOLL LINKS **;
+    ** Edit by NPeterson 5/4/2017 **;
+    data links&tod; set links&tod;
+        if toll > 0 and type1 ^= 7 then do;
+            toll = toll * miles;
+            toll = round(toll, 0.01);
         end;
 
     ** ATTACH COORDINATES TO NETWORK NODES **;

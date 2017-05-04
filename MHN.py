@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 4/21/17
+    Revised: 5/4/17
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -302,16 +302,16 @@ class MasterHighwayNetwork(object):
 
 
     @staticmethod
-    def determine_arc_bearing(line_feature):
+    def determine_arc_bearing(line_geom):
         ''' Determines the cardinal direction of a single arc, determined from its
             two endpoints. The angle is determined by the atan2() function, and
             after some numeric manipulation is then used to select the correct
             cardinal direction from an ordered list of possibilities. '''
         from math import atan2, degrees, floor
-        x1 = line_feature.firstPoint.X
-        y1 = line_feature.firstPoint.Y
-        x2 = line_feature.lastPoint.X
-        y2 = line_feature.lastPoint.Y
+        x1 = line_geom.firstPoint.X
+        y1 = line_geom.firstPoint.Y
+        x2 = line_geom.lastPoint.X
+        y2 = line_geom.lastPoint.Y
         xdiff = x2 - x1
         ydiff = y2 - y1
         angle = degrees(atan2(ydiff, xdiff))
@@ -327,6 +327,20 @@ class MasterHighwayNetwork(object):
         describe = arcpy.Describe(fc)
         OID_name = describe.OIDFieldName
         return OID_name
+
+
+    @staticmethod
+    def determine_tolltype(vdf, cost):
+        ''' Automatically determine TOLLTYPE code, based on link's VDF and
+            toll cost. '''
+        if cost > 0:
+            if vdf == '7':
+                tolltype = '1'  # Fixed cost toll (i.e. toll plaza)
+            else:
+                tolltype = '2'  # Per-mile rate (i.e. distance-based tolling)
+        else:
+            tolltype = '0'  # N/A (not tolled)
+        return tolltype
 
 
     @staticmethod

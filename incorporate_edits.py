@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 12/19/16
+    Revised: 5/4/17
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -404,11 +404,21 @@ arcpy.AddMessage('-- Arc MILES field recalculated')
 with arcpy.da.UpdateCursor(temp_arcs, ['SHAPE@','BEARING']) as bearing_cursor:
     for arc in bearing_cursor:
         old_bearing = arc[1]
-        new_bearing = MHN.determine_arc_bearing(arc[0])
+        new_bearing = MHN.determine_arc_bearing(line_geom=arc[0])
         if new_bearing != old_bearing:
             arc[1] = new_bearing
             bearing_cursor.updateRow(arc)
 arcpy.AddMessage('-- Arc BEARING field recalculated')
+
+# Calculate arc TOLLTYPE values.
+with arcpy.da.UpdateCursor(temp_arcs, ['TOLLTYPE', 'TYPE1', 'TOLLDOLLARS']) as tolltype_cursor:
+    for arc in tolltype_cursor:
+        old_tolltype = arc[0]
+        new_tolltype = MHN.determine_tolltype(vdf=arc[1], cost=arc[2])
+        if new_tolltype != old_tolltype:
+            arc[0] = new_tolltype
+            tolltype_cursor.updateRow(arc)
+arcpy.AddMessage('-- Arc TOLLTYPE field recalculated')
 
 
 # -----------------------------------------------------------------------------
