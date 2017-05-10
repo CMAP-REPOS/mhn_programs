@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 4/18/17
+    Revised: 5/10/17
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -271,13 +271,23 @@ for scen in scen_list:
                     writer.write(' '.join(['r', fnode, tnode]) + '\n')
                     n = 0  # Before for-loop, will not be reset if an arc is multi-part for some reason
                     for part in arc:
-                        vertex = next(part)
+                        try:
+                            vertex = part.next()
+                        except:
+                            # Must be using ArcGIS Pro...
+                            vertex = next(part)
                         while vertex:
                             n += 1
                             writer.write(' '.join(['a', fnode, tnode, str(n), str(vertex.X), str(vertex.Y)]) + '\n')
-                            vertex = next(part)
-                            if not vertex:
+                            try:
+                                vertex = part.next()
+                            except:
                                 vertex = next(part)
+                            if not vertex:
+                                try:
+                                    vertex = part.next()
+                                except:
+                                    vertex = next(part)
             return None
 
         arcs_mem = os.path.join(MHN.mem, 'arcs')
