@@ -2,7 +2,7 @@
 '''
     import_highway_projects.py
     Author: npeterson
-    Revised: 3/1/17
+    Revised: 5/5/17
     ---------------------------------------------------------------------------
     Import highway project coding from an Excel spreadsheet. SAS can currently
     only handle .xls and not .xlsx.
@@ -112,7 +112,7 @@ for project_id in project_arcs.keys():
 
     # Set COMPLETION_YEAR, MCP_ID & RSP_ID to defaults, or existing values if applicable.
     completion_year = 9999  # default 9999 (i.e. not conformed)
-    mcp_id = ' '            # default blank (i.e. not an MCP)
+    mcp_id = None           # default NULL (i.e. not an MCP)
     rsp_id = None           # default NULL (i.e. not an RSP)
     existing_project_query = ''' "{0}" = '{1}' '''.format(common_id_field, project_id)
     existing_project_lyr = MHN.make_skinny_table_view(MHN.hwyproj, 'existing_project_lyr', ['COMPLETION_YEAR', 'MCP_ID', 'RSP_ID'], existing_project_query)
