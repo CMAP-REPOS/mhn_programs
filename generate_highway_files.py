@@ -231,7 +231,7 @@ for scen in scen_list:
                 mainline_lanemiles[ab] = lanemiles
 
     scen_mcp_tipids = {}
-    scen_mcp_query = ''' "COMPLETION_YEAR" <= {0} AND "MCP_ID" <> '' '''.format(scen_year)
+    scen_mcp_query = ''' "COMPLETION_YEAR" <= {0} AND "MCP_ID" IS NOT NULL '''.format(scen_year)
     with arcpy.da.SearchCursor(MHN.hwyproj, ['MCP_ID', hwyproj_id_field], scen_mcp_query) as c:
         for mcp_id, tipid in c:
             if mcp_id not in scen_mcp_tipids:
