@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 8/21/15
+    Revised: 5/11/17
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -165,7 +165,7 @@ for scen in scen_list:
     hwy_year_query = '"COMPLETION_YEAR" <= {0}'.format(scen_year)
     hwy_year_view = MHN.make_skinny_table_view(MHN.hwyproj, 'hwy_year_view', hwy_year_attr, hwy_year_query)
     MHN.write_attribute_csv(hwy_year_view, hwy_year_csv, hwy_year_attr)
-    hwy_projects = [r for r in arcpy.da.SearchCursor(hwy_year_view, [hwyproj_id_field, 'MCP_ID', 'COMPLETION_YEAR'])]
+    hwy_projects = [r for r in arcpy.da.SearchCursor(hwy_year_view, [hwyproj_id_field, 'COMPLETION_YEAR'])]
     arcpy.Delete_management(hwy_year_view)
 
     hwy_transact_attr = [
@@ -173,7 +173,7 @@ for scen in scen_list:
         'NEW_POSTEDSPEED2', 'NEW_THRULANES1', 'NEW_THRULANES2', 'NEW_THRULANEWIDTH1', 'NEW_THRULANEWIDTH2', 'ADD_PARKLANES1',
         'ADD_PARKLANES2', 'ADD_SIGIC', 'ADD_CLTL', 'ADD_RRGRADECROSS', 'NEW_TOLLDOLLARS', 'NEW_MODES', 'TOD', 'ABB', 'REP_ANODE', 'REP_BNODE'
     ]
-    hwy_transact_query = ''' "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id, mcp_id, comp_year in hwy_projects)))
+    hwy_transact_query = ''' "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id, comp_year in hwy_projects)))
     hwy_transact_view = MHN.make_skinny_table_view(MHN.route_systems[MHN.hwyproj][0], 'hwy_transact_view', hwy_transact_attr, hwy_transact_query)
     MHN.write_attribute_csv(hwy_transact_view, hwy_transact_csv, hwy_transact_attr)
     hwy_abb = [r[0] for r in arcpy.da.SearchCursor(hwy_transact_view, ['ABB'])]
@@ -219,7 +219,7 @@ for scen in scen_list:
         if abm_output:
             arcpy.AddMessage('-- Scenario {0} ABM toll file generated successfully.'.format(scen))
 
-    # Calculate scenario mainline links' AM Peak lane-miles, and create mcp_stats.txt.
+    # Calculate scenario mainline links' AM Peak lane-miles.
     scen_ampeak_l1 = os.path.join(scen_path, '{0}03.l1'.format(scen))
     mainline_lanemiles = {}
     with open(scen_ampeak_l1, 'r') as l1:
@@ -230,6 +230,7 @@ for scen in scen_list:
                 lanemiles = float(attr[3]) * int(attr[6])
                 mainline_lanemiles[ab] = lanemiles
 
+    # Create mcp_stats.txt.
     scen_mcp_tipids = {}
     scen_mcp_query = ''' "COMPLETION_YEAR" <= {0} AND "MCP_ID" IS NOT NULL '''.format(scen_year)
     with arcpy.da.SearchCursor(MHN.hwyproj, ['MCP_ID', hwyproj_id_field], scen_mcp_query) as c:
@@ -249,6 +250,27 @@ for scen in scen_list:
             w.write('{0},{1},{2}\n'.format(mcp_id, MHN.mcps[mcp_id], mcp_lanemiles))
 
     arcpy.AddMessage('-- Scenario {0} mcp_stats.csv generated successfully.'.format(scen))
+
+    # Create rsp_stats.txt.
+    scen_rsp_tipids = {}
+    scen_rsp_query = ''' "COMPLETION_YEAR" <= {0} AND "RSP_ID" IS NOT NULL '''.format(scen_year)
+    with arcpy.da.SearchCursor(MHN.hwyproj, ['RSP_ID', hwyproj_id_field], scen_rsp_query) as c:
+        for rsp_id, tipid in c:
+            if rsp_id not in scen_rsp_tipids:
+                scen_rsp_tipids[rsp_id] = set([tipid])
+            else:
+                scen_rsp_tipids[rsp_id].add(tipid)
+
+    rsp_stats = os.path.join(scen_path, 'rsp_stats.csv')
+    with open(rsp_stats, 'w') as w:
+        w.write('RSP_ID,RSP_NAME,MAINLINE_LANEMILES\n')
+        for rsp_id in sorted(scen_rsp_tipids.keys()):
+            rsp_query = ''' "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join(scen_rsp_tipids[rsp_id]))
+            rsp_ab = set((r[0].rsplit('-', 1)[0] for r in arcpy.da.SearchCursor(MHN.route_systems[MHN.hwyproj][0], ['ABB'], rsp_query)))
+            rsp_lanemiles = sum((mainline_lanemiles[ab] for ab in rsp_ab if ab in mainline_lanemiles))
+            w.write('{0},{1},{2}\n'.format(rsp_id, MHN.rsps[rsp_id], rsp_lanemiles))
+
+    arcpy.AddMessage('-- Scenario {0} rsp_stats.csv generated successfully.'.format(scen))
 
     # Create linkshape.in.
     def generate_linkshape(arcs, output_dir):
