@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 4/24/17
+    Revised: 5/12/17
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -494,7 +494,7 @@ for scen in scen_list:
             node_coords = {}
 
             acc_w = open(rail_acc, 'wt')
-            with open(ntwk_batchin, 'rb') as network:
+            with open(ntwk_batchin, 'rt') as network:
                 section = ''
 
                 for line in network:
@@ -528,7 +528,7 @@ for scen in scen_list:
             cta_stops = set()
             metra_stops = set()
 
-            with open(itin_batchin, 'rb') as itin:
+            with open(itin_batchin, 'rt') as itin:
                 vtype = ''
                 is_stop = True  # First node in file will be a stop
 
@@ -788,7 +788,7 @@ for scen in scen_list:
 def get_line_ids_from_itin(itin):
     ''' Parse an itinerary batchin file to obtain line IDs. '''
     line_ids = set()
-    with open(itin, 'rb') as r:
+    with open(itin, 'rt') as r:
         for line in r:
             # Lines starting with "a" contain header info
             if line.startswith('a'):
