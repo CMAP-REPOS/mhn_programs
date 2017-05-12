@@ -1,7 +1,7 @@
 /*
     generate_transit_files_2.sas
     authors: cheither & npeterson
-    revised: 12/13/16
+    revised: 5/12/17
     ----------------------------------------------------------------------------
     Program creates bus transit network batchin files. Bus transit network is
     built using a modified version of MHN processing procedures.
@@ -371,20 +371,18 @@ data _null_; set hold nobs=totobs;
             num = _n_;
         data temp; set short nobs=fixobs;
             call symput('totfix', left(put(fixobs, 8.))); run;
-        data _null_;
-            command = "if exist &pypath (del &pypath /Q)"; call system(command);
-            command = "ftype Python.File >> &pypath"; call system(command);
+        
+        x "if exist &pypath (del &pypath /Q)";
+        %let command = %nrstr(for %i in (python.exe) do @echo.%~$PATH:i);
+        x "&command >> &pypath"; run;
 
-        data null; infile "&pypath" length=reclen;
+        data null; infile "&pypath" length=reclen obs=1;
             input location $varying254. reclen;
-            loc = scan(location, 2, '=');
-            goodloc = substr(loc, 1, index(loc, '.exe"') + 4);
-            call symput('runpython', trim(goodloc)); run;
+            call symput('runpython', trim(location));
+            run;
 
-        data _null_;
-            command = "if exist &pypath (del &pypath /Q)" ; call system(command);
-        data _null_;
-            command = "if exist &shrtpath (del &shrtpath /Q)" ; call system(command);
+        x "if exist &pypath (del &pypath /Q)";
+        x "if exist &shrtpath (del &shrtpath /Q)";
 
         ** -- RUN PYTHON SCRIPT -- **;
         %do %while (&count <= &totfix);
@@ -425,8 +423,7 @@ data _null_; set hold nobs=totobs;
 
             data _null_;
                 %put a=&a b=&b;
-                command = "%bquote(&runpython) &progdir.\shortest_path.py &a &b &linkdict &shrtpath";
-                call system(command);
+                x "%str(%'&runpython.%') &progdir.\shortest_path.py &a &b &linkdict &shrtpath";
             %let count = %eval(&count + 1);
         %end;
 
