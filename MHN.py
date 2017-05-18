@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 5/11/17
+    Revised: 5/18/17
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -258,6 +258,7 @@ class MasterHighwayNetwork(object):
         143: "Modern Metra Electric",
         144: "S.M.A.R.T. - Suburban Metropolitan Area Rapid Transit",
         145: "Vollmer Rd",
+        146: "I-55 Managed Lane (Alternate)",
     }
 
 
@@ -619,14 +620,18 @@ class MasterHighwayNetwork(object):
     def submit_sas(self, sas_file, sas_log, sas_lst, arg_list=None):
         ''' Calls a specified SAS program with optional arguments specified in a
             $-separated string. '''
-        from subprocess import call
+        import subprocess
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+
         if not arg_list:
             arg_str = ''
         else:
             arg_str = '$'.join((str(arg) for arg in arg_list))
         bat = os.path.join(self.prog_dir, 'sasrun.bat')
         cmd = [bat, sas_file, arg_str, sas_log, sas_lst]
-        return call(cmd)
+        return subprocess.check_call(cmd, startupinfo=startupinfo)
 
 
     @staticmethod

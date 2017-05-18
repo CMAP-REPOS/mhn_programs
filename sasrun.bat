@@ -1,7 +1,7 @@
 @echo off
 ::  sasrun.bat
 ::  Author: cheither & npeterson
-::  Revised: 11/18/14
+::  Revised: 5/18/17
 ::  ---------------------------------------------------------------------------
 ::  This is called by various Python scripts to execute a specified SAS
 ::  program. SAS 9.4 path is hardcoded in order to send the appropriate SAS
@@ -22,7 +22,7 @@ if not exist %SASPATH% (set SASPATH=%SASPATHALT%)
 if not exist %SASPATH% goto BADSAS
 
 :: Run SAS
-%SASPATH% -sysin %1 -sysparm %2 -log %3 -print %4
+%SASPATH% -sysin %1 -sysparm %2 -log %3 -print %4 -nosplash -icon -noterminal
 
 :: Write errorlevel to .lst file if SAS did not terminate successfully
 if %ERRORLEVEL% gtr 0 echo SAS script failed with errorlevel=%ERRORLEVEL%. Check %3. > %4

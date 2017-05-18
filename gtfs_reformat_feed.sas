@@ -1,7 +1,7 @@
 /*
    gtfs_reformat_feed.sas
    authors: cheither & npeterson
-   revised: 5/12/17
+   revised: 5/18/17
    ----------------------------------------------------------------------------
    Program reformats unloaded itinerary data for python.
 
@@ -63,7 +63,7 @@ data s; set s; by line order;
  *** Run python script to collapse runs into TOD routes ***;
 *-----------------------------------------------------------------------------;
 x "if exist &pypath (del &pypath /Q)";
-%let command = %nrstr(for %i in (python.exe) do @echo.%~$PATH:i);
+%let command = %nrstr(for %i in (pythonw.exe) do @echo.%~$PATH:i);
 x "&command >> &pypath"; run;
 
 data null; infile "&pypath" length=reclen obs=1;

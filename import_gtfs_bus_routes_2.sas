@@ -1,7 +1,7 @@
 /*
    import_gtfs_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 5/12/17
+   revised: 5/18/17
    ----------------------------------------------------------------------------
    Program is called by import_gtfs_bus_routes.py & formats bus itineraries
    to build with arcpy.
@@ -592,7 +592,7 @@ data temp; set hold nobs=totobs; call symput('tothold', left(put(totobs, 8.))); 
         data temp; set short nobs=fixobs; call symput('totfix', left(put(fixobs, 8.))); run;
 
         x "if exist &pypath (del &pypath /Q)";
-        %let command = %nrstr(for %i in (python.exe) do @echo.%~$PATH:i);
+        %let command = %nrstr(for %i in (pythonw.exe) do @echo.%~$PATH:i);
         x "&command >> &pypath"; run;
 
         data null; infile "&pypath" length=reclen obs=1;
