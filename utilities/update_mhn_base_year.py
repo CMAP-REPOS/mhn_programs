@@ -132,11 +132,11 @@ in_mhn.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
     in_mhn.die('{} did not run!'.format(sas1_sas))
 else:
-    #os.remove(sas1_log)
+    os.remove(sas1_log)
     in_mhn.delete_if_exists(sas1_lst)
-    #os.remove(year_csv)
-    #os.remove(transact_csv)
-    #os.remove(network_csv)
+    os.remove(year_csv)
+    os.remove(transact_csv)
+    os.remove(network_csv)
 
 
 # -----------------------------------------------------------------------------
