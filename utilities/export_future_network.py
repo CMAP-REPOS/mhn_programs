@@ -44,7 +44,7 @@ if not arcpy.Exists(out_fd):
     arcpy.CreateFeatureDataset_management(out_gdb, out_fd_name, sr)
 
 # Other parameters
-sas1_name = 'export_future_network_2'
+sas1_name = 'process_highway_coding'  # Also used by update_mhn_base_year.py
 
 
 # -----------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 /*
-   export_future_network_2.sas
+   process_highway_coding.sas
    Authors: cheither & npeterson
    Revised: 7/25/13
    ----------------------------------------------------------------------------
@@ -205,7 +205,7 @@ options pagesize=50 linesize=125;
 
       *------------------------------------------------------------------;
         ** CREATE A 'CORRUPT' NETWORK WHERE BASE LINK CHARACTERISTICS **;
-        ** ARE MODIFIED TO THEIR FINAL CONDITION IN scenario 'X' (1)   **;
+        ** ARE MODIFIED TO THEIR FINAL CONDITION IN scenario 'X' (1)  **;
       *------------------------------------------------------------------;
   data tempnet; update network modify; by abb;
       repanode=anode; repbnode=bnode;
