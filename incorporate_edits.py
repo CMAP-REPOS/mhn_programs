@@ -94,12 +94,6 @@ else:
 
 
 # -----------------------------------------------------------------------------
-#  Copy node attributes to memory, for fast access.
-# -----------------------------------------------------------------------------
-current_nodes_dict = MHN.make_attribute_dict(MHN.node, 'NODE', ['POINT_X','POINT_Y'])
-
-
-# -----------------------------------------------------------------------------
 #  Generate nodes from arcs, to check for changes and errors.
 # -----------------------------------------------------------------------------
 # Generate ANODES, including a copy with no BNODE field.

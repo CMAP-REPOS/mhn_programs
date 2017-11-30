@@ -19,7 +19,7 @@ class MasterHighwayNetwork(object):
     # -----------------------------------------------------------------------------
     #  SET GDB-AGNOSTIC VARIABLES
     # -----------------------------------------------------------------------------
-    base_year = 2010  # BASELINK=1 network year, not necessarily scenario 100 (i.e. base_year was recently 2009, while scenario 100 was 2010)
+    base_year = 2015  # BASELINK=1 network year, not necessarily scenario 100 (i.e. base_year was recently 2009, while scenario 100 was 2010)
 
     bus_years = {
         'base':    2015,
