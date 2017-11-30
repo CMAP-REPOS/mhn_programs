@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 5/11/17
+    Revised: 5/18/17
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -258,6 +258,7 @@ class MasterHighwayNetwork(object):
         143: "Modern Metra Electric",
         144: "S.M.A.R.T. - Suburban Metropolitan Area Rapid Transit",
         145: "Vollmer Rd",
+        146: "I-55 Managed Lane (Alternate)",
     }
 
 
