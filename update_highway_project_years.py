@@ -2,7 +2,7 @@
 '''
     update_highway_project_years.py
     Author: npeterson
-    Revised: 9/3/14
+    Revised: 12/18/17
     ---------------------------------------------------------------------------
     This script updates the completion years of projects to be included in
     Conformity analyses. The final completion year file is received from the
@@ -22,6 +22,7 @@
 '''
 import os
 import csv
+import re
 import sys
 import arcpy
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
@@ -160,13 +161,13 @@ def get_trans_proj_scens(table):
 
     # Iterate through headers with valid TIPIDs & scenarios
     fields = ['NOTES', 'SCENARIO']
-    sql = ''' "NOTES" LIKE '%__-__-____%' AND "SCENARIO" NOT IN ('7', '9') '''
+    sql = ''' "NOTES" LIKE '%__-__-____%' AND "SCENARIO" NOT IN ('9') '''
     with arcpy.da.SearchCursor(table, fields, sql) as cursor:
         for row in cursor:
 
             # Parse referenced TIPIDs
             tipids = []
-            notes = row[0].split(':')
+            notes = re.split(':|;', row[0])  # Split at colon or semicolon
             for note in notes:
                 note = note.strip()
                 if MHN.is_tipid(note):
