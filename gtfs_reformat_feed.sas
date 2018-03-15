@@ -1,7 +1,7 @@
 /*
    gtfs_reformat_feed.sas
    authors: cheither & npeterson
-   revised: 7/17/15
+   revised: 5/18/17
    ----------------------------------------------------------------------------
    Program reformats unloaded itinerary data for python.
 
@@ -62,28 +62,17 @@ data s; set s; by line order;
 *-----------------------------------------------------------------------------;
  *** Run python script to collapse runs into TOD routes ***;
 *-----------------------------------------------------------------------------;
-data _null_;
-    command = "if exist &pypath (del &pypath /Q)";
-    call system(command);
-    command = "ftype Python.File >> &pypath";
-    call system(command); run;
+x "if exist &pypath (del &pypath /Q)";
+%let command = %nrstr(for %i in (pythonw.exe) do @echo.%~$PATH:i);
+x "&command >> &pypath"; run;
 
-data null; infile "&pypath" length=reclen;
+data null; infile "&pypath" length=reclen obs=1;
     input location $varying254. reclen;
-    loc = scan(location, 2, '=');
-    goodloc = substr(loc, 1, index(loc, '.exe"') + 4);
-    call symput('runpython', trim(goodloc));
+    call symput('runpython', trim(location));
     run;
 
-%macro runpy;
-    data _null_;
-        command = "%bquote(&runpython) &progdir./gtfs_collapse_routes.py &oneline &feedgrp";
-        call system(command);
-        command = "if exist &pypath (del &pypath /Q)";
-        call system(command); run;
-%mend runpy;
-%runpy
-/* end of macro */
+x "%str(%'&runpython.%') &progdir.\gtfs_collapse_routes.py &oneline &feedgrp";
+x "if exist &pypath (del &pypath /Q)"; run;
 
 
 *-----------------------------------------------------------------------------;

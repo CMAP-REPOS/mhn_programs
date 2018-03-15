@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 4/24/17
+    Revised: 5/12/17
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -493,8 +493,8 @@ for scen in scen_list:
             # Read in rail network node coordinates
             node_coords = {}
 
-            acc_w = open(rail_acc, 'wb')
-            with open(ntwk_batchin, 'rb') as network:
+            acc_w = open(rail_acc, 'wt')
+            with open(ntwk_batchin, 'rt') as network:
                 section = ''
 
                 for line in network:
@@ -528,7 +528,7 @@ for scen in scen_list:
             cta_stops = set()
             metra_stops = set()
 
-            with open(itin_batchin, 'rb') as itin:
+            with open(itin_batchin, 'rt') as itin:
                 vtype = ''
                 is_stop = True  # First node in file will be a stop
 
@@ -561,7 +561,7 @@ for scen in scen_list:
                         is_stop = False if 'dwt=#' in line else True
 
                 # Write CTA .pnt file
-                cta_w = open(cta_pnt, 'wb')
+                cta_w = open(cta_pnt, 'wt')
                 for node in sorted(cta_stops):
                     if node in node_coords:
                         cta_w.write('{0},{1},{2}\n'.format(node, node_coords[node][0], node_coords[node][1]))
@@ -569,7 +569,7 @@ for scen in scen_list:
                 cta_w.close()
 
                 # Write Metra .pnt file
-                metra_w = open(metra_pnt, 'wb')
+                metra_w = open(metra_pnt, 'wt')
                 for node in sorted(metra_stops):
                     if node in node_coords:
                         metra_w.write('{0},{1},{2}\n'.format(node, node_coords[node][0], node_coords[node][1]))
@@ -687,7 +687,7 @@ for scen in scen_list:
                 distance to that zone's centroid. '''
             centroid_sr = arcpy.Describe(centroids_fc).spatialReference
             centroid_geom = {r[0]: r[1].projectAs(centroid_sr) for r in arcpy.da.SearchCursor(centroids_fc, [centroids_node_field, 'SHAPE@'])}
-            w = open(out_csv, 'wb')
+            w = open(out_csv, 'wt')
             with arcpy.da.SearchCursor(pts_fc, [pts_node_field, pts_zone_field, 'SHAPE@']) as c:
                 for node, zone, pt_geom in c:
                     distance = pt_geom.projectAs(centroid_sr).distanceTo(centroid_geom[zone])
@@ -788,7 +788,7 @@ for scen in scen_list:
 def get_line_ids_from_itin(itin):
     ''' Parse an itinerary batchin file to obtain line IDs. '''
     line_ids = set()
-    with open(itin, 'rb') as r:
+    with open(itin, 'rt') as r:
         for line in r:
             # Lines starting with "a" contain header info
             if line.startswith('a'):
@@ -820,7 +820,7 @@ if abm_output:
     scen_line_ids = get_scen_line_ids()
 
     # Ease of boarding CSV
-    with open(easeb_csv, 'wb') as w:
+    with open(easeb_csv, 'wt') as w:
         w.write('tline,@easeb\n')
         for line_id in sorted(scen_line_ids):
 
@@ -837,7 +837,7 @@ if abm_output:
                 w.write('{0},1.0\n'.format(line_id))
 
     # Productivity bonus (by user class) CSV
-    with open(prof_csv, 'wb') as w:
+    with open(prof_csv, 'wt') as w:
         w.write('tline,@prof1,@prof2,@prof3\n')
         for line_id in sorted(scen_line_ids):
 
@@ -858,7 +858,7 @@ if abm_output:
                 w.write('{0},-0.05,-0.1,-0.25\n'.format(line_id))
 
     # Reliability impact CSV
-    with open(relim_csv, 'wb') as w:
+    with open(relim_csv, 'wt') as w:
         w.write('tline,@relim\n')
         for line_id in sorted(scen_line_ids):
 

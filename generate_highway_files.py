@@ -75,7 +75,7 @@ if abm_output:
         out_attr = ['NODE', MHN.zone_attr, MHN.subzone_attr]
         node_lyr = 'node_lyr'
         MHN.make_skinny_table_view(MHN.node, node_lyr, out_attr)
-        with open(out_csv, 'wb') as w:
+        with open(out_csv, 'wt') as w:
             w.write('node,zone09,subzone09\n')
             with arcpy.da.SearchCursor(node_lyr, out_attr, sql_clause=(None, 'ORDER BY NODE')) as c:
                 for r in c:
@@ -293,13 +293,23 @@ for scen in scen_list:
                     writer.write(' '.join(['r', fnode, tnode]) + '\n')
                     n = 0  # Before for-loop, will not be reset if an arc is multi-part for some reason
                     for part in arc:
-                        vertex = part.next()
+                        try:
+                            vertex = part.next()
+                        except:
+                            # Must be using ArcGIS Pro...
+                            vertex = next(part)
                         while vertex:
                             n += 1
                             writer.write(' '.join(['a', fnode, tnode, str(n), str(vertex.X), str(vertex.Y)]) + '\n')
-                            vertex = part.next()
-                            if not vertex:
+                            try:
                                 vertex = part.next()
+                            except:
+                                vertex = next(part)
+                            if not vertex:
+                                try:
+                                    vertex = part.next()
+                                except:
+                                    vertex = next(part)
             return None
 
         arcs_mem = os.path.join(MHN.mem, 'arcs')

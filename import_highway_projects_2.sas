@@ -1,7 +1,7 @@
 /*
    import_highway_projects_2.sas
    authors: cheither & npeterson
-   revised: 7/18/14
+   revised: 3/15/18
    ----------------------------------------------------------------------------
    This program reads highway project coding and assigns an observation number
    to each line of coding, dependent upon the number of times a link (anode-
@@ -13,7 +13,7 @@
 option missing=0;  **this is only a mask: the true value is still .;
 
 %let codexls=%scan(&sysparm,1,$);
-%let excel=%scan(&codexls,-1,.);  *gets coding spreadsheet extension: XLS or XLSX;
+*%let excel=%scan(&codexls,-1,.);  *gets coding spreadsheet extension: XLS or XLSX;
 %let mhnlinks=%scan(&sysparm,2,$);
 %let projcsv=%scan(&sysparm,3,$);
 %let lst=%scan(&sysparm,4,$);
@@ -26,17 +26,18 @@ option missing=0;  **this is only a mask: the true value is still .;
 
 %macro getdata;
   %if %sysfunc(fexist(in0)) %then %do;
-        ** READ IN HIGHWAY PROJECT CODING **;
-       proc import out=coding datafile="&codexls" dbms=&excel replace; *sheet="template"; getnames=yes; mixed=yes;
-  %end;
+    ** READ IN HIGHWAY PROJECT CODING **;
+    *proc import datafile="&codexls" out=coding dbms=&excel replace;
+    proc import datafile="&codexls" out=coding dbms=excel replace;
+    *sheet="template"; getnames=yes; mixed=yes;
+    %end;
   %else %do;
-   data null;
-    file "&lst";
-     put "File not found: &codexls";
-  %end;
-%mend getdata;
+    data null; file "&lst";
+    put "File not found: &codexls";
+    %end;
+  %mend getdata;
 %getdata
-  /* end macro */
+/* end macro */
 
 
 data coding; set coding(where=(tipid>0));

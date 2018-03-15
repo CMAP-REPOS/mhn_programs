@@ -1,7 +1,7 @@
 /*
    import_future_bus_routes_2.sas
    authors: cheither & npeterson
-   revised: 12/13/16
+   revised: 3/15/18
    ----------------------------------------------------------------------------
    Program is called by import_future_bus_routes.py and formats bus itineraries
    to build with arcpy.
@@ -9,7 +9,7 @@
 */
 
 %let codexls=%scan(&sysparm,1,$);
-%let excel=%scan(&codexls,-1,.);  *gets coding spreadsheet extension: XLS or XLSX;
+*%let excel=%scan(&codexls,-1,.);  *gets coding spreadsheet extension: XLS or XLSX;
 %let dir=%scan(&sysparm,2,$);
 %let itincsv=%scan(&sysparm,3,$);
 %let routecsv=%scan(&sysparm,4,$);
@@ -18,29 +18,31 @@
 
 
 /*-------------------------------------------------------------*/
-                   * INPUT FILES *;
+* INPUT FILES *;
 filename inbus "&codexls";
 filename in1 "&dir./network.csv";
 filename in2 "&dir./transact.csv";
 filename in3 "&dir./year.csv";
-                   * OUTPUT FILES *;
+* OUTPUT FILES *;
 filename out1 "&routecsv";
 filename out2 "&itincsv";
 /*-------------------------------------------------------------*/
 
 %macro getdata;
   %if %sysfunc(fexist(inbus)) %then %do;
-        ** READ IN CODING FOR BUS ITINERARIES **;
-       proc import out=section datafile="&codexls" dbms=&excel replace; sheet="itinerary"; getnames=yes; mixed=yes; guessingrows=1000;
-          proc sort data=section; by tr_line order;
-  %end;
+    ** READ IN CODING FOR BUS ITINERARIES **;
+    *proc import out=section datafile="&codexls" dbms=&excel replace;
+    proc import out=section datafile="&codexls" dbms=excel replace;
+    sheet="itinerary"; getnames=yes; mixed=yes; guessingrows=1000;
+    proc sort data=section; by tr_line order;
+    %end;
   %else %do;
-   data null; file "&lst";
-     put "File not found: &codexls";
-  %end;
-%mend getdata;
+    data null; file "&lst";
+    put "File not found: &codexls";
+    %end;
+  %mend getdata;
 %getdata
-  /* end macro */
+/* end macro */
 
 
 data section; set section(where=(tr_line is not null));

@@ -123,17 +123,17 @@ def clear_transit_project_years(proj_years_dict, rail_fc, bus_fc, mover_table, e
 
     # Combine separate rail, bus & people mover dicts into one
     trans_proj_scens = rail_proj_scens.copy()
-    for tipid, scen in bus_proj_scens.iteritems():
+    for tipid, scen in bus_proj_scens.items():
         if tipid not in trans_proj_scens or scen < trans_proj_scens[tipid]:
             trans_proj_scens[tipid] = scen
-    for tipid, scen in mover_proj_scens.iteritems():
+    for tipid, scen in mover_proj_scens.items():
         if tipid not in trans_proj_scens or scen < trans_proj_scens[tipid]:
             trans_proj_scens[tipid] = scen
 
     # Compare transit project scenarios against project completion years.
     # If any errors exist, write them to file and stop processing.
     early_scenarios = []
-    for tipid, scen in trans_proj_scens.iteritems():
+    for tipid, scen in trans_proj_scens.items():
         if tipid in proj_years_dict and MHN.scenario_years[(str(scen))] < proj_years_dict[tipid]:
             early_scenarios.append(tipid)
     if early_scenarios:

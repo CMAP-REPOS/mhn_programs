@@ -140,7 +140,7 @@ arcpy.MakeFeatureLayer_management(new_nodes_NODE, new_nodes_NODE_lyr)
 # -----------------------------------------------------------------------------
 #  Determine the current highest NODE value.
 # -----------------------------------------------------------------------------
-valid_node_ids = set(xrange(MHN.min_node_id, MHN.max_node_id + 1))
+valid_node_ids = set(range(MHN.min_node_id, MHN.max_node_id + 1))
 taken_node_ids = set(r[0] for r in arcpy.da.SearchCursor(new_nodes_NODE, ['NODE']))
 available_node_ids = sorted(valid_node_ids - taken_node_ids)
 if len(available_node_ids) == 0:
@@ -467,7 +467,7 @@ for ABB_tuple in split_dict:
     ordered_ABBs = order_ABBs(unordered_ABBs, anode)  # A list of tuples: (ABB, length_ratio)
     for ABB_list in ordered_ABBs:
         index = ordered_ABBs.index(ABB_list)
-        start_ratio = sum([ordered_ABBs[i][1] for i in xrange(index)])
+        start_ratio = sum([ordered_ABBs[i][1] for i in range(index)])
         ABB_list.append(start_ratio)  # Append start_ratio to track "how far along" each segment begins...
     for ABB, length_ratio, start_ratio in ordered_ABBs:
         index = ordered_ABBs.index([ABB, length_ratio, start_ratio])
@@ -684,39 +684,43 @@ arcpy.Copy_management(MHN.gdb, backup_gdb)
 arcpy.AddWarning('\nGeodatabase temporarily backed up to {0}. (If update fails for any reason, replace {1} with this.)'.format(backup_gdb, MHN.gdb))
 
 arcpy.AddMessage('\nSaving changes to disk...')
+
+# Delete existing relationship classes
+for dirpath, dirnames, filenames in arcpy.da.Walk(MHN.gdb, datatype='RelationshipClass'):
+    for filename in filenames:
+        rel_class = os.path.join(dirpath, filename)
+        arcpy.Delete_management(rel_class)
+
+# Replace old arcs.
+arcpy.AddMessage('-- {0}...'.format(MHN.arc))
+arcpy.TruncateTable_management(MHN.arc)
+arcpy.Append_management(temp_arcs, MHN.arc, 'TEST')
+arcpy.Delete_management(temp_arcs)
+
+# Replace old nodes.
+arcpy.AddMessage('-- {0}...'.format(MHN.node))
+arcpy.TruncateTable_management(MHN.node)
+arcpy.Append_management(new_nodes_CZ, MHN.node, 'TEST')
+arcpy.Delete_management(new_nodes_CZ)
+
 # Replace route system tables and line FCs.
 for updated_route_system in updated_route_systems_list:
+
     # Header feature class:
     header = updated_route_system[0][0]
     header_updated = updated_route_system[0][1]
-    arcpy.AddMessage('-- ' + header + '...')
+    arcpy.AddMessage('-- {0}...'.format(header))
     arcpy.TruncateTable_management(header)
-    arcpy.Delete_management(header)
-    arcpy.CopyFeatures_management(header_updated, header)
+    arcpy.Append_management(header_updated, header, 'TEST')
     arcpy.Delete_management(header_updated)
+
     # Itinerary table:
     itin = updated_route_system[1][0]
     itin_updated = updated_route_system[1][1]
-    arcpy.AddMessage('-- ' + itin + '...')
+    arcpy.AddMessage('-- {0}...'.format(itin))
     arcpy.TruncateTable_management(itin)
-    arcpy.Delete_management(itin)
-    itin_path = MHN.break_path(itin)
-    # CreateTable & Append because CopyFeatures crashes randomly with large tables.
-    arcpy.CreateTable_management(itin_path['dir'], itin_path['name'], itin_updated)
     arcpy.Append_management(itin_updated, itin, 'TEST')
     arcpy.Delete_management(itin_updated)
-
-# Replace old nodes.
-arcpy.AddMessage('-- ' + MHN.node + '...')
-arcpy.Delete_management(MHN.node)
-arcpy.CopyFeatures_management(new_nodes_CZ, MHN.node)
-arcpy.Delete_management(new_nodes_CZ)
-
-# Replace old arcs.
-arcpy.AddMessage('-- ' + MHN.arc + '...')
-arcpy.Delete_management(MHN.arc)
-arcpy.CopyFeatures_management(temp_arcs, MHN.arc)
-arcpy.Delete_management(temp_arcs)
 
 # Rebuild relationship classes.
 arcpy.AddMessage('\nRebuilding relationship classes...')
@@ -739,4 +743,9 @@ arcpy.Compact_management(MHN.gdb)
 arcpy.Delete_management(MHN.mem)
 arcpy.Delete_management(backup_gdb)
 arcpy.AddMessage('\nChanges successfully applied!\n')
-arcpy.RefreshActiveView()
+
+try:
+    arcpy.RefreshActiveView()
+except:
+    # Must be using ArcGIS Pro...
+    pass
