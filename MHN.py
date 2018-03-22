@@ -730,22 +730,27 @@ class MasterHighwayNetwork(object):
         return itin_table
 
 
-    def write_arc_flag_file(self, flag_file, flag_query):
+    def write_arc_flag_file(self, flag_file, flag_query, csv_mode=False):
         ''' Create a file containing l=anode,bnode rows for all directional links
             meeting a specified criterion. '''
         self.delete_if_exists(flag_file)
         flag_lyr = 'flag_lyr'
         arcpy.MakeFeatureLayer_management(self.arc, flag_lyr, flag_query)
         with open(flag_file, 'w') as w:
-            w.write('~# {0} links\n'.format(flag_query.strip()))
+            if csv_mode:
+                row_prefix = ''
+                w.write('ANODE,BNODE\n')
+            else:
+                row_prefix = 'l='
+                w.write('~# {0} links\n'.format(flag_query.strip()))
             with arcpy.da.SearchCursor(flag_lyr, ['ANODE', 'BNODE', 'DIRECTIONS']) as cursor:
                 for row in cursor:
                     anode = row[0]
                     bnode = row[1]
                     directions = int(row[2])
-                    w.write('l={0},{1}\n'.format(anode, bnode))
+                    w.write('{2}{0},{1}\n'.format(anode, bnode, row_prefix))
                     if directions > 1:
-                        w.write('l={1},{0}\n'.format(anode, bnode))
+                        w.write('{2}{1},{0}\n'.format(anode, bnode, row_prefix))
         arcpy.Delete_management(flag_lyr)
         return flag_file
 

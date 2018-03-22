@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 5/12/17
+    Revised: 3/22/18
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -62,6 +62,7 @@ sas3_log = os.path.join(MHN.temp_dir, '{0}.log'.format(sas3_name))
 sas3_lst = os.path.join(MHN.temp_dir, '{0}.lst'.format(sas3_name))
 bus_route_csv = os.path.join(MHN.temp_dir, 'bus_route.csv')
 bus_itin_csv = os.path.join(MHN.temp_dir, 'bus_itin.csv')
+trans_only_csv = os.path.join(MHN.temp_dir, 'transit_only_links.txt')
 oneline_itin_txt = os.path.join(MHN.temp_dir, 'oneline_itin.txt')  # gtfs_collapse_routes.py input file (called by gtfs_reformat_feed.sas)
 feed_groups_txt = os.path.join(MHN.temp_dir, 'feed_groups.txt')    # gtfs_collapse_routes.py output file
 missing_links_csv = os.path.join(MHN.out_dir, 'missing_bus_links.csv')
@@ -81,6 +82,7 @@ MHN.delete_if_exists(sas3_log)
 MHN.delete_if_exists(sas3_lst)
 MHN.delete_if_exists(bus_route_csv)
 MHN.delete_if_exists(bus_itin_csv)
+MHN.delete_if_exists(trans_only_csv)
 MHN.delete_if_exists(oneline_itin_txt)
 MHN.delete_if_exists(feed_groups_txt)
 MHN.delete_if_exists(missing_links_csv)
@@ -461,13 +463,30 @@ for scen in scen_list:
             os.remove(pnr_csv)
             pnr_csv = pnr_fixed_csv
 
+        # Identify NEW_MODES=4 links among highway projects completed by scenario year.
+        hwy_year_attr = [hwyproj_id_field, 'COMPLETION_YEAR']
+        hwy_year_query = '"COMPLETION_YEAR" <= {0}'.format(scen_year)
+        hwy_year_view = MHN.make_skinny_table_view(MHN.hwyproj, 'hwy_year_view', hwy_year_attr, hwy_year_query)
+        hwy_year_proj = [r[0] for r in arcpy.da.SearchCursor(hwy_year_view, [hwyproj_id_field])]
+        arcpy.Delete_management(hwy_year_view)
+
+        hwy_coding_attr = [hwyproj_id_field, 'NEW_MODES', 'ABB']
+        hwy_coding_query = ''' "NEW_MODES" = '4' AND ("TOD" = '0' OR "TOD" LIKE '%{2}%') AND "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in hwy_year_proj)), TOD)
+        hwy_coding_view = MHN.make_skinny_table_view(MHN.route_systems[MHN.hwyproj][0], 'hwy_coding_view', hwy_coding_attr, hwy_coding_query)
+        hwy_coding_abb = [r[0] for r in arcpy.da.SearchCursor(hwy_coding_view, ['ABB'])]
+        arcpy.Delete_management(hwy_coding_view)
+
+        trans_only_attr = ['ANODE', 'BNODE', 'ABB', 'DIRECTIONS']
+        trans_only_query = ''' "MODES" = '4' OR "ABB" IN ('{0}') '''.format("','".join((abb for abb in hwy_coding_abb if abb[-1] != '1')))
+        MHN.write_arc_flag_file(trans_only_csv, hwy_network_query, csv_mode=True)
+
         # Call generate_transit_files_2.sas -- creates bus batchin files.
         sas2_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas2_name))
         sas2_output = os.path.join(tran_path, '{0}_{1}.txt'.format(sas2_name, scen))
         sas2_args = (scen_tran_path, scen_hwy_path, rep_runs_csv, rep_runs_itin_csv, replace_csv, pnr_csv,
                      scen, tod, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])),
                      str(MHN.max_poe), min(MHN.scenario_years.keys()), MHN.prog_dir, missing_links_csv,
-                     link_dict_txt, short_path_txt, path_errors_txt, sas2_output)
+                     link_dict_txt, short_path_txt, path_errors_txt, trans_only_csv, sas2_output)
         if tod == out_tod_periods[0] and os.path.exists(sas2_output):
             os.remove(sas2_output)  # Delete this before first iteration, or else old version will be appended to.
         MHN.submit_sas(sas2_sas, sas2_log, sas2_lst, sas2_args)
@@ -482,6 +501,7 @@ for scen in scen_list:
             os.remove(rep_runs_csv)
             os.remove(rep_runs_itin_csv)
             os.remove(pnr_csv)
+            os.remove(trans_only_csv)
             MHN.delete_if_exists(replace_csv)
 
 

@@ -33,7 +33,7 @@ filename out2 "&itincsv";
     ** READ IN CODING FOR BUS ITINERARIES **;
     *proc import out=section datafile="&codexls" dbms=&excel replace;
     proc import out=section datafile="&codexls" dbms=excel replace;
-    sheet="itinerary"; getnames=yes; mixed=yes; guessingrows=1000;
+      sheet="itinerary"; getnames=yes; mixed=yes; *guessingrows=1000;
     proc sort data=section; by tr_line order;
     %end;
   %else %do;
@@ -59,7 +59,9 @@ data verify; set section; proc sort; by itin_a itin_b;
 
 
              ** READ IN ROUTE TABLE CODING **;
-proc import out=rte datafile="&codexls" dbms=&excel replace; sheet="header"; getnames=yes; mixed=yes; guessingrows=1000;
+*proc import out=rte datafile="&codexls" dbms=&excel replace;
+proc import out=rte datafile="&codexls" dbms=excel replace;
+  sheet="header"; getnames=yes; mixed=yes; *guessingrows=1000;
 data rte; set rte(where=(tr_line is not null));
  length des $22. nt $32.;
   tr_line=lowcase(tr_line);
@@ -67,7 +69,7 @@ data rte; set rte(where=(tr_line is not null));
   if notes='' then notes='X';
   description=upcase(description);
   d=compress(description,"'");
-  d=substr(d,1,20);
+  d=substr(d,1,20); ** Can this be expanded to accommodate longer names? **;
   des=trim(d);
   nt=trim(notes);
 
