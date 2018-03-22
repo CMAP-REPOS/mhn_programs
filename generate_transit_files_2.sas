@@ -26,8 +26,9 @@ options noxwait;
 %let linkdict = %scan(&sysparm, 15, $);
 %let shrt = %scan(&sysparm, 16, $);
 %let pathfail = %scan(&sysparm, 17, $);
-%let mode4lks = %scan(&sysparm, 18, $);
-%let outtxt = %scan(&sysparm, 19, $);
+%let mode4lk = %scan(&sysparm, 18, $);
+%let mode4nd = %scan(&sysparm, 19, $);
+%let outtxt = %scan(&sysparm, 20, $);
 %let shrtpath = %sysfunc(tranwrd(&shrt, /, \));
 %let pypath = %sysfunc(tranwrd(&progdir./pypath.txt, /, \));
 %let newln = 0;
@@ -56,7 +57,8 @@ filename innd "&hwypath.\&scen.0&tp..n1";
 filename innd2 "&hwypath.\&scen.0&tp..n2";
 filename inlk "&hwypath.\&scen.0&tp..l1";
 filename pnrnd "&pnrcsv";
-filename buswy "&mode4lks";
+filename bwylk "&mode4lk";
+filename bwynd "&mode4nd";
 
 *** OUTPUT FILES ***;
 filename later "&dirpath.\itin.final";
@@ -214,18 +216,22 @@ data nodes(drop=flag); infile innd missover;
     end;
     proc sort; by itina;
 
-*** Get and append nodes from transit-only (MODES=4) links ***;
-proc import datafile=buswy out=buswylk dbms=csv replace; getnames=yes;
-data buswylk; set buswylk;
+*** Get and append busway (MODES=4) nodes ***;
+/*proc import datafile=bwylk out=buswaylk dbms=csv replace; getnames=yes;
+data buswaylk; set buswaylk;
     rename anode=itina bnode=itinb;
     proc sort; by itina itinb; run;
 
-data buswynd(keep=itina); set buswylk;
+data buswaynd(keep=itina); set buswaylk;
     output;
     itina = itinb;
     output;
-    proc sort nodupkey; by itina;
-data nodes; merge nodes buswynd; by itina;
+    proc sort nodupkey; by itina;*/
+proc import datafile=bwynd out=buswaynd dbms=csv replace; getnames=yes;
+data buswaynd; set buswaynd;
+    rename node=itina point_x=x_a point_y=y_a;
+    proc sort; by itina;
+data nodes; merge nodes buswaynd; by itina;
 proc sort; by itina; run;
 
 *** Compare itinerary nodes against available network nodes ***;
@@ -311,8 +317,12 @@ data links(drop=flag j1-j2); infile inlk missover;
     if vdf = 6 then delete;
     proc sort; by itina itinb;
 
-*** Append transit-only (MODES=4) links ***;
-data links; merge links buswylk; by itina itinb;
+*** Get and append busway (MODES=4) links ***;
+proc import datafile=bwylk out=buswaylk dbms=csv replace; getnames=yes;
+data buswaylk; set buswaylk;
+    rename anode=itina bnode=itinb;
+    proc sort; by itina itinb; run;
+data links; merge links buswaylk; by itina itinb;
     proc sort; by itina itinb; run;
 
 data links; merge links(in=hit) nodes; by itina;
