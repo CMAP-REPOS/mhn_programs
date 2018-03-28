@@ -166,13 +166,13 @@ class MasterHighwayNetwork(object):
         24:  "I-290/I-294 Interchange Improvement",
         25:  "Central Lake County Corridor: IL 53 North and IL 120",
         29:  "I-55 Managed Lane",
-        30:  "I-290 Managed Lane",
+        30:  "I-290 Eisenhower Reconstruction and Managed Lane",
         31:  "Illiana Corridor",
         32:  "I-190 Access Improvements",
-        33:  "Circle Interchange",
+        33:  "Jane Byrne Interchange Reconstruction",
         34:  "I-55 Add Lanes and Reconstruction",
         35:  "I-57 Add Lanes",
-        36:  "I-80 Add / Managed Lanes",
+        36:  "I-80 Reconstruction and Managed Lanes",
         37:  "I-80 Managed Lanes",
         38:  "I-80 to I-55 Connector",
         46:  "Randall Rd",
@@ -211,7 +211,7 @@ class MasterHighwayNetwork(object):
         85:  "West Loop Transportation Center Phase I",
         87:  "Mid-City Transitway",
         88:  "West Loop Transportation Center Phase II",
-        89:  "Lake Shore Drive Reconstruction",
+        89:  "North Lake Shore Drive Improvements",
         93:  "Blue Line Forest Park Branch Reconstruction",
         94:  "Brown Line Capacity Expansion",
         98:  "A-2 Crossing Rebuild",
@@ -258,7 +258,7 @@ class MasterHighwayNetwork(object):
         143: "Modern Metra Electric",
         144: "S.M.A.R.T. - Suburban Metropolitan Area Rapid Transit",
         145: "Vollmer Rd",
-        146: "I-55 Managed Lane (Alternate)",
+        146: "I-55 Dual Managed Lane",
     }
 
 
@@ -730,22 +730,27 @@ class MasterHighwayNetwork(object):
         return itin_table
 
 
-    def write_arc_flag_file(self, flag_file, flag_query):
+    def write_arc_flag_file(self, flag_file, flag_query, csv_mode=False):
         ''' Create a file containing l=anode,bnode rows for all directional links
             meeting a specified criterion. '''
         self.delete_if_exists(flag_file)
         flag_lyr = 'flag_lyr'
         arcpy.MakeFeatureLayer_management(self.arc, flag_lyr, flag_query)
         with open(flag_file, 'w') as w:
-            w.write('~# {0} links\n'.format(flag_query.strip()))
+            if csv_mode:
+                row_prefix = ''
+                w.write('ANODE,BNODE\n')
+            else:
+                row_prefix = 'l='
+                w.write('~# {0} links\n'.format(flag_query.strip()))
             with arcpy.da.SearchCursor(flag_lyr, ['ANODE', 'BNODE', 'DIRECTIONS']) as cursor:
                 for row in cursor:
                     anode = row[0]
                     bnode = row[1]
                     directions = int(row[2])
-                    w.write('l={0},{1}\n'.format(anode, bnode))
+                    w.write('{2}{0},{1}\n'.format(anode, bnode, row_prefix))
                     if directions > 1:
-                        w.write('l={1},{0}\n'.format(anode, bnode))
+                        w.write('{2}{1},{0}\n'.format(anode, bnode, row_prefix))
         arcpy.Delete_management(flag_lyr)
         return flag_file
 

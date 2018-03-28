@@ -1,7 +1,7 @@
 /*
     generate_transit_files_2.sas
     authors: cheither & npeterson
-    revised: 5/18/17
+    revised: 3/28/18
     ----------------------------------------------------------------------------
     Program creates bus transit network batchin files. Bus transit network is
     built using a modified version of MHN processing procedures.
@@ -26,7 +26,9 @@ options noxwait;
 %let linkdict = %scan(&sysparm, 15, $);
 %let shrt = %scan(&sysparm, 16, $);
 %let pathfail = %scan(&sysparm, 17, $);
-%let outtxt = %scan(&sysparm, 18, $);
+%let mode4lk = %scan(&sysparm, 18, $);
+%let mode4nd = %scan(&sysparm, 19, $);
+%let outtxt = %scan(&sysparm, 20, $);
 %let shrtpath = %sysfunc(tranwrd(&shrt, /, \));
 %let pypath = %sysfunc(tranwrd(&progdir./pypath.txt, /, \));
 %let newln = 0;
@@ -55,6 +57,8 @@ filename innd "&hwypath.\&scen.0&tp..n1";
 filename innd2 "&hwypath.\&scen.0&tp..n2";
 filename inlk "&hwypath.\&scen.0&tp..l1";
 filename pnrnd "&pnrcsv";
+filename bwylk "&mode4lk";
+filename bwynd "&mode4nd";
 
 *** OUTPUT FILES ***;
 filename later "&dirpath.\itin.final";
@@ -184,6 +188,7 @@ data itins; set itins;
     miles = round(miles, 0.01);
 
 data r(keep=linename mode headway); set routes;
+    proc sort; by linename;
 data itins; merge itins r(in=hit); by linename;
     if hit;
 
@@ -212,6 +217,15 @@ data nodes(drop=flag); infile innd missover;
     end;
     proc sort; by itina;
 
+*** Get and append busway (MODES=4) nodes ***;
+proc import datafile=bwynd out=buswaynd dbms=csv replace; getnames=yes;
+data buswaynd; set buswaynd;
+    rename node=itina point_x=x_a point_y=y_a zone09=zone capacityzone09=atype;
+    proc sort; by itina;
+data nodes; merge nodes buswaynd; by itina;
+proc sort; by itina; run;
+
+*** Compare itinerary nodes against available network nodes ***;
 data nodechk(keep=itina); set itins;
     output;
     itina = itinb;
@@ -284,6 +298,7 @@ data nodes; merge nodes pnr; by itina;
 data bnode(rename=(itina=itinb x_a=x_b y_a=y_b)) ; set nodes;
     drop zone atype pcost pspac;
 
+*** Get available highway links from highway batchin file ***;
 data links(drop=flag j1-j2); infile inlk missover;
     input @1 flag $2. @;
         select(flag);
@@ -292,6 +307,16 @@ data links(drop=flag j1-j2); infile inlk missover;
     end;
     if vdf = 6 then delete;
     proc sort; by itina itinb;
+
+*** Get and append busway (MODES=4) links ***;
+*** NOTE: Busway link CSV currently has no MILES column, so these links can't be used in shortest path routing ***;
+proc import datafile=bwylk out=buswaylk dbms=csv replace; getnames=yes;
+data buswaylk; set buswaylk;
+    rename anode=itina bnode=itinb;
+    proc sort; by itina itinb; run;
+data links; merge links buswaylk; by itina itinb;
+    proc sort; by itina itinb; run;
+
 data links; merge links(in=hit) nodes; by itina;
     if hit;
     proc sort; by itinb;
@@ -371,7 +396,7 @@ data _null_; set hold nobs=totobs;
             num = _n_;
         data temp; set short nobs=fixobs;
             call symput('totfix', left(put(fixobs, 8.))); run;
-        
+
         x "if exist &pypath (del &pypath /Q)";
         %let command = %nrstr(for %i in (pythonw.exe) do @echo.%~$PATH:i);
         x "&command >> &pypath"; run;
@@ -407,7 +432,7 @@ data _null_; set hold nobs=totobs;
                 call symput('xmin', left(put(x1, 8.))); call symput('xmax', left(put(x2, 8.)));
                 call symput('ymin', left(put(y1, 8.))); call symput('ymax', left(put(y2, 8.))); run;
 
-            data net1; set links(where=(&xmin <= x_a <= &xmax and &ymin <= y_a <= &ymax));
+            data net1; set links(where=(&xmin <= x_a <= &xmax and &ymin <= y_a <= &ymax and miles > 0));
             data dict(keep=itina itinb miles); set net1(where=(itina > &maxzone and itinb > &maxzone));
                 miles = int(miles * 100);
 
