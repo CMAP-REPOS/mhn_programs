@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 3/22/18
+    Revised: 3/28/18
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -498,7 +498,7 @@ for scen in scen_list:
         busway_anodes = [abb.split('-')[0] for abb in busway_abb]
         busway_bnodes = [abb.split('-')[1] for abb in busway_abb]
         busway_nodes_list = list(set(busway_anodes).union(set(busway_bnodes)))
-        busway_nodes_attr = ['NODE', 'POINT_X', 'POINT_Y']
+        busway_nodes_attr = ['NODE', 'POINT_X', 'POINT_Y', MHN.zone_attr, MHN.capzone_attr]
         busway_nodes_query = '"NODE" IN ({0})'.format(','.join(busway_nodes_list))
         busway_nodes_view = MHN.make_skinny_table_view(MHN.node, 'busway_nodes_view', busway_nodes_attr, busway_nodes_query)
         MHN.write_attribute_csv(busway_nodes_view, busway_nodes_csv, busway_nodes_attr)

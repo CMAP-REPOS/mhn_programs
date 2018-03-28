@@ -1,7 +1,7 @@
 /*
     generate_transit_files_2.sas
     authors: cheither & npeterson
-    revised: 3/22/18
+    revised: 3/28/18
     ----------------------------------------------------------------------------
     Program creates bus transit network batchin files. Bus transit network is
     built using a modified version of MHN processing procedures.
@@ -188,6 +188,7 @@ data itins; set itins;
     miles = round(miles, 0.01);
 
 data r(keep=linename mode headway); set routes;
+    proc sort; by linename;
 data itins; merge itins r(in=hit); by linename;
     if hit;
 
@@ -217,19 +218,9 @@ data nodes(drop=flag); infile innd missover;
     proc sort; by itina;
 
 *** Get and append busway (MODES=4) nodes ***;
-/*proc import datafile=bwylk out=buswaylk dbms=csv replace; getnames=yes;
-data buswaylk; set buswaylk;
-    rename anode=itina bnode=itinb;
-    proc sort; by itina itinb; run;
-
-data buswaynd(keep=itina); set buswaylk;
-    output;
-    itina = itinb;
-    output;
-    proc sort nodupkey; by itina;*/
 proc import datafile=bwynd out=buswaynd dbms=csv replace; getnames=yes;
 data buswaynd; set buswaynd;
-    rename node=itina point_x=x_a point_y=y_a;
+    rename node=itina point_x=x_a point_y=y_a zone09=zone capacityzone09=atype;
     proc sort; by itina;
 data nodes; merge nodes buswaynd; by itina;
 proc sort; by itina; run;
@@ -318,6 +309,7 @@ data links(drop=flag j1-j2); infile inlk missover;
     proc sort; by itina itinb;
 
 *** Get and append busway (MODES=4) links ***;
+*** NOTE: Busway link CSV currently has no MILES column, so these links can't be used in shortest path routing ***;
 proc import datafile=bwylk out=buswaylk dbms=csv replace; getnames=yes;
 data buswaylk; set buswaylk;
     rename anode=itina bnode=itinb;
@@ -440,7 +432,7 @@ data _null_; set hold nobs=totobs;
                 call symput('xmin', left(put(x1, 8.))); call symput('xmax', left(put(x2, 8.)));
                 call symput('ymin', left(put(y1, 8.))); call symput('ymax', left(put(y2, 8.))); run;
 
-            data net1; set links(where=(&xmin <= x_a <= &xmax and &ymin <= y_a <= &ymax));
+            data net1; set links(where=(&xmin <= x_a <= &xmax and &ymin <= y_a <= &ymax and miles > 0));
             data dict(keep=itina itinb miles); set net1(where=(itina > &maxzone and itinb > &maxzone));
                 miles = int(miles * 100);
 
