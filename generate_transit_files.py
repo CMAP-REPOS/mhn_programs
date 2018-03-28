@@ -296,47 +296,58 @@ for scen in scen_list:
         MHN.write_attribute_csv(rep_runs_itin_view, rep_runs_itin_csv, rep_runs_itin_attr)
         arcpy.Delete_management(rep_runs_itin_view)
 
-        # Export future bus header coding as necessary.
-        bus_future_lyr = 'future_lyr'
-        arcpy.MakeFeatureLayer_management(MHN.bus_future, bus_future_lyr)
-        bus_future_id_field = MHN.route_systems[MHN.bus_future][1]
-        if abm_output:
-            bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'CT_VEH', 'SPEED', 'HEADWAY']  # CT_VEH instead of VEHICLE_TYPE
+        # If scenario has future bus coding, process it.
+        if MHN.scenario_years[scen] > MHN.base_year:
+
+            # Export future bus header coding as necessary.
+            bus_future_lyr = 'future_lyr'
+            arcpy.MakeFeatureLayer_management(MHN.bus_future, bus_future_lyr)
+            bus_future_id_field = MHN.route_systems[MHN.bus_future][1]
+            if abm_output:
+                bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'CT_VEH', 'SPEED', 'HEADWAY']  # CT_VEH instead of VEHICLE_TYPE
+            else:
+                bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
+            bus_future_query = ''' "SCENARIO" LIKE '%{0}%' '''.format(scen[0])  # SCENARIO field contains first character of applicable scenario codes
+            bus_future_view = MHN.make_skinny_table_view(bus_future_lyr, 'bus_future_view', bus_future_attr, bus_future_query)
+            bus_future_csv = os.path.join(scen_tran_path, 'bus_future.csv')
+            MHN.write_attribute_csv(bus_future_view, bus_future_csv, bus_future_attr, include_headers=False)  # Skip headers for easier appending
+            selected_future_runs = MHN.make_attribute_dict(bus_future_view, bus_future_id_field, attr_list=[])
+
+            # Another future bus header set for route replacement data.
+            replace_attr = [bus_future_id_field, 'REPLACE', 'TOD']
+            replace_view = MHN.make_skinny_table_view(bus_future_lyr, 'replace_view', replace_attr, bus_future_query)
+            replace_csv = os.path.join(scen_tran_path, 'replace.csv')
+            MHN.write_attribute_csv(replace_view, replace_csv, replace_attr)
+            arcpy.Delete_management(replace_view)
+
+            # Corresponding future bus itineraries.
+            bus_future_order_field = MHN.route_systems[MHN.bus_future][2]
+            bus_future_itin_attr = [bus_future_id_field, 'ITIN_A', 'ITIN_B', bus_future_order_field, 'LAYOVER', 'DWELL_CODE', 'ZONE_FARE', 'LINE_SERV_TIME', 'TTF', 'F_MEAS', 'T_MEAS', 'MILES']
+            bus_future_itin_query = ''' "{0}" IN ('{1}') '''.format(bus_future_id_field, "','".join((bus_future_id for bus_future_id in selected_future_runs)))
+            bus_future_itin_view = MHN.make_skinny_table_view(all_runs_itin_miles_dict['future'], 'bus_future_itin_view', bus_future_itin_attr, bus_future_itin_query)
+            bus_future_itin_csv = os.path.join(scen_tran_path, 'bus_future_itin.csv')
+            MHN.write_attribute_csv(bus_future_itin_view, bus_future_itin_csv, bus_future_itin_attr, include_headers=False)  # Skip headers for easier appending
+            arcpy.Delete_management(bus_future_itin_view)
+
+            # Append future header/itin data to base/current header/itin files.
+            with open(rep_runs_csv, 'a') as writer:
+                with open(bus_future_csv, 'r') as reader:
+                    for line in reader:
+                        writer.write(line)
+            os.remove(bus_future_csv)
+            with open(rep_runs_itin_csv, 'a') as writer:
+                with open(bus_future_itin_csv, 'r') as reader:
+                    for line in reader:
+                        writer.write(line)
+            os.remove(bus_future_itin_csv)
+
         else:
-            bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
-        bus_future_query = ''' "SCENARIO" LIKE '%{0}%' '''.format(scen[0])  # SCENARIO field contains first character of applicable scenario codes
-        bus_future_view = MHN.make_skinny_table_view(bus_future_lyr, 'bus_future_view', bus_future_attr, bus_future_query)
-        bus_future_csv = os.path.join(scen_tran_path, 'bus_future.csv')
-        MHN.write_attribute_csv(bus_future_view, bus_future_csv, bus_future_attr, include_headers=False)  # Skip headers for easier appending
-        selected_future_runs = MHN.make_attribute_dict(bus_future_view, bus_future_id_field, attr_list=[])
-
-        # Another future bus header set for route replacement data.
-        replace_attr = [bus_future_id_field, 'REPLACE', 'TOD']
-        replace_view = MHN.make_skinny_table_view(bus_future_lyr, 'replace_view', replace_attr, bus_future_query)
-        replace_csv = os.path.join(scen_tran_path, 'replace.csv')
-        MHN.write_attribute_csv(replace_view, replace_csv, replace_attr)
-        arcpy.Delete_management(replace_view)
-
-        # Corresponding future bus itineraries.
-        bus_future_order_field = MHN.route_systems[MHN.bus_future][2]
-        bus_future_itin_attr = [bus_future_id_field, 'ITIN_A', 'ITIN_B', bus_future_order_field, 'LAYOVER', 'DWELL_CODE', 'ZONE_FARE', 'LINE_SERV_TIME', 'TTF', 'F_MEAS', 'T_MEAS', 'MILES']
-        bus_future_itin_query = ''' "{0}" IN ('{1}') '''.format(bus_future_id_field, "','".join((bus_future_id for bus_future_id in selected_future_runs)))
-        bus_future_itin_view = MHN.make_skinny_table_view(all_runs_itin_miles_dict['future'], 'bus_future_itin_view', bus_future_itin_attr, bus_future_itin_query)
-        bus_future_itin_csv = os.path.join(scen_tran_path, 'bus_future_itin.csv')
-        MHN.write_attribute_csv(bus_future_itin_view, bus_future_itin_csv, bus_future_itin_attr, include_headers=False)  # Skip headers for easier appending
-        arcpy.Delete_management(bus_future_itin_view)
-
-        # Append future header/itin data to base/current header/itin files.
-        with open(rep_runs_csv, 'a') as writer:
-            with open(bus_future_csv, 'r') as reader:
-                for line in reader:
-                    writer.write(line)
-        os.remove(bus_future_csv)
-        with open(rep_runs_itin_csv, 'a') as writer:
-            with open(bus_future_itin_csv, 'r') as reader:
-                for line in reader:
-                    writer.write(line)
-        os.remove(bus_future_itin_csv)
+            # Write dummy route replacement CSV when no future coding applies.
+            bus_future_id_field = MHN.route_systems[MHN.bus_future][1]
+            replace_attr = [bus_future_id_field, 'REPLACE', 'TOD']
+            replace_csv = os.path.join(scen_tran_path, 'replace.csv')
+            with open(replace_csv, 'w') as w:
+                w.write(','.join(replace_attr) + '\n')
 
         # Identify any missing itinerary endpoints (1st itin_a/last itin_b).
         scen_nodes = set()
