@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 5/18/17
+    Revised: 4/6/18
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -54,7 +54,7 @@ class MasterHighwayNetwork(object):
         '400': 2030,
         '500': 2035,
         '600': 2040,
-        '700': 2050,
+        '700': 2050
 
         ### Old codes (C17Q1 and earlier):
         # '100': 2010,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
@@ -62,7 +62,7 @@ class MasterHighwayNetwork(object):
         # '300': 2020,
         # '400': 2025,
         # '500': 2030,
-        # '600': 2040,
+        # '600': 2040
     }
 
     min_year = min(year for scen, year in scenario_years.items())
@@ -87,6 +87,13 @@ class MasterHighwayNetwork(object):
                '"STARTHOUR" IN (18, 19)'),
         'am': ('7AM-9AM',                                   # am: Same as TOD 3, but for buses w/ >50% service in period
                '"AM_SHARE" >= 0.5')
+    }
+
+    ampm_tods ={
+        '1': ('1', '2', '3', '4', '5', '6', '7', '8', 'am'),  # All periods
+        '2': ('2', '3', '4', '5', 'am'),                      # AM periods
+        '3': ('1', '6', '7', '8'),                            # PM periods
+        '4': ('1', '5')                                       # Off-peak periods
     }
 
     mcps = {

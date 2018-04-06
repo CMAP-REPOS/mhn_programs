@@ -1,7 +1,7 @@
 /*
     generate_transit_files_2.sas
     authors: cheither & npeterson
-    revised: 3/28/18
+    revised: 4/6/18
     ----------------------------------------------------------------------------
     Program creates bus transit network batchin files. Bus transit network is
     built using a modified version of MHN processing procedures.
@@ -309,7 +309,6 @@ data links(drop=flag j1-j2); infile inlk missover;
     proc sort; by itina itinb;
 
 *** Get and append busway (MODES=4) links ***;
-*** NOTE: Busway link CSV currently has no MILES column, so these links can't be used in shortest path routing ***;
 proc import datafile=bwylk out=buswaylk dbms=csv replace; getnames=yes;
 data buswaylk; set buswaylk;
     rename anode=itina bnode=itinb;
