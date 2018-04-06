@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 3/28/18
+    Revised: 4/6/18
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -21,6 +21,7 @@
 '''
 import os
 import sys
+import operator
 import arcpy
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
@@ -474,30 +475,123 @@ for scen in scen_list:
             os.remove(pnr_csv)
             pnr_csv = pnr_fixed_csv
 
-        # Identify NEW_MODES=4 links/nodes among highway projects completed by scenario year.
+        # Identify NEW_MODES=4 links in base network and among highway projects completed by scenario year.
         hwyproj_id_field = MHN.route_systems[MHN.hwyproj][1]
         hwy_year_attr = [hwyproj_id_field, 'COMPLETION_YEAR']
         hwy_year_query = '"COMPLETION_YEAR" <= {0}'.format(scen_year)
         hwy_year_view = MHN.make_skinny_table_view(MHN.hwyproj, 'hwy_year_view', hwy_year_attr, hwy_year_query)
-        hwy_year_proj = [r[0] for r in arcpy.da.SearchCursor(hwy_year_view, [hwyproj_id_field])]
+        hwyproj_years = {r[0]: r[1] for r in arcpy.da.SearchCursor(hwy_year_view, hwy_year_attr)}
         arcpy.Delete_management(hwy_year_view)
 
-        hwy_coding_attr = [hwyproj_id_field, 'NEW_MODES', 'ABB'] #, 'TOD']
-        #hwy_coding_query = ''' "NEW_MODES" = '4' AND ("TOD" = '0' OR "TOD" LIKE '%{2}%') AND "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in hwy_year_proj)), TOD)
-        hwy_coding_query = ''' "NEW_MODES" = '4' AND "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in hwy_year_proj)))
-        hwy_coding_view = MHN.make_skinny_table_view(MHN.route_systems[MHN.hwyproj][0], 'hwy_coding_view', hwy_coding_attr, hwy_coding_query)
-        hwy_coding_abb = [r[0] for r in arcpy.da.SearchCursor(hwy_coding_view, ['ABB'])]
-        arcpy.Delete_management(hwy_coding_view)
+        busway_coding_attr = [
+            hwyproj_id_field, 'ABB', 'NEW_MODES', 'NEW_DIRECTIONS',
+            'NEW_THRULANES1', 'NEW_THRULANES2', 'NEW_TYPE1', 'NEW_TYPE2',
+            'NEW_AMPM1', 'NEW_AMPM2', 'TOD'
+        ]
+        busway_coding_query = ''' "NEW_MODES" = '4' AND "{0}" IN ('{1}') '''.format(
+            hwyproj_id_field, "','".join(hwyproj_id for hwyproj_id in hwyproj_years.keys())
+        )
+        busway_coding_view = MHN.make_skinny_table_view(
+            MHN.route_systems[MHN.hwyproj][0], 'busway_coding_view', busway_coding_attr, busway_coding_query
+        )
+        busway_coding_abb = [r[0] for r in arcpy.da.SearchCursor(busway_coding_view, ['ABB'])]
+        busway_coding_dict = {abb: dict() for abb in busway_coding_abb}
+        with arcpy.da.SearchCursor(busway_coding_view, busway_coding_attr) as c:
+            for r in c:
+                tipid = r[0]
+                abb = r[1]
+                attr = list(r[2:])
+                for i in range(len(attr)):
+                    attr[i] = str(attr[i]) if str(attr[i]) != '0' else None  # Set 0s to null, stringify rest
+                attr_dict = dict(zip(busway_coding_attr[2:], attr))
+                busway_coding_dict[abb][tipid] = attr_dict
+        arcpy.Delete_management(busway_coding_view)
 
-        busway_attr = ['ANODE', 'BNODE', 'ABB', 'DIRECTIONS']
-        busway_query = ''' "MODES" = '4' OR "ABB" IN ('{0}') '''.format("','".join((abb for abb in hwy_coding_abb if abb[-1] != '1')))
-        busway_view = MHN.make_skinny_table_view(MHN.arc, 'busway_view', busway_attr, busway_query)
-        busway_abb = [r[0] for r in arcpy.da.SearchCursor(busway_view, ['ABB'])]
-        MHN.write_arc_flag_file(busway_links_csv, busway_query, csv_mode=True)
+        busway_link_attr = [
+            'ABB', 'MILES', 'DIRECTIONS', 'THRULANES1', 'THRULANES2', 'TYPE1', 'TYPE2',
+            'AMPM1', 'AMPM2'
+        ]
+        busway_link_query = ''' "MODES" = '4' OR "ABB" IN ('{0}') '''.format(
+            "','".join((abb for abb in busway_coding_abb if abb[-1] != '1'))
+        )
+        busway_link_view = MHN.make_skinny_table_view(MHN.arc, 'busway_link_view', busway_link_attr, busway_link_query)
+        busway_link_abb = [r[0] for r in arcpy.da.SearchCursor(busway_link_view, ['ABB'])]
+        busway_baseyear_csv = os.path.join(MHN.temp_dir, 'busway_links_baseyear.csv')
+        MHN.write_attribute_csv(busway_link_view, busway_baseyear_csv, busway_link_attr)
 
-        busway_anodes = [abb.split('-')[0] for abb in busway_abb]
-        busway_bnodes = [abb.split('-')[1] for abb in busway_abb]
-        busway_nodes_list = list(set(busway_anodes).union(set(busway_bnodes)))
+        # Determine final coded attributes of each MODES=4 link
+        busway_nodes = set()
+        with open(busway_links_csv, 'wt') as w:
+            with open(busway_baseyear_csv, 'rt') as r:
+                N = 0
+                for line in r:
+                    N += 1
+
+                    # Write CSV header for first row
+                    if N == 1:
+                        w.write('ANODE,BNODE,MILES,THRULN,VDF\n')
+                        continue
+
+                    # Get link's base year attributes
+                    attr = line.strip().split(',')
+                    abb = attr[0]  # Always present
+                    anode, bnode, baselink = abb.split('-')
+                    miles = str(round(float(attr[1]), 2))  # Always present
+                    dirs = attr[2]  # Always present
+                    lanes1 = attr[3] if attr[3] != '0' else None
+                    vdf1 = attr[5] if attr[5] != '0' else None
+                    ampm1 = attr[7] if attr[7] != '0' else None
+                    if dirs == '1':
+                        lanes2 = vdf2 = ampm2 = None
+                    elif dirs == '2':
+                        lanes2 = lanes1
+                        vdf2 = vdf1
+                        ampm2 = ampm1
+                    else:
+                        lanes2 = attr[4] if attr[4] != '0' else None
+                        vdf2 = attr[6] if attr[6] != '0' else None
+                        ampm2 = attr[8] if attr[8] != '0' else None
+
+                    # Update chronologically with highway coding
+                    link_hwyproj = {tipid: hwyproj_years[tipid] for tipid in busway_coding_dict[abb].keys()}
+                    link_hwyproj_chrono = sorted(link_hwyproj.items(), key=operator.itemgetter(1))
+                    for tipid, year in link_hwyproj_chrono:
+                        attr2 = busway_coding_dict[abb][tipid]
+                        if attr2['TOD'] and tod not in attr2['TOD']:
+                            continue  # Ignore if coding doesn't apply to current TOD
+                        dirs = attr2['NEW_DIRECTIONS'] if attr2['NEW_DIRECTIONS'] else dirs
+                        lanes1 = attr2['NEW_THRULANES1'] if attr2['NEW_THRULANES1'] else lanes1
+                        vdf1 = attr2['NEW_TYPE1'] if attr2['NEW_TYPE1'] else vdf1
+                        ampm1 = attr2['NEW_AMPM1'] if attr2['NEW_AMPM1'] else ampm1
+                        if dirs == '1':
+                            lanes2 = vdf2 = ampm2 = None
+                        elif dirs == '2':
+                            lanes2 = lanes1
+                            vdf2 = vdf1
+                            ampm2 = ampm1
+                        else:
+                            lanes2 = attr2['NEW_THRULANES2'] if attr2['NEW_THRULANES2'] else lanes2
+                            vdf2 = attr2['NEW_TYPE2'] if attr2['NEW_TYPE2'] else vdf2
+                            ampm2 = attr2['NEW_AMPM2'] if attr2['NEW_AMPM2'] else ampm2
+
+                    # Determine whether to write A->B and B->A links
+                    write_ab = True if tod in MHN.ampm_tods[ampm1] else False
+                    write_ba = True if dirs in ('2', '3') and tod in MHN.ampm_tods[ampm2] else False
+
+                    # Write directional link data to output CSV
+                    if write_ab:
+                        out_ab = '{0},{1},{2},{3},{4}\n'.format(anode, bnode, miles, lanes1, vdf1)
+                        w.write(out_ab)
+                        busway_nodes.update([anode, bnode])
+                    if write_ba:
+                        out_ba = '{0},{1},{2},{3},{4}\n'.format(bnode, anode, miles, lanes2, vdf2)
+                        w.write(out_ba)
+                        busway_nodes.update([anode, bnode])
+
+        os.remove(busway_baseyear_csv)
+
+        # Identify end nodes of MODES=4 links
+        busway_nodes_list = list(busway_nodes)
         busway_nodes_attr = ['NODE', 'POINT_X', 'POINT_Y', MHN.zone_attr, MHN.capzone_attr]
         busway_nodes_query = '"NODE" IN ({0})'.format(','.join(busway_nodes_list))
         busway_nodes_view = MHN.make_skinny_table_view(MHN.node, 'busway_nodes_view', busway_nodes_attr, busway_nodes_query)

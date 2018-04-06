@@ -246,7 +246,7 @@ filename in4 "&dir.\&scen.\nodes.csv";
         if action = 3 then delete;
 
     /*
-    *** -- Update toll values to January 2012 rates -- ***;
+    *** -- Update post-2012 toll values to January 2012 rates -- ***;
     %if &scen > 100 %then %do;
         toll = round(toll * 1.875, 0.05);
     %end;
@@ -482,7 +482,7 @@ data coord; infile in4 dlm=',' dsd firstobs=2;
             else if trkres in (12)
                 then mode = 'ASHTb';  ** No trucks except B-plates;
         end;
-        
+
     ** UPDATE TOLL COST FOR DISTANCE-BASED TOLL LINKS **;
     ** Edit by NPeterson 5/4/2017 **;
     data links&tod; set links&tod;
