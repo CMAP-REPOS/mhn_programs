@@ -276,13 +276,13 @@ filename in4 "&dir.\&scen.\nodes.csv";
         ** Edit by TSchmidt & NPeterson 5/21/14 **;
         if trkres in (1, 18)
             then mode = 'ASH';  ** No trucks;
-        else if trkres in (2:4, 9:11, 13, 25:26, 35, 37)
+        else if trkres in (2:4, 9:11, 13, 25, 35, 37)
             then mode = 'ASHTb';  ** No trucks except B-plates;
-        else if trkres in (7:8, 14, 16:17, 19, 27, 29, 31, 34, 38:47, 49)
+        else if trkres in (7:8, 14, 16:17, 19, 27, 29, 31, 34, 38:44, 46:47, 49)
             then mode = 'ASHTlb';  ** No medium or heavy trucks;
-        else if trkres in (5, 30, 48)
+        else if trkres in (5, 30, 45, 48)
             then mode = 'ASHTmlb';  ** No heavy trucks;
-        /*else if trkres in (6, 15, 20, 22:24, 28, 32:33, 36)
+        /*else if trkres in (6, 15, 20, 22:24, 26, 28, 32:33, 36)
              then mode = 'ASHThmlb';*/ ** Already set implicitly by modes=2 **;
 
         if blvd = 1 then mode = 'ASH';  ** No trucks. Trumps trkres codes;
