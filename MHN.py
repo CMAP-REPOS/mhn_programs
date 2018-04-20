@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 4/6/18
+    Revised: 4/19/18
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -405,6 +405,17 @@ class MasterHighwayNetwork(object):
                 cumulative_percent = new_cumulative_percent
 
         return itin_table
+
+
+    @staticmethod
+    def check_selection(lyr):
+        ''' Check whether specified layer has a selection. '''
+        desc = arcpy.Describe(lyr)
+        selected = desc.FIDSet
+        if len(selected) == 0:
+            return False
+        else:
+            return True
 
 
     @staticmethod
