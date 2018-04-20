@@ -69,7 +69,7 @@ data rte; set rte(where=(tr_line is not null));
   if notes='' then notes='X';
   description=upcase(description);
   d=compress(description,"'");
-  d=substr(d,1,20); ** Can this be expanded to accommodate longer names? **;
+  d=substr(d,1,20); ** 20-char limit imposed by Emme **;
   des=trim(d);
   nt=trim(notes);
 
