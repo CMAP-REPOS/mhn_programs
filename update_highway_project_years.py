@@ -2,7 +2,7 @@
 '''
     update_highway_project_years.py
     Author: npeterson
-    Revised: 12/18/17
+    Revised: 5/9/18
     ---------------------------------------------------------------------------
     This script updates the completion years of projects to be included in
     Conformity analyses. The final completion year file is received from the
@@ -60,6 +60,8 @@ if not os.path.exists(tipid_uncodable_csv):
 # -----------------------------------------------------------------------------
 tipid_all_csv = os.path.join(MHN.temp_dir, 'tipid_all.csv')
 early_scenarios_csv = os.path.join(MHN.out_dir, 'early_transit_scenarios.csv')
+late_scenarios_csv = os.path.join(MHN.out_dir, 'late_transit_scenarios.csv')
+unknown_trans_ids_csv = os.path.join(MHN.out_dir, 'unknown_transit_tipids.csv')
 in_year_not_mhn_txt = os.path.join(MHN.out_dir, 'in_year_not_mhn.txt')
 in_mhn_not_year_txt = os.path.join(MHN.out_dir, 'in_mhn_not_year.txt')
 
@@ -111,7 +113,8 @@ os.remove(tipid_all_csv)
 # -----------------------------------------------------------------------------
 arcpy.AddMessage('{0}Checking future transit projects...'.format('\n'))
 
-def clear_transit_project_years(proj_years_dict, rail_fc, bus_fc, mover_table, early_scenarios_csv):
+def clear_transit_project_years(proj_years_dict, hwyproj_ids, rail_fc, bus_fc, mover_table,
+                                early_scenarios_csv, late_scenarios_csv, unknown_trans_ids_csv):
     ''' Remove transit project TIPIDs from the dict after verifying that their
         scenarios specified in the MHN/MRN are no earlier than their completion
         years. '''
@@ -132,20 +135,54 @@ def clear_transit_project_years(proj_years_dict, rail_fc, bus_fc, mover_table, e
 
     # Compare transit project scenarios against project completion years.
     # If any errors exist, write them to file and stop processing.
-    early_scenarios = []
+    early_scenarios = set()
+    late_scenarios = set()
+    unknown_tipids = set()
     for tipid, scen in trans_proj_scens.items():
-        if tipid in proj_years_dict and MHN.scenario_years[(str(scen))] < proj_years_dict[tipid]:
-            early_scenarios.append(tipid)
+        if tipid in proj_years_dict and MHN.scenario_years[str(scen)] < proj_years_dict[tipid]:
+            early_scenarios.add(tipid)
+        elif tipid in proj_years_dict and MHN.scenario_years[str(scen - 100)] > proj_years_dict[tipid]:
+            late_scenarios.add(tipid)
+        elif tipid not in proj_years_dict and MHN.scenario_years[str(scen)] < MHN.max_year:
+            unknown_tipids.add(tipid)
+
     if early_scenarios:
         with open(early_scenarios_csv, 'w') as w:
             w.write('TIPID,COMPLETION_YEAR,FIRST_SCENARIO\n')
-            for tipid in early_scenarios:
+            for tipid in sorted(early_scenarios):
                 w.write('{0},{1},{2}\n'.format(MHN.tipid_from_int(tipid), proj_years_dict[tipid], trans_proj_scens[tipid]))
         MHN.die((
             '''ERROR: Some transit projects (future bus, rail and/or people '''
             '''mover) reference a scenario that is earlier than their TIPID's '''
             '''specified completion year. See {0} for details.'''
         ).format(early_scenarios_csv))
+
+    if late_scenarios:
+        with open(late_scenarios_csv, 'w') as w:
+            w.write('TIPID,COMPLETION_YEAR,FIRST_SCENARIO\n')
+            for tipid in sorted(late_scenarios):
+                w.write('{0},{1},{2}\n'.format(MHN.tipid_from_int(tipid), proj_years_dict[tipid], trans_proj_scens[tipid]))
+        MHN.die((
+            '''ERROR: Some transit projects (future bus, rail and/or people '''
+            '''mover) reference a scenario that is much later than their TIPID's '''
+            '''specified completion year. See {0} for details.'''
+        ).format(late_scenarios_csv))
+
+    if unknown_tipids:
+        with open(unknown_trans_ids_csv, 'w') as w:
+            w.write('TIPID,FIRST_SCENARIO\n')
+            for tipid in sorted(unknown_tipids):
+                w.write('{0},{1}\n'.format(MHN.tipid_from_int(tipid), trans_proj_scens[tipid]))
+        MHN.die((
+            '''ERROR: Some transit projects (future bus, rail and/or people '''
+            '''mover) have a TIPID that is not present in {0} or {1}. See {2} '''
+            '''for details.'''
+        ).format(tipid_conformed_csv, tipid_exempt_csv, unknown_trans_ids_csv))
+
+    # Ignore transit projects that also have a highway component (e.g. new busway links)
+    trans_proj_with_hwy_component = set(hwyproj_ids) & set(trans_proj_scens.keys())
+    for tipid in trans_proj_with_hwy_component:
+        del trans_proj_scens[tipid]
 
     # Remove transit TIPIDs from project years dictionary
     hwyproj_years_dict = proj_years_dict.copy()
@@ -183,25 +220,28 @@ def get_trans_proj_scens(table):
 
     return tipid_scens
 
-
-hwyproj_years = clear_transit_project_years(proj_years, mrn_future_fc, MHN.bus_future, people_mover_table, early_scenarios_csv)
+# Remove transit-only (bus or rail) projects after checking their scenario codes
+common_id_field = MHN.route_systems[MHN.hwyproj][1]
+coded_hwyproj = [int(r[0]) for r in arcpy.da.SearchCursor(MHN.hwyproj, [common_id_field])]
+hwyproj_years = clear_transit_project_years(
+    proj_years, coded_hwyproj, mrn_future_fc, MHN.bus_future, people_mover_table,
+    early_scenarios_csv, late_scenarios_csv, unknown_trans_ids_csv
+)
 
 
 # -----------------------------------------------------------------------------
 #  Read uncodable projects into dictionary.
 # -----------------------------------------------------------------------------
-uncodable_proj = []
+uncodable_proj = set() #[]
 with open(tipid_uncodable_csv, 'r') as no_code:
     for row in no_code:
         tipid = int(row.strip().split(',')[0])
-        if tipid not in uncodable_proj:
-            uncodable_proj.append(tipid)
+        uncodable_proj.add(tipid)
 
 
 # -----------------------------------------------------------------------------
 #  Check for inappropriately coded projects.
 # -----------------------------------------------------------------------------
-common_id_field = MHN.route_systems[MHN.hwyproj][1]
 hwyproj_view = 'hwyproj_view'
 arcpy.MakeTableView_management(MHN.hwyproj, hwyproj_view)
 
@@ -239,7 +279,6 @@ arcpy.Delete_management(hwyproj_view)
 # -----------------------------------------------------------------------------
 #  Check for still-uncoded projects.
 # -----------------------------------------------------------------------------
-coded_hwyproj = [int(r[0]) for r in arcpy.da.SearchCursor(MHN.hwyproj, [common_id_field])]
 uncoded_hwyproj = [tipid for tipid in hwyproj_years if tipid not in coded_hwyproj and tipid not in uncodable_proj]
 if len(uncoded_hwyproj) == 0:
     arcpy.AddMessage((
