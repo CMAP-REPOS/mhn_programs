@@ -354,8 +354,8 @@ with arcpy.da.UpdateCursor(new_nodes_CZ, ['NODE', MHN.zone_attr, MHN.subzone_att
             zoned_node[1] = 9999
             zoned_node[3] = 11
             zoned_nodes_cursor.updateRow(zoned_node)
-        #elif node < MHN.min_poe and node != zone:
-        #    arcpy.AddWarning('WARNING -- Zone ' + str(node) + ' centroid is in zone ' + str(zone) + '! Please verify that this is intentional.')
+        elif node < MHN.min_poe and node != zone:
+            arcpy.AddWarning('-- WARNING: Zone ' + str(node) + ' centroid is in zone ' + str(zone) + '! Please verify that this is intentional.')
         else:
             pass
 arcpy.AddMessage('-- Node {0}, {1} & {2} fields recalculated'.format(MHN.zone_attr, MHN.subzone_attr, MHN.capzone_attr))
