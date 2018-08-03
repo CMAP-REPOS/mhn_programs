@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 5/4/17
+    Revised: 8/2/18
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -329,18 +329,25 @@ else:
 # -----------------------------------------------------------------------------
 #  Update node/arc attributes.
 # -----------------------------------------------------------------------------
-# Calculate node ZONE and AREATYPE using Identity tool.
+# Calculate node SUBZONE, ZONE and CAPACITY ZONE using Identity tool
 new_nodes_CZ = os.path.join(MHN.mem, 'new_nodes_CZ')
 subzone_lyr = MHN.make_skinny_feature_layer(MHN.subzone, 'subzone_lyr', [MHN.zone_attr, MHN.subzone_attr, MHN.capzone_attr])
 arcpy.Identity_analysis(new_nodes, subzone_lyr, new_nodes_CZ, 'NO_FID')
 
-arcpy.DeleteIdentical_management(new_nodes_CZ, ['Shape', 'NODE'])  # Delete (arbitrarily) duplicates created from nodes lying exactly on border of 2+ zones/capzones
-with arcpy.da.UpdateCursor(new_nodes_CZ, ['NODE', MHN.zone_attr, MHN.subzone_attr, MHN.capzone_attr]) as zoned_nodes_cursor:
+# Calculate node IM AREA using Identity tool
+new_nodes_CZI = os.path.join(MHN.mem, 'new_nodes_CZI')
+imarea_lyr = MHN.make_skinny_feature_layer(MHN.imarea, 'imarea_lyr', [MHN.imarea_attr])
+arcpy.Identity_analysis(new_nodes_CZ, imarea_lyr, new_nodes_CZI, 'NO_FID')
+
+# Delete (arbitrarily) duplicates created from nodes lying exactly on border of 2+ subzone/zone/capzone/imarea polys
+arcpy.DeleteIdentical_management(new_nodes_CZI, ['Shape', 'NODE'])
+with arcpy.da.UpdateCursor(new_nodes_CZI, ['NODE', MHN.zone_attr, MHN.subzone_attr, MHN.capzone_attr, MHN.imarea_attr]) as zoned_nodes_cursor:
     for zoned_node in zoned_nodes_cursor:
         node = zoned_node[0]
         zone = zoned_node[1]
         subzone = zoned_node[2]
         capzone = zoned_node[3]
+        imarea = zoned_node[4]
         if MHN.min_poe <= node <= MHN.max_poe and zone > 0:
             MHN.die('POE {0} is in zone {1}! Please move it outside of the modeling area.'.format(str(node), str(zone)))
             raise arcpy.ExecuteError
@@ -358,7 +365,7 @@ with arcpy.da.UpdateCursor(new_nodes_CZ, ['NODE', MHN.zone_attr, MHN.subzone_att
             arcpy.AddWarning('-- WARNING: Zone ' + str(node) + ' centroid is in zone ' + str(zone) + '! Please verify that this is intentional.')
         else:
             pass
-arcpy.AddMessage('-- Node {0}, {1} & {2} fields recalculated'.format(MHN.zone_attr, MHN.subzone_attr, MHN.capzone_attr))
+arcpy.AddMessage('-- Node {}, {}, {} & {} fields recalculated'.format(MHN.zone_attr, MHN.subzone_attr, MHN.capzone_attr, MHN.imarea_attr))
 
 # Calculate arc ANODE and BNODE values.
 anodes_id = os.path.join(MHN.mem, 'anodes_id')
@@ -700,8 +707,8 @@ arcpy.Delete_management(temp_arcs)
 # Replace old nodes.
 arcpy.AddMessage('-- {0}...'.format(MHN.node))
 arcpy.TruncateTable_management(MHN.node)
-arcpy.Append_management(new_nodes_CZ, MHN.node, 'TEST')
-arcpy.Delete_management(new_nodes_CZ)
+arcpy.Append_management(new_nodes_CZI, MHN.node, 'TEST')
+arcpy.Delete_management(new_nodes_CZI)
 
 # Replace route system tables and line FCs.
 for updated_route_system in updated_route_systems_list:
