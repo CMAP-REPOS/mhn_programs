@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 4/19/18
+    Revised: 8/2/18
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -27,6 +27,7 @@ class MasterHighwayNetwork(object):
     }
 
     centroid_ranges = {
+        ## zones09
         'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
         'Chicago': range(   1,  310),
         'Cook':    range(   1,  855),
@@ -39,6 +40,24 @@ class MasterHighwayNetwork(object):
         'CMAP':    range(   1, 1712),
         'MHN':     range(   1, 1962),
         'POE':     range(1945, 1962)
+
+        # ## zones17
+        # 'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
+        # 'Chicago': range(   1,  718),
+        # 'Cook':    range(   1, 1733),
+        # 'McHenry': range(2584, 2703),
+        # 'Lake':    range(2326, 2584),
+        # 'Kane':    range(2112, 2305),
+        # 'DuPage':  range(1733, 2112),
+        # 'Will':    range(2703, 2927),
+        # 'Kendall': range(2305, 2326),
+        # 'MHN':     range(   1, 3650),
+        # 'POE':     range(3633, 3650),
+        # 'CMAP': {
+        #     '7_Counties':  range(   1, 2927),
+        #     'Grundy_Part': range(2949, 2950),
+        #     'DeKalb_Part': range(2977, 2978)
+        # }
     }
 
     min_node_id =  5001  # 1-5000 reserved for zone centroids/POEs
@@ -94,68 +113,6 @@ class MasterHighwayNetwork(object):
         '2': ('2', '3', '4', '5', 'am'),                      # AM periods
         '3': ('1', '6', '7', '8'),                            # PM periods
         '4': ('1', '5')                                       # Off-peak periods
-    }
-
-    mcps = {
-        '100001': "Elgin O'Hare Expressway Improvements (including Western O'Hare Bypass)",
-        '100002': "I-190 Access Improvements",
-        '100003': "I-90 Add/Managed Lanes",
-        '100004': "Central Lake County Corridor (IL 53 North and IL 120)",
-        '100005': "I-290 Multimodal Corridor",
-        '100006': "I-55 Managed Lanes",
-        '100007': "I-94 Add Lanes North",
-        '100008': "I-80 Add Lanes (US 30 to US 45)",
-        '100009': "I-294/I-57 Interchange",
-        '100010': "I-88 Add Lanes",
-        '100011': "Illiana Expressway",
-        '100012': "Circle Interchange Reconstruction",
-        '101001': "I-80 Add/Managed Lanes",
-        '101002': "I-57 Add Lanes",
-        '101003': "I-55 Add Lanes and Reconstruction",
-        '101004': "IL 394",
-        '101005': "Prairie Parkway",
-        '101006': "McHenry-Lake Corridor",
-        '101007': "Elgin O'Hare Expressway West Extension",
-        '101008': "Elgin O'Hare Expressway Far West Extension",
-        '101009': "I-80 to I-55 Connector",
-        '101010': "I-80 Managed Lanes",
-        '101011': "I-294 Central Tristate Mobility Improvements",
-        '200001': "CTA South Red Line Extension",
-        '200002': "Metra UP North Improvements",
-        '200003': "Metra UP Northwest Improvements and Extension",
-        '200004': "Metra Rock Island Improvements",
-        '200005': "West Loop Transportation Center (Phase 1)",
-        '200006': "Metra SouthWest Service Improvements",
-        '200007': "CTA North Red and Purple Line Improvements",
-        '200008': "Metra UP West Improvements",
-        '200009': "West Loop Transportation Center (Phase 2)",
-        '201001': "Metra SouthEast Service Corridor",
-        '201002': "Mid-City Transitway",
-        '201003': "CTA Orange Line Extension",
-        '201004': "CTA Yellow Line Enhancements and Extension",
-        '201005': "Metra Rock Island Extension",
-        '201006': "Metra Heritage Corridor Improvements",
-        '201007': "Metra SouthWest Service Extension and Full Service",
-        '201008': "Express Airport Train Service",
-        '201009': "Metra Milwaukee District North Extension",
-        '201010': "South Lakefront Corridor",
-        '201011': "CTA Brown Line Extension",
-        '201012': "O'Hare to Schaumburg Transit Service",
-        '201013': "Metra North Central Service Improvements",
-        '201014': "Metra Electric District Extension",
-        '201015': "Metra Milwaukee District West Extension",
-        '201016': "Metra Milwaukee District West Improvements",
-        '201017': "Metra Milwaukee District North Improvement",
-        '201018': "Inner Circumferential Rail Service",
-        '201019': "DuPage 'J' Line",
-        '201020': "Central Area Transitway",
-        '201021': "CTA Blue Line West Extension",
-        '201022': "CTA Circle Line (Phase III, north)",
-        '201023': "Metra BNSF Extension",
-        '201024': "CTA Circle Line (Phase II, south)",
-        '201025': "Metra STAR Line Corridor",
-        '201026': "Metra BNSF Improvements",
-        '201027': "Metra Electric District Improvements",
     }
 
     rsps = {
@@ -323,6 +280,14 @@ class MasterHighwayNetwork(object):
         self.subzone_attr = 'Subzone09'
         self.capzone = os.path.join(self.zone_gdb, 'zonesys09', 'capzones09')
         self.capzone_attr = 'CapacityZone09'
+        # self.zone = os.path.join(self.zone_gdb, 'zonesys17', 'zones17')
+        # self.zone_attr = 'Zone17'
+        # self.subzone = os.path.join(self.zone_gdb, 'zonesys17', 'subzones17')
+        # self.subzone_attr = 'Subzone17'
+        # self.capzone = os.path.join(self.zone_gdb, 'zonesys17', 'capzones17')
+        # self.capzone_attr = 'CapacityZone17'
+        self.imarea = os.path.join(self.zone_gdb, 'imarea18')
+        self.imarea_attr = 'IMArea'
 
         # Misc.
         self.mhn2iris_name = 'mhn2iris'

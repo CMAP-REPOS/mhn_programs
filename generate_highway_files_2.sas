@@ -1,7 +1,7 @@
 /*
     generate_highway_files_2.sas
     Authors: cheither, npeterson, nferguson & tschmidt
-    Revised: 5/4/17
+    Revised: 8/3/18
     ---------------------------------------------------------------------------
     Program uses base conditions and project data from the MHN to build Emme
     scenario highway networks. Emme batchin files are the output of this
@@ -405,7 +405,8 @@ data coord; infile in4 dlm=',' dsd firstobs=2;
           x
           y
           zone
-          areatype;
+          areatype
+          imarea;
 
     ** Zone09 area definitions **;
     if 1 <= zone <= 854 then area = '01. Cook Co.';
@@ -562,11 +563,12 @@ data coord; infile in4 dlm=',' dsd firstobs=2;
     ** WRITE OUT NODE ATTRIBUTE FILE FOR EMME **;
     data out4; set anodes;
         file out5;
-        if _n_= 1 then put 'c i-node,@zone,@atype';
+        if _n_= 1 then put 'c i-node,@zone,@atype,@imarea';
         put
         @1 node 6. +1
            zone +1
-           areatype;
+           areatype +1
+           imarea;
 
 %mend output;
 

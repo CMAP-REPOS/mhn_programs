@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 5/11/17
+    Revised: 8/3/18
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -194,7 +194,7 @@ for scen in scen_list:
     hwy_anodes = [abb.split('-')[0] for abb in hwy_abb_2]
     hwy_bnodes = [abb.split('-')[1] for abb in hwy_abb_2]
     hwy_nodes_list = list(set(hwy_anodes).union(set(hwy_bnodes)))
-    hwy_nodes_attr = ['NODE', 'POINT_X', 'POINT_Y', MHN.zone_attr, MHN.capzone_attr]
+    hwy_nodes_attr = ['NODE', 'POINT_X', 'POINT_Y', MHN.zone_attr, MHN.capzone_attr, MHN.imarea_attr]
     hwy_nodes_query = '"NODE" IN ({0})'.format(','.join(hwy_nodes_list))
     hwy_nodes_view = MHN.make_skinny_table_view(MHN.node, 'hwy_nodes_view', hwy_nodes_attr, hwy_nodes_query)
     MHN.write_attribute_csv(hwy_nodes_view, hwy_nodes_csv, hwy_nodes_attr)
@@ -229,27 +229,6 @@ for scen in scen_list:
                 ab = '{0}-{1}'.format(attr[1], attr[2])
                 lanemiles = float(attr[3]) * int(attr[6])
                 mainline_lanemiles[ab] = lanemiles
-
-    # Create mcp_stats.txt.
-    scen_mcp_tipids = {}
-    scen_mcp_query = ''' "COMPLETION_YEAR" <= {0} AND "MCP_ID" IS NOT NULL '''.format(scen_year)
-    with arcpy.da.SearchCursor(MHN.hwyproj, ['MCP_ID', hwyproj_id_field], scen_mcp_query) as c:
-        for mcp_id, tipid in c:
-            if mcp_id not in scen_mcp_tipids:
-                scen_mcp_tipids[mcp_id] = set([tipid])
-            else:
-                scen_mcp_tipids[mcp_id].add(tipid)
-
-    mcp_stats = os.path.join(scen_path, 'mcp_stats.csv')
-    with open(mcp_stats, 'w') as w:
-        w.write('MCP_ID,MCP_NAME,MAINLINE_LANEMILES\n')
-        for mcp_id in sorted(scen_mcp_tipids.keys()):
-            mcp_query = ''' "{0}" IN ('{1}') '''.format(hwyproj_id_field, "','".join(scen_mcp_tipids[mcp_id]))
-            mcp_ab = set((r[0].rsplit('-', 1)[0] for r in arcpy.da.SearchCursor(MHN.route_systems[MHN.hwyproj][0], ['ABB'], mcp_query)))
-            mcp_lanemiles = sum((mainline_lanemiles[ab] for ab in mcp_ab if ab in mainline_lanemiles))
-            w.write('{0},{1},{2}\n'.format(mcp_id, MHN.mcps[mcp_id], mcp_lanemiles))
-
-    arcpy.AddMessage('-- Scenario {0} mcp_stats.csv generated successfully.'.format(scen))
 
     # Create rsp_stats.txt.
     scen_rsp_tipids = {}
