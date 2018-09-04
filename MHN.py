@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 8/2/18
+    Revised: 9/4/18
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -27,37 +27,37 @@ class MasterHighwayNetwork(object):
     }
 
     centroid_ranges = {
-        ## zones09
-        'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
-        'Chicago': range(   1,  310),
-        'Cook':    range(   1,  855),
-        'McHenry': range( 855,  959),
-        'Lake':    range( 959, 1134),
-        'Kane':    range(1134, 1279),
-        'DuPage':  range(1279, 1503),
-        'Will':    range(1503, 1691),
-        'Kendall': range(1691, 1712),
-        'CMAP':    range(   1, 1712),
-        'MHN':     range(   1, 1962),
-        'POE':     range(1945, 1962)
-
-        # ## zones17
+        # ## zones09
         # 'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
-        # 'Chicago': range(   1,  718),
-        # 'Cook':    range(   1, 1733),
-        # 'McHenry': range(2584, 2703),
-        # 'Lake':    range(2326, 2584),
-        # 'Kane':    range(2112, 2305),
-        # 'DuPage':  range(1733, 2112),
-        # 'Will':    range(2703, 2927),
-        # 'Kendall': range(2305, 2326),
-        # 'MHN':     range(   1, 3650),
-        # 'POE':     range(3633, 3650),
-        # 'CMAP': {
-        #     '7_Counties':  range(   1, 2927),
-        #     'Grundy_Part': range(2949, 2950),
-        #     'DeKalb_Part': range(2977, 2978)
-        # }
+        # 'Chicago': range(   1,  310),
+        # 'Cook':    range(   1,  855),
+        # 'McHenry': range( 855,  959),
+        # 'Lake':    range( 959, 1134),
+        # 'Kane':    range(1134, 1279),
+        # 'DuPage':  range(1279, 1503),
+        # 'Will':    range(1503, 1691),
+        # 'Kendall': range(1691, 1712),
+        # 'CMAP':    range(   1, 1712),
+        # 'MHN':     range(   1, 1962),
+        # 'POE':     range(1945, 1962)
+
+        ## zones17
+        'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
+        'Chicago': range(   1,  718),
+        'Cook':    range(   1, 1733),
+        'McHenry': range(2584, 2703),
+        'Lake':    range(2326, 2584),
+        'Kane':    range(2112, 2305),
+        'DuPage':  range(1733, 2112),
+        'Will':    range(2703, 2927),
+        'Kendall': range(2305, 2326),
+        'MHN':     range(   1, 3650),
+        'POE':     range(3633, 3650),
+        'CMAP': {
+            '7_Counties':  range(   1, 2927),
+            'Grundy_Part': range(2949, 2950),
+            'DeKalb_Part': range(2977, 2978)
+        }
     }
 
     min_node_id =  5001  # 1-5000 reserved for zone centroids/POEs
@@ -274,18 +274,18 @@ class MasterHighwayNetwork(object):
             self.zone_gdb = zone_gdb_path
         else:
             self.zone_gdb = os.path.join(self.root_dir, 'zone_systems.gdb')
-        self.zone = os.path.join(self.zone_gdb, 'zonesys09', 'zones09')
-        self.zone_attr = 'Zone09'
-        self.subzone = os.path.join(self.zone_gdb, 'zonesys09', 'subzones09')
-        self.subzone_attr = 'Subzone09'
-        self.capzone = os.path.join(self.zone_gdb, 'zonesys09', 'capzones09')
-        self.capzone_attr = 'CapacityZone09'
-        # self.zone = os.path.join(self.zone_gdb, 'zonesys17', 'zones17')
-        # self.zone_attr = 'Zone17'
-        # self.subzone = os.path.join(self.zone_gdb, 'zonesys17', 'subzones17')
-        # self.subzone_attr = 'Subzone17'
-        # self.capzone = os.path.join(self.zone_gdb, 'zonesys17', 'capzones17')
-        # self.capzone_attr = 'CapacityZone17'
+        # self.zone = os.path.join(self.zone_gdb, 'zonesys09', 'zones09')
+        # self.zone_attr = 'Zone09'
+        # self.subzone = os.path.join(self.zone_gdb, 'zonesys09', 'subzones09')
+        # self.subzone_attr = 'Subzone09'
+        # self.capzone = os.path.join(self.zone_gdb, 'zonesys09', 'capzones09')
+        # self.capzone_attr = 'CapacityZone09'
+        self.zone = os.path.join(self.zone_gdb, 'zonesys17', 'zones17')
+        self.zone_attr = 'zone17'
+        self.subzone = os.path.join(self.zone_gdb, 'zonesys17', 'subzones17')
+        self.subzone_attr = 'subzone17'
+        self.capzone = os.path.join(self.zone_gdb, 'zonesys17', 'capzones17')
+        self.capzone_attr = 'capzone17'
         self.imarea = os.path.join(self.zone_gdb, 'imarea18')
         self.imarea_attr = 'IMArea'
 
