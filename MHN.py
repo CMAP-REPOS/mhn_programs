@@ -266,7 +266,7 @@ class MasterHighwayNetwork(object):
         }
         self.pnr_name = 'parknride'
         self.pnr = os.path.join(self.gdb, self.pnr_name)
-        self.projection = arcpy.Describe(self.hwynet).spatialReference
+        self.projection = arcpy.Describe(self.arc).spatialReference
 
         # Zone geodatabase structure (default to zone_systems.gdb in same dir as MHN gdb)
         if zone_gdb_path:
