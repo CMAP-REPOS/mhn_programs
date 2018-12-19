@@ -393,12 +393,14 @@ class MasterHighwayNetwork(object):
     @staticmethod
     def check_selection(lyr):
         ''' Check whether specified layer has a selection. '''
-        desc = arcpy.Describe(lyr)
-        selected = desc.FIDSet
-        if len(selected) == 0:
+        try:
+            if len(arcpy.Describe(lyr).FIDSet) == 0:
+                return False
+            else:
+                return True
+        except AttributeError:
+            # `lyr` is not a feature layer or table view
             return False
-        else:
-            return True
 
 
     @staticmethod
@@ -669,7 +671,7 @@ class MasterHighwayNetwork(object):
         ''' Format an integer < 100,000,000 as a TIPID string. '''
         try:
             n_str = str(int(n)).zfill(8)
-            tipid = '-'.join(n_str[:2], n_str[2:4], n_str[4:])
+            tipid = '-'.join([n_str[:2], n_str[2:4], n_str[4:]])
         except:
             return None
         return tipid if self.is_tipid(tipid) else None
