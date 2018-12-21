@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 9/4/18
+    Revised: 12/19/18
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -27,21 +27,6 @@ class MasterHighwayNetwork(object):
     }
 
     centroid_ranges = {
-        # ## zones09
-        # 'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
-        # 'Chicago': range(   1,  310),
-        # 'Cook':    range(   1,  855),
-        # 'McHenry': range( 855,  959),
-        # 'Lake':    range( 959, 1134),
-        # 'Kane':    range(1134, 1279),
-        # 'DuPage':  range(1279, 1503),
-        # 'Will':    range(1503, 1691),
-        # 'Kendall': range(1691, 1712),
-        # 'CMAP':    range(   1, 1712),
-        # 'MHN':     range(   1, 1962),
-        # 'POE':     range(1945, 1962)
-
-        ## zones17
         'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
         'Chicago': range(   1,  718),
         'Cook':    range(   1, 1733),
@@ -58,6 +43,20 @@ class MasterHighwayNetwork(object):
             'Grundy_Part': range(2949, 2950),
             'DeKalb_Part': range(2977, 2978)
         }
+
+        # ## zones09 (C18Q3 and earlier)
+        # 'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
+        # 'Chicago': range(   1,  310),
+        # 'Cook':    range(   1,  855),
+        # 'McHenry': range( 855,  959),
+        # 'Lake':    range( 959, 1134),
+        # 'Kane':    range(1134, 1279),
+        # 'DuPage':  range(1279, 1503),
+        # 'Will':    range(1503, 1691),
+        # 'Kendall': range(1691, 1712),
+        # 'CMAP':    range(   1, 1712),
+        # 'MHN':     range(   1, 1962),
+        # 'POE':     range(1945, 1962)
     }
 
     min_node_id =  5001  # 1-5000 reserved for zone centroids/POEs
@@ -108,7 +107,7 @@ class MasterHighwayNetwork(object):
                '"AM_SHARE" >= 0.5')
     }
 
-    ampm_tods ={
+    ampm_tods = {
         '1': ('1', '2', '3', '4', '5', '6', '7', '8', 'am'),  # All periods
         '2': ('2', '3', '4', '5', 'am'),                      # AM periods
         '3': ('1', '6', '7', '8'),                            # PM periods
@@ -267,7 +266,7 @@ class MasterHighwayNetwork(object):
         }
         self.pnr_name = 'parknride'
         self.pnr = os.path.join(self.gdb, self.pnr_name)
-        self.projection = arcpy.Describe(self.hwynet).spatialReference
+        self.projection = arcpy.Describe(self.arc).spatialReference
 
         # Zone geodatabase structure (default to zone_systems.gdb in same dir as MHN gdb)
         if zone_gdb_path:
@@ -373,14 +372,35 @@ class MasterHighwayNetwork(object):
 
 
     @staticmethod
+    def check_edit_session(lyr):
+        ''' Check for an active edit session on a specified layer by trying to
+            open two cursors simultaneously. '''
+        edit_session = True
+        try:
+            OID = arcpy.Describe(lyr).OIDFieldName
+            with arcpy.da.UpdateCursor(lyr, OID) as rows:
+                row = next(rows)
+                with arcpy.da.UpdateCursor(lyr, OID) as rows2:
+                    row2 = next(rows2)
+        except RuntimeError as e:
+            if str(e) == "workspace already in transaction mode":
+                edit_session = False  # No active edit session
+            else:
+                raise  # Some other RuntimeError
+        return edit_session
+
+
+    @staticmethod
     def check_selection(lyr):
         ''' Check whether specified layer has a selection. '''
-        desc = arcpy.Describe(lyr)
-        selected = desc.FIDSet
-        if len(selected) == 0:
+        try:
+            if len(arcpy.Describe(lyr).FIDSet) == 0:
+                return False
+            else:
+                return True
+        except AttributeError:
+            # `lyr` is not a feature layer or table view
             return False
-        else:
-            return True
 
 
     @staticmethod
@@ -388,9 +408,9 @@ class MasterHighwayNetwork(object):
         ''' Check if a file exists, and delete it if so. '''
         if arcpy.Exists(filepath):
             arcpy.Delete_management(filepath)
-            message = filepath + ' successfully deleted.'
+            message = '{} successfully deleted.'.format(filepath)
         else:
-            message = filepath + ' does not exist.'
+            message = '{} does not exist.'.format(filepath)
         return message
 
 
@@ -417,9 +437,7 @@ class MasterHighwayNetwork(object):
     @staticmethod
     def determine_OID_fieldname(fc):
         ''' Determines the Object ID fieldname for the specified fc/table. '''
-        describe = arcpy.Describe(fc)
-        OID_name = describe.OIDFieldName
-        return OID_name
+        return arcpy.Describe(fc).OIDFieldName
 
 
     @staticmethod
@@ -439,7 +457,7 @@ class MasterHighwayNetwork(object):
     @staticmethod
     def die(error_message=''):
         ''' End processing prematurely. '''
-        arcpy.AddError('\n' + error_message + '\n')
+        arcpy.AddError('\n{}\n'.format(error_message))
         sys.exit()
         return None
 
@@ -487,7 +505,7 @@ class MasterHighwayNetwork(object):
         ''' Check hwyproj completion years and return list of invalid projects'
             TIPIDs. '''
         common_id_field = self.route_systems[self.hwyproj][1]
-        invalid_year_query = '"{0}" = 0 OR "{0}" IS NULL'.format('COMPLETION_YEAR')
+        invalid_year_query = "{0} = 0 OR {0} IS NULL".format('COMPLETION_YEAR')
         invalid_year_lyr = self.make_skinny_table_view(self.hwyproj, 'invalid_year_lyr', ['COMPLETION_YEAR', common_id_field], invalid_year_query)
         invalid_year_count = int(arcpy.GetCount_management(invalid_year_lyr).getOutput(0))
         if invalid_year_count > 0:
@@ -520,12 +538,11 @@ class MasterHighwayNetwork(object):
             - NOTE 2: using attr_list=[] will essentially build a list of unique
               key_field values. '''
         attr_dict = {}
-        fc_field_objects = arcpy.ListFields(fc)
-        fc_fields = [field.name for field in fc_field_objects if field.type != 'Geometry']
+        fc_fields = [f.name for f in arcpy.ListFields(fc) if f.type != 'Geometry']
         if attr_list == ['*']:
             valid_fields = fc_fields
         else:
-            valid_fields = [field for field in attr_list if field in fc_fields]
+            valid_fields = [f for f in attr_list if f in fc_fields]
         # Ensure that key_field is always the first field in the field list
         cursor_fields = [key_field] + list(set(valid_fields) - set([key_field]))
         with arcpy.da.SearchCursor(fc, cursor_fields) as cursor:
@@ -555,9 +572,9 @@ class MasterHighwayNetwork(object):
             keep_fields_list = []
         for field in input_fields:
             if field.name in keep_fields_list:
-                field_info_str += field.name + ' ' + field.name + ' VISIBLE;'
+                field_info_str += '{0} {0} VISIBLE;'.format(field.name)
             else:
-                field_info_str += field.name + ' ' + field.name + ' HIDDEN;'
+                field_info_str += '{0} {0} HIDDEN;'.format(field.name)
         field_info_str.rstrip(';')  # Remove trailing semicolon
         if is_geo:
             arcpy.MakeFeatureLayer_management(in_obj, out_obj, where_clause, field_info=field_info_str)
@@ -580,14 +597,14 @@ class MasterHighwayNetwork(object):
             valid_types = ['String']
         else:
             valid_types = ['String', 'SmallInteger', 'Integer', 'Single', 'Double']
-        matched_fields = [field for field in arcpy.ListFields(fc) if field.name in fields and field.type in valid_types]
+        matched_fields = [f for f in arcpy.ListFields(fc) if f.name in fields and f.type in valid_types]
         for field in matched_fields:
             if field.type == 'String':
-                expression = "'{0}'".format(value)
+                expression = "'{}'".format(value)
             else:
-                expression = '{0}'.format(value)
+                expression = "{}".format(value)
             null_view = 'null_view'
-            arcpy.MakeTableView_management(fc, null_view, '"{0}" IS NULL'.format(field.name))
+            arcpy.MakeTableView_management(fc, null_view, "{} IS NULL".format(field.name))
             if int(arcpy.GetCount_management(null_view).getOutput(0)) > 0:
                 arcpy.CalculateField_management(null_view, field.name, expression, 'PYTHON')
             arcpy.Delete_management(null_view)
@@ -611,7 +628,7 @@ class MasterHighwayNetwork(object):
         if not arg_list:
             arg_str = ''
         else:
-            arg_str = '$'.join((str(arg) for arg in arg_list))
+            arg_str = '$'.join(str(arg) for arg in arg_list)
         bat = os.path.join(self.prog_dir, 'sasrun.bat')
         cmd = [bat, sas_file, arg_str, sas_log, sas_lst]
         return subprocess.check_call(cmd, startupinfo=startupinfo)
@@ -654,7 +671,7 @@ class MasterHighwayNetwork(object):
         ''' Format an integer < 100,000,000 as a TIPID string. '''
         try:
             n_str = str(int(n)).zfill(8)
-            tipid = '-'.join((n_str[:2], n_str[2:4], n_str[4:]))
+            tipid = '-'.join([n_str[:2], n_str[2:4], n_str[4:]])
         except:
             return None
         return tipid if self.is_tipid(tipid) else None
@@ -725,15 +742,15 @@ class MasterHighwayNetwork(object):
                 w.write('ANODE,BNODE\n')
             else:
                 row_prefix = 'l='
-                w.write('~# {0} links\n'.format(flag_query.strip()))
+                w.write('~# {} links\n'.format(flag_query.strip()))
             with arcpy.da.SearchCursor(flag_lyr, ['ANODE', 'BNODE', 'DIRECTIONS']) as cursor:
                 for row in cursor:
                     anode = row[0]
                     bnode = row[1]
                     directions = int(row[2])
-                    w.write('{2}{0},{1}\n'.format(anode, bnode, row_prefix))
+                    w.write('{0}{1},{2}\n'.format(row_prefix, anode, bnode))
                     if directions > 1:
-                        w.write('{2}{1},{0}\n'.format(anode, bnode, row_prefix))
+                        w.write('{0}{2},{1}\n'.format(row_prefix, anode, bnode))
         arcpy.Delete_management(flag_lyr)
         return flag_file
 
@@ -743,12 +760,11 @@ class MasterHighwayNetwork(object):
         ''' Write attributes of a feature class/table to a specified text file.
             Input field_list allows output field order to be specified. Defaults to
             all non-shape fields. '''
-        all_field_objects = arcpy.ListFields(in_obj)
-        valid_field_names = [field.name for field in all_field_objects if field.name != '' and field.type != 'Geometry']
+        valid_field_names = [f.name for f in arcpy.ListFields(in_obj) if f.name != '' and f.type != 'Geometry']
         if not field_list:
             fields = valid_field_names
         else:
-            fields = [field for field in field_list if field in valid_field_names]
+            fields = [f for f in field_list if f in valid_field_names]
         csv = open(textfile,'w')
         if include_headers:
             csv.write(','.join(fields) + '\n')
