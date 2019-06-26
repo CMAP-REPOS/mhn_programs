@@ -2,7 +2,7 @@
 '''
     update_highway_project_years.py
     Author: npeterson
-    Revised: 5/9/18
+    Revised: 6/26/19
     ---------------------------------------------------------------------------
     This script updates the completion years of projects to be included in
     Conformity analyses. The final completion year file is received from the
@@ -92,7 +92,7 @@ proj_years = {}
 duplicates = []
 with open(tipid_all_csv, 'r') as r:
     for line in r:
-        tipid_str, completion_year_str = line.strip().split(',')
+        tipid_str, completion_year_str = line.strip().split(',')[:2]  # rows from year.csv have a 3rd column that is ignored here
         tipid = int(tipid_str)
         completion_year = int(completion_year_str)
         if tipid in proj_years and completion_year != proj_years[tipid]:
