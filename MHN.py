@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 12/19/18
+    Revised: 12/13/19
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -601,10 +601,15 @@ class MasterHighwayNetwork(object):
         for field in matched_fields:
             if field.type == 'String':
                 expression = "'{}'".format(value)
+                if value == 0:
+                    null_sql = "{0} IS NULL OR {0} IN ('', ' ')".format(field.name)  # Replace blanks, too
+                else:
+                    null_sql = "{} IS NULL".format(field.name)
             else:
                 expression = "{}".format(value)
+                null_sql = "{} IS NULL".format(field.name)
             null_view = 'null_view'
-            arcpy.MakeTableView_management(fc, null_view, "{} IS NULL".format(field.name))
+            arcpy.MakeTableView_management(fc, null_view, null_sql)
             if int(arcpy.GetCount_management(null_view).getOutput(0)) > 0:
                 arcpy.CalculateField_management(null_view, field.name, expression, 'PYTHON')
             arcpy.Delete_management(null_view)
