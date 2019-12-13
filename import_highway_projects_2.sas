@@ -1,7 +1,7 @@
 /*
    import_highway_projects_2.sas
    authors: cheither & npeterson
-   revised: 3/15/18
+   revised: 12/13/19
    ----------------------------------------------------------------------------
    This program reads highway project coding and assigns an observation number
    to each line of coding, dependent upon the number of times a link (anode-
@@ -105,7 +105,7 @@ data dups; set freqs(where=(count>1));
 
 ** Verify Coding for Action=4 Links **;
 data check; set coding(where=(action=4));
-if modes in (1:4) & lanes1>0 & feet1>0 & ampm1 in (1:4) then do;
+if modes in (1:5) & lanes1>0 & feet1>0 & ampm1 in (1:4) then do;
   if directions in (1,2) then do;
     if type1=7 then delete;
     if type1 in (1:6,8) & speed1>0 then delete;
