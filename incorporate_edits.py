@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 12/19/18
+    Revised: 12/13/19
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -32,6 +32,7 @@ MHN = MasterHighwayNetwork(mhn_gdb_path)
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
 bad_arcs_shp = os.path.join(MHN.temp_dir, 'bad_arcs.shp')
+bad_truckres_shp = os.path.join(MHN.temp_dir, 'bad_truckres.shp')
 duplicate_nodes_shp = os.path.join(MHN.temp_dir, 'duplicate_nodes.shp')
 overlapping_nodes_shp = os.path.join(MHN.temp_dir, 'overlapping_nodes.shp')
 
@@ -76,7 +77,7 @@ arcpy.MakeFeatureLayer_management(temp_arcs, arcs_without_ABB_lyr, "ANODE = 0 OR
 arcpy.CalculateField_management(arcs_without_ABB_lyr, 'ABB', "' '", 'PYTHON')
 arcpy.Delete_management(arcs_without_ABB_lyr)
 
-# Check for problems with other fields.
+# Check for missing attributes.
 bad_arcs_lyr = 'bad_arcs_lyr'
 bad_arcs_query = (
     "BASELINK = ' ' OR DIRECTIONS = '0' "
@@ -94,6 +95,23 @@ if bad_arcs_count > 0:
 else:
     arcpy.Delete_management(bad_arcs_lyr)
     arcpy.AddMessage('-- All arcs have all required attributes')
+
+# Validate truck restrictions.
+bad_truckres_lyr = 'bad_truckres_lyr'
+bad_truckres_query = "BASELINK = '1' AND (TRUCKRES <> '0' OR CHIBLVD = 1) AND MODES <> '2'"
+arcpy.MakeFeatureLayer_management(temp_arcs, bad_truckres_lyr, bad_truckres_query)
+bad_truckres_count = int(arcpy.GetCount_management(bad_truckres_lyr).getOutput(0))
+if bad_truckres_count > 0:
+    arcpy.CopyFeatures_management(bad_truckres_lyr, bad_truckres_shp)
+    MHN.die((
+        "Some arcs have conflicting TRUCKRES/CHI_BLVD/MODES attributes. "
+        "If TRUCKRES > 0 or CHI_BLVD = 1, MODES *must* be 2. "
+        "Check {} for specific arcs."
+    ).format(bad_truckres_shp))
+    raise arcpy.ExecuteError
+else:
+    arcpy.Delete_management(bad_truckres_lyr)
+    arcpy.AddMessage('-- All arcs have valid truck restriction attributes')
 
 
 # -----------------------------------------------------------------------------

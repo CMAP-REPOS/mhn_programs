@@ -1,7 +1,7 @@
 /*
     generate_highway_files_2.sas
     Authors: cheither, npeterson, nferguson & tschmidt
-    Revised: 8/3/18
+    Revised: 12/13/19
     ---------------------------------------------------------------------------
     Program uses base conditions and project data from the MHN to build Emme
     scenario highway networks. Emme batchin files are the output of this
@@ -274,18 +274,20 @@ filename in4 "&dir.\&scen.\nodes.csv";
         ** UPDATE TRUCK RESTRICTIONS (NOT TIME-PERIOD SPECIFIC) **;
         ** Codes not listed below are TOD-specific, assigned later. **;
         ** Edit by TSchmidt & NPeterson 5/21/14 **;
-        if trkres in (1, 18)
-            then mode = 'ASH';  ** No trucks;
-        else if trkres in (2:4, 9:11, 13, 25, 35, 37)
-            then mode = 'ASHTb';  ** No trucks except B-plates;
-        else if trkres in (7:8, 14, 16:17, 19, 27, 29, 31, 34, 38:44, 46:47, 49)
-            then mode = 'ASHTlb';  ** No medium or heavy trucks;
-        else if trkres in (5, 30, 45, 48)
-            then mode = 'ASHTmlb';  ** No heavy trucks;
-        /*else if trkres in (6, 15, 20, 22:24, 26, 28, 32:33, 36)
-             then mode = 'ASHThmlb';*/ ** Already set implicitly by modes=2 **;
+        if modes = 2 then do;
+            if trkres in (1, 18)
+                then mode = 'ASH';  ** No trucks;
+            else if trkres in (2:4, 9:11, 13, 25, 35, 37)
+                then mode = 'ASHTb';  ** No trucks except B-plates;
+            else if trkres in (7:8, 14, 16:17, 19, 27, 29, 31, 34, 38:44, 46:47, 49)
+                then mode = 'ASHTlb';  ** No medium or heavy trucks;
+            else if trkres in (5, 30, 45, 48)
+                then mode = 'ASHTmlb';  ** No heavy trucks;
+            /*else if trkres in (6, 15, 20, 22:24, 26, 28, 32:33, 36)
+                 then mode = 'ASHThmlb';*/ ** Already set implicitly by modes=2 **;
 
-        if blvd = 1 then mode = 'ASH';  ** No trucks. Trumps trkres codes;
+            if blvd = 1 then mode = 'ASH';  ** No trucks. Trumps trkres codes;
+        end;
 
         ** Vertical clearance restrictions added 9/9/15 by NFerguson **;
         if 0 < vertclrn < 162
