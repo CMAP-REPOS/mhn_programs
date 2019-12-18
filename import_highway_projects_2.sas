@@ -1,7 +1,7 @@
 /*
    import_highway_projects_2.sas
    authors: cheither & npeterson
-   revised: 12/13/19
+   revised: 12/18/19
    ----------------------------------------------------------------------------
    This program reads highway project coding and assigns an observation number
    to each line of coding, dependent upon the number of times a link (anode-
@@ -103,6 +103,15 @@ data dups; set freqs(where=(count>1));
     proc print; var tipid anode bnode tod count;
      title 'DUPLICATE ANODE-BNODE CODING WITHIN A PROJECT';
 
+** Verify Coding for Action=1 Links **;
+data check; set coding(where=(action=1));
+  if directions=3 then do;
+    if type2>0 & ampm2>0 & speed2>0 & lanes2>0 & feet2>0 then delete;
+    end;
+  else delete;
+proc print; var tipid anode bnode action directions type2 lanes2 feet2 speed2 ampm2;
+title 'FIX MISSING VALUES FOR THESE DIRECTIONS=3 LINKS';
+
 ** Verify Coding for Action=4 Links **;
 data check; set coding(where=(action=4));
 if modes in (1:5) & lanes1>0 & feet1>0 & ampm1 in (1:4) then do;
@@ -143,6 +152,7 @@ data check; set coding(where=(action=2));
          ampm1 ampm2 modes tolldollars directions parklanes1 parklanes2 sigic cltl tod;
      title 'NON-USABLE VALUES CODED ON THESE LINKS';
 
+** Export validated coding **;
 proc sort data=coding1; by anode bnode;
 data coding1; merge coding1(in=hit) mhn; by anode bnode; if hit;
   abb=catx('-', anode, bnode, baselink);
