@@ -70,7 +70,7 @@ class MasterHighwayNetwork(object):
         '200': 2020,
         '300': 2025,
         '400': 2030,
-        '500': 2035,
+        '500': 2035,  # Not currently used
         '600': 2040,
         '700': 2050
 
