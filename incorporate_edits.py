@@ -477,7 +477,7 @@ if len(ab_duplicates) > 0:
     ).format(ab_duplicates_shp))
     raise arcpy.ExecuteError
 else:
-    arcpy.AddMessage('-- No duplicate directional links detected.')
+    arcpy.AddMessage('-- No duplicate directional links detected')
 
 
 # -----------------------------------------------------------------------------
