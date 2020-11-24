@@ -2,7 +2,7 @@
 '''
     incorporate_edits.py
     Author: npeterson
-    Revised: 12/13/19
+    Revised: 11/24/20
     ---------------------------------------------------------------------------
     This script should be run after any geometric edits have been made to the
     Master Highway Network. It will:
@@ -35,14 +35,17 @@ bad_arcs_shp = os.path.join(MHN.temp_dir, 'bad_arcs.shp')
 bad_truckres_shp = os.path.join(MHN.temp_dir, 'bad_truckres.shp')
 duplicate_nodes_shp = os.path.join(MHN.temp_dir, 'duplicate_nodes.shp')
 overlapping_nodes_shp = os.path.join(MHN.temp_dir, 'overlapping_nodes.shp')
+ab_duplicates_shp = os.path.join(MHN.temp_dir, 'ab_duplicates.shp')
 
 
 # -----------------------------------------------------------------------------
 #  Clean up old temp files, if necessary.
 # -----------------------------------------------------------------------------
 MHN.delete_if_exists(bad_arcs_shp)
+MHN.delete_if_exists(bad_truckres_shp)
 MHN.delete_if_exists(duplicate_nodes_shp)
 MHN.delete_if_exists(overlapping_nodes_shp)
+MHN.delete_if_exists(ab_duplicates_shp)
 
 
 # -----------------------------------------------------------------------------
@@ -440,6 +443,41 @@ with arcpy.da.UpdateCursor(temp_arcs, ['TOLLTYPE', 'TYPE1', 'TOLLDOLLARS']) as t
             arc[0] = new_tolltype
             tolltype_cursor.updateRow(arc)
 arcpy.AddMessage('-- Arc TOLLTYPE field recalculated')
+
+
+# -----------------------------------------------------------------------------
+#  Check for duplicate directional ANODE-BNODE pairs.
+# -----------------------------------------------------------------------------
+ab_pairs = {}
+with arcpy.da.SearchCursor(temp_arcs, ['ABB', 'ANODE', 'BNODE', 'DIRECTIONS']) as c:
+    for abb, anode, bnode, dir in c:
+        arc_ab = (anode, bnode)
+        ab_pairs[arc_ab] = ab_pairs.get(arc_ab, [])
+        ab_pairs[arc_ab].append(abb)
+        if dir in ('2', '3'):
+            arc_ba = (bnode, anode)
+            ab_pairs[arc_ba] = ab_pairs.get(arc_ba, [])
+            ab_pairs[arc_ba].append(abb)
+
+ab_duplicates = set()
+for arc_ab, abb_list in ab_pairs.items():
+    if len(abb_list) > 1:
+        ab_duplicates.update(abb_list)
+del ab_pairs
+
+if len(ab_duplicates) > 0:
+    ab_duplicates_lyr = 'ab_duplicates_lyr'
+    ab_duplicates_query = "ABB IN ('{}')".format("', '".join(ab_duplicates))
+    arcpy.MakeFeatureLayer_management(temp_arcs, ab_duplicates_lyr, ab_duplicates_query)
+    arcpy.CopyFeatures_management(ab_duplicates_lyr, ab_duplicates_shp)
+    MHN.die((
+        "Some arcs will result in duplicate directional links (ANODE-BNODE, "
+        "and/or BNODE-ANODE, depending on their DIRECTIONS attributes) when "
+        "Generate Highway Files is run. Check {} for specific arcs."
+    ).format(ab_duplicates_shp))
+    raise arcpy.ExecuteError
+else:
+    arcpy.AddMessage('-- No duplicate directional links detected')
 
 
 # -----------------------------------------------------------------------------
