@@ -2,7 +2,7 @@
 '''
     generate_transit_files.py
     Author: npeterson
-    Revised: 4/19/18
+    Revised: 12/9/21
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -315,10 +315,17 @@ for scen in scen_list:
             selected_future_runs = MHN.make_attribute_dict(bus_future_view, bus_future_id_field, attr_list=[])
 
             # Another future bus header set for route replacement data.
+            # Output one row per route being replaced.
             replace_attr = [bus_future_id_field, 'REPLACE', 'TOD']
             replace_view = MHN.make_skinny_table_view(bus_future_lyr, 'replace_view', replace_attr, bus_future_query)
             replace_csv = os.path.join(scen_tran_path, 'replace.csv')
-            MHN.write_attribute_csv(replace_view, replace_csv, replace_attr)
+            with open(replace_csv, 'w') as w:
+                w.write(','.join(replace_attr) + '\n')
+                with arcpy.da.SearchCursor(replace_view, replace_attr) as cursor:
+                    for tr_line, rep, tod in cursor:
+                        rep_list = rep.split(':')  # REPLACE values are colon-delimited
+                        for rep_id in rep_list:
+                            w.write('{},{},{}\n'.format(tr_line, strip(rep_id), tod))
             arcpy.Delete_management(replace_view)
 
             # Corresponding future bus itineraries.
