@@ -2,7 +2,7 @@
 '''
     generate_highway_files.py
     Author: npeterson
-    Revised: 8/3/18
+    Revised: 1/19/22
     ---------------------------------------------------------------------------
     This program creates the Emme highway batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -225,7 +225,7 @@ for scen in scen_list:
     with open(scen_ampeak_l1, 'r') as l1:
         for r in l1:
             attr = r.split()
-            if attr[0] == 'a'and attr[7] in ('2', '4'):  # Ignore comments, t-record and non-mainline links
+            if attr[0] == 'a' and attr[7] in ('2', '4'):  # Ignore comments, t-record and non-mainline links
                 ab = '{0}-{1}'.format(attr[1], attr[2])
                 lanemiles = float(attr[3]) * int(attr[6])
                 mainline_lanemiles[ab] = lanemiles
