@@ -2,7 +2,7 @@
 '''
     MHN.py
     Author: npeterson
-    Revised: 12/13/19
+    Revised: 1/21/22
     ---------------------------------------------------------------------------
     A class for importing into MHN processing scripts, containing frequently
     used methods and variables.
@@ -66,13 +66,22 @@ class MasterHighwayNetwork(object):
     max_poe = max(centroid_ranges['POE'])
 
     scenario_years = {
-        '100': 2015,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
-        '200': 2020,
-        '300': 2025,
-        '400': 2030,
-        '500': 2035,  # Not currently used
-        '600': 2040,
+        '100': 2019,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
+        '200': 2025,
+        '300': 2030,
+        '400': 2035,
+        '500': 2040,
+        '600': 2045,  # UrbanSim only
         '700': 2050
+
+        ### Old codes (C17Q2-C21Q4)
+        # '100': 2015,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
+        # '200': 2020,
+        # '300': 2025,
+        # '400': 2030,
+        # '500': 2035,  # Not currently used
+        # '600': 2040,
+        # '700': 2050
 
         ### Old codes (C17Q1 and earlier):
         # '100': 2010,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
@@ -116,47 +125,46 @@ class MasterHighwayNetwork(object):
 
     rsps = {
         3:   "McHenry-Lake Corridor",
-        6:   "IL-31 Front St",
-        10:  "IL-60",
-        11:  "IL-62/Algonquin Rd",
-        13:  "IL-83/Barron Blvd",
-        14:  "IL-131/Greenbay Rd",
-        15:  "IL-173/Rosecrans Rd",
+        6:   "IL 31/Front St",
+        10:  "IL 60",
+        11:  "IL 62/Algonquin Rd",
+        13:  "IL 83/Barron Blvd",
+        14:  "IL 131/Greenbay Rd",
+        15:  "IL 173/Rosecrans Rd",
         20:  "Elgin O'Hare Western Access",
         21:  "I-290/IL 53 Interchange Improvement",
-        22:  "I-294 Interchange Addition",
+        22:  "I-294/I-57 Interchange Addition",
         23:  "I-294 Central Tri-State Mobility Improvements",
-        24:  "I-290/I-294 Interchange Improvement",
-        25:  "Central Lake County Corridor: IL 53 North and IL 120",
+        24:  "I-290/I-88/I-294 Interchange Improvement",
+        25:  "Central Lake County Corridor: IL 53 North & IL 120",
         29:  "I-55 Managed Lane",
-        30:  "I-290 Eisenhower Reconstruction and Managed Lane",
+        30:  "I-290 Eisenhower Reconstruction & Managed Lane",
         31:  "Illiana Corridor",
         32:  "I-190 Access Improvements",
         33:  "Jane Byrne Interchange Reconstruction",
-        34:  "I-55 Add Lanes and Reconstruction",
+        34:  "I-55 Add Lanes & Reconstruction",
         35:  "I-57 Add Lanes",
-        36:  "I-80 Reconstruction and Managed Lanes",
+        36:  "I-80 Reconstruction & Managed Lanes",
         37:  "I-80 Managed Lanes",
         38:  "I-80 to I-55 Connector",
         46:  "Randall Rd",
         51:  "North Algonquin Fox River Crossing",
         53:  "Caton Farm-Bruce Rd Corridor",
         55:  "Laraway Rd",
-        56:  "Wilmington-Peotone Rd ",
+        56:  "Wilmington-Peotone Rd",
         57:  "Red Line Extension (South)",
-        58:  "Red Purple Modernization Phase I",
-        58:  "Red Purple Modernization Phase II",
+        58:  "(58A/B) Red Purple Modernization",
         59:  "Blue Line West Extension",
         60:  "Brown Line Extension",
         61:  "Circle Line South (Phase II)",
         62:  "Circle Line North (Phase III)",
         63:  "Orange Line Extension",
-        64:  "Yellow Line Enhancements and Extension",
+        64:  "Yellow Line Enhancements & Extension",
         66:  "UP Northwest Extension",
         67:  "SouthWest Service Improvements / 75th St Corridor Improvement Program Elements",
         68:  "UP North Improvements",
         69:  "UP West Improvements",
-        70:  "Rock Island Improvements ",
+        70:  "Rock Island Improvements",
         71:  "BNSF Extension-Oswego/Plano",
         72:  "BNSF Improvements",
         73:  "Heritage Corridor Improvements",
@@ -178,19 +186,19 @@ class MasterHighwayNetwork(object):
         93:  "Blue Line Forest Park Branch Reconstruction",
         94:  "Brown Line Capacity Expansion",
         98:  "A-2 Crossing Rebuild",
-        102: "Pulse-ART Expansion",
+        102: "(102A) Pulse-ART Expansion",
         103: "River North-Streeterville Transit Improvements",
         104: "South Lakefront-Museum Campus Access Improvement",
         105: "Express Bus Expansion",
         106: "Ashland Ave BRT",
         107: "Green Line Extension",
         108: "South Halsted BRT",
-        109: "IL-43/Harlem Ave",
-        110: "IL-47",
-        111: "IL-83/Kingery Hwy",
-        112: "US-12/95th St",
-        113: "US-20/Lake St",
-        114: "US-45/Olde Half Day Rd",
+        109: "IL 43/Harlem Ave",
+        110: "IL 47",
+        111: "IL 83/Kingery Hwy",
+        112: "US 12/95th St",
+        113: "US 20/Lake St",
+        114: "US 45/Olde Half Day Rd",
         115: "BNSF Extension-Sugar Grove",
         116: "Heritage Corridor Extension",
         117: "Milwaukee District North Extension-Richmond",
@@ -204,14 +212,14 @@ class MasterHighwayNetwork(object):
         125: "North Lakefront Light Rail Line",
         126: "South Lakefront Light Rail Line",
         127: "Superloop Light Rail Line",
-        128: "Madison Street and Jackson Street Light Rail Lines",
+        128: "Madison Street & Jackson Street Light Rail Lines",
         129: "Clark Street Light Rail Line",
         130: "Downtown Ring Light Rail Line",
         131: "The Burnham Ring Light Rail Line",
-        132: "Milwaukee Avenue Streetcar and O'Hare Blue Line Express",
-        134: "Cross-Town Tollway and CTA Route",
+        132: "Milwaukee Avenue Streetcar & O'Hare Blue Line Express",
+        134: "Cross-Town Tollway & CTA Route",
         135: "I-94 Bishop Ford Expressway",
-        136: "I-90/1-94 Kennedy and Dan Ryan Expressways",
+        136: "I-90/1-94 Kennedy & Dan Ryan Expressways",
         137: "I-55 Stevenson Expressway",
         138: "I-90 Kennedy Expressway",
         139: "I-94 Edens Expressway",
@@ -222,6 +230,24 @@ class MasterHighwayNetwork(object):
         144: "S.M.A.R.T. - Suburban Metropolitan Area Rapid Transit",
         145: "Vollmer Rd",
         146: "I-55 Dual Managed Lane",
+        147: "Blue Line Capacity",
+        151: "CREATE GS-02",
+        152: "Elston-Armitage-Ahsland-Cortland Intersection",
+        153: "Ashland-Ogden Metra Infill Station",
+        154: "South Halsted Bus Enhancements",
+        155: "I-294 BRT Stations",
+        156: "Milwaukee Corridor/O'Hare Improvements",
+        158: "US 6",
+        159: "US 30",
+        160: "US 45 & Milburn Bypass",
+        161: "IL 7/143rd St",
+        162: "IL 47",
+        163: "IL 56",
+        164: "IL 60",
+        9901: "(A1) O'Hare Express Service",
+        9902: "(A2) South Lakefront Improvements",
+        9903: "(A3) I-55 Reconstruction & IL 126 Interchange Reconfiguration",
+        9904: "(A4) I-55/IL 59 Interchange",
     }
 
 
