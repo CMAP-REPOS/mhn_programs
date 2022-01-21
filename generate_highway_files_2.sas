@@ -1,7 +1,7 @@
 /*
     generate_highway_files_2.sas
     Authors: cheither, npeterson, nferguson & tschmidt
-    Revised: 12/13/19
+    Revised: 1/19/22
     ---------------------------------------------------------------------------
     Program uses base conditions and project data from the MHN to build Emme
     scenario highway networks. Emme batchin files are the output of this
@@ -71,10 +71,6 @@ filename in4 "&dir.\&scen.\nodes.csv";
     data network; set network;
         miles = round(miles, 0.01);
         toll = round(toll, 0.01);
-
-    *- - - - - - - - - - - - - - - - - -*;
-      %if &scen = &baseyr %then %goto skip;   *** CURRENTLY APPLES-TO-ORANGES, e.g. 100 vs 2010, so never skipped;
-    *- - - - - - - - - - - - - - - - - -*;
 
     *-----------------------------;
       ** READ IN SECTION TABLE **;
@@ -165,27 +161,27 @@ filename in4 "&dir.\&scen.\nodes.csv";
     data period temp(drop=tod); set temp;
         if tod > 0 then output period; else output temp;
 
-        proc sort data=period; by abb;
-        data n(keep=abb anode bnode directn); set network;
-        data period; merge period (in=hit) n; by abb; if hit;
-            tp = put(tod, 7.0);
+    proc sort data=period; by abb;
+    data n(keep=abb anode bnode directn); set network;
+    data period; merge period (in=hit) n; by abb; if hit;
+        tp = put(tod, 7.0);
+        output;
+        if directn = 2 then do;
+            cn = anode; anode = bnode; bnode = cn;
             output;
-            if directn = 2 then do;
-                cn = anode; anode = bnode; bnode = cn;
-                output;
-            end;
-            if directn = 3 then do;
-                cn = anode; anode = bnode; bnode = cn;
-                type1 = type2;
-                ampm1 = ampm2;
-                posted1 = posted2;
-                thruln1 = thruln2;
-                parkln1 = parkln2;
-                thruft1 = thruft2;
-                output;
-            end;
-            drop cn ampm2 posted2 thruln2 parkln2 thruft2 type2;
-            proc sort; by anode bnode;
+        end;
+        if directn = 3 then do;
+            cn = anode; anode = bnode; bnode = cn;
+            type1 = type2;
+            ampm1 = ampm2;
+            posted1 = posted2;
+            thruln1 = thruln2;
+            parkln1 = parkln2;
+            thruft1 = thruft2;
+            output;
+        end;
+        drop cn ampm2 posted2 thruln2 parkln2 thruft2 type2;
+        proc sort; by anode bnode;
 
     data modify; set temp;
         if action = 1;
@@ -245,58 +241,8 @@ filename in4 "&dir.\&scen.\nodes.csv";
     data network; update network delete; by abb;
         if action = 3 then delete;
 
-    /*
-    *** -- Update post-2012 toll values to January 2012 rates -- ***;
-    %if &scen > 100 %then %do;
-        toll = round(toll * 1.875, 0.05);
-    %end;
-
-    *** -- Revert max speed limit to 65 MPH for pre-2014 scenarios -- ***;
-    %if &scen = 100 %then %do;
-        posted1 = min(posted1, 65);
-        posted2 = min(posted2, 65);
-    %end;
-    */
-
-    *- - - - - - - - - - -*;
-     %skip: ;
-    *- - - - - - - - - - -*;
-
     data network; set network;
         if tipid = '.' then tipid = 0;
-
-        if modes = 1 then mode = 'ASHThmlb';       ** all modes;
-        else if modes = 2 then mode = 'ASHThmlb';  ** all modes (unless modified below by trkres);
-        else if modes = 3 then mode = 'AThmlb';    ** truck only;
-        else if modes = 4 then delete;             ** transit only;
-        else if modes = 5 then mode = 'AH';        ** HOV only;
-
-        ** UPDATE TRUCK RESTRICTIONS (NOT TIME-PERIOD SPECIFIC) **;
-        ** Codes not listed below are TOD-specific, assigned later. **;
-        ** Edit by TSchmidt & NPeterson 5/21/14 **;
-        if modes = 2 then do;
-            if trkres in (1, 18)
-                then mode = 'ASH';  ** No trucks;
-            else if trkres in (2:4, 9:11, 13, 25, 35, 37)
-                then mode = 'ASHTb';  ** No trucks except B-plates;
-            else if trkres in (7:8, 14, 16:17, 19, 27, 29, 31, 34, 38:44, 46:47, 49)
-                then mode = 'ASHTlb';  ** No medium or heavy trucks;
-            else if trkres in (5, 30, 45, 48)
-                then mode = 'ASHTmlb';  ** No heavy trucks;
-            /*else if trkres in (6, 15, 20, 22:24, 26, 28, 32:33, 36)
-                 then mode = 'ASHThmlb';*/ ** Already set implicitly by modes=2 **;
-
-            if blvd = 1 then mode = 'ASH';  ** No trucks. Trumps trkres codes;
-        end;
-
-        ** Vertical clearance restrictions added 9/9/15 by NFerguson **;
-        if 0 < vertclrn < 162
-            then mode = compress(mode, 'h'); ** Minimum 13'6" clearance for heavy trucks;
-        if 0 < vertclrn < 150
-            then mode = compress(mode, 'm'); ** Minimum 12'6" clearance for medium trucks;
-        if 0 < vertclrn < 138
-            then mode = compress(mode, 'l'); ** Minimum 11'6" clearance for light trucks;
-
         proc sort; by anode bnode;
 
 %mend main;
@@ -473,17 +419,37 @@ data coord; infile in4 dlm=',' dsd firstobs=2;
     data links&tod; set links&tod;
         if count(parkres1, "&tod") > 0 then do;
             thruln1 = max(thruln1, resln1);  **-- max. value of (original lanes+1) or value after project coding processed--**;
-            parkln1 = 0;                    **-- obviously no parking is available -**;
+            parkln1 = 0;                     **-- obviously no parking is available -**;
         end;
 
-    ** UPDATE TIME-OF-DAY TRUCK RESTRICTIONS **;
-    ** Edit by TSchmidt 9/12/2014 **;
+    ** SET EMME MODES (based on modes, trkres, blvd, vertclrn & tod) **;
     data links&tod; set links&tod;
+        if modes = 1 then mode = 'ASHThmlb';       ** all modes;
+        else if modes = 2 then mode = 'ASHThmlb';  ** all modes (unless modified below by trkres);
+        else if modes = 3 then mode = 'AThmlb';    ** truck only;
+        else if modes = 4 then delete;             ** transit only;
+        else if modes = 5 then mode = 'AH';        ** HOV only;
+
+        ** UPDATE TRUCK RESTRICTIONS **;
+        ** Edit by TSchmidt & NPeterson 5/21/14 **;
+        if modes = 2 then do;
+            if trkres in (1, 18) then mode = 'ASH';  ** No trucks;
+            else if trkres in (2:4, 9:11, 13, 25, 35, 37) then mode = 'ASHTb';  ** No trucks except B-plates;
+            else if trkres in (7:8, 14, 16:17, 19, 27, 29, 31, 34, 38:44, 46:47, 49) then mode = 'ASHTlb';  ** No medium or heavy trucks;
+            else if trkres in (5, 30, 45, 48) then mode = 'ASHTmlb';  ** No heavy trucks;
+            /*else if trkres in (6, 15, 20, 22:24, 26, 28, 32:33, 36) then mode = 'ASHThmlb'; */ ** Already set implicitly by modes=2 **;
+            if blvd = 1 then mode = 'ASH';  ** No trucks. Trumps trkres codes;
+        end;
+
+        ** Vertical clearance restrictions added 9/9/15 by NFerguson **;
+        if 0 < vertclrn < 162 then mode = compress(mode, 'h'); ** Minimum 13'6" clearance for heavy trucks;
+        if 0 < vertclrn < 150 then mode = compress(mode, 'm'); ** Minimum 12'6" clearance for medium trucks;
+        if 0 < vertclrn < 138 then mode = compress(mode, 'l'); ** Minimum 11'6" clearance for light trucks;
+
+        ** Time-of-day truck restrictions added 9/12/14 by TSchmidt **;
         if &tod = 1 then do;    **-- Currently only overnight restrictions --**;
-            if trkres in (21)
-                then mode = 'ASH';  ** No trucks;
-            else if trkres in (12)
-                then mode = 'ASHTb';  ** No trucks except B-plates;
+            if trkres in (21) then mode = 'ASH';  ** No trucks;
+            else if trkres in (12) then mode = 'ASHTb';  ** No trucks except B-plates;
         end;
 
     ** UPDATE TOLL COST FOR DISTANCE-BASED TOLL LINKS **;

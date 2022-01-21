@@ -771,7 +771,7 @@ arcpy.Delete_management(temp_arcs)
 # Replace old nodes.
 arcpy.AddMessage('-- {}...'.format(MHN.node))
 arcpy.TruncateTable_management(MHN.node)
-arcpy.Append_management(new_nodes_CZI, MHN.node, 'TEST')
+arcpy.Append_management(new_nodes_CZI, MHN.node, 'NO_TEST')  # TEST was crashing in ArcGIS Pro -- Shape_Length & Shape_Area added to new_nodes_CZI from IMArea polys????
 arcpy.Delete_management(new_nodes_CZI)
 
 # Replace route system tables and line FCs.
