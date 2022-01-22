@@ -662,6 +662,7 @@ class MasterHighwayNetwork(object):
             arg_str = '$'.join(str(arg) for arg in arg_list)
         bat = os.path.join(self.prog_dir, 'sasrun.bat')
         cmd = [bat, sas_file, arg_str, sas_log, sas_lst]
+        # arcpy.AddMessage('{}: {}'.format(sas_file, arg_str))  # Helpful for debugging
         return subprocess.check_call(cmd, startupinfo=startupinfo)
 
 
