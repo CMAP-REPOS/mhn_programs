@@ -169,11 +169,12 @@ arcpy.Merge_management((unaltered_coding_view, temp_coding_table), updated_codin
 # -----------------------------------------------------------------------------
 #  Commit the changes only after everything else has run successfully.
 # -----------------------------------------------------------------------------
-backup_gdb = MHN.gdb[:-4] + '_' + MHN.timestamp() + '.gdb'
+timestamp = MHN.timestamp()
+backup_gdb = '{}_{}.gdb'.format(MHN.gdb[:-4], timestamp)
 arcpy.Copy_management(MHN.gdb, backup_gdb)
-arcpy.AddWarning('{0}Geodatabase temporarily backed up to {1}. (If import fails for any reason, replace {2} with this.)'.format('\n',backup_gdb, MHN.gdb))
+arcpy.AddWarning('\nGeodatabase temporarily backed up to {}. (If import fails for any reason, replace {} with this.)'.format(backup_gdb, MHN.gdb))
 
-arcpy.AddMessage('{0}Saving changes to disk...'.format('\n'))
+arcpy.AddMessage('\nSaving changes to disk...')
 
 # Replace hwyproj feature class:
 arcpy.AddMessage('-- ' + MHN.hwyproj + '...')
