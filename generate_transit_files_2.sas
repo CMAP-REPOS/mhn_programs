@@ -1,7 +1,7 @@
 /*
     generate_transit_files_2.sas
     authors: cheither & npeterson
-    revised: 4/19/18
+    revised: 1/25/22
     ----------------------------------------------------------------------------
     Program creates bus transit network batchin files. Bus transit network is
     built using a modified version of MHN processing procedures.
@@ -20,7 +20,7 @@ options noxwait;
 %let zone1 = %scan(&sysparm, 9, $);      * zone09 CBD start zone;
 %let zone2 = %scan(&sysparm, 10, $);     * zone09 CBD end zone;
 %let maxzone = %scan(&sysparm, 11, $);   * highest zone09 POE zone number;
-%let basescen = %scan(&sysparm, 12, $);  * base year scenario - not used since c10q1;
+%let procfut = %scan(&sysparm, 12, $);   * is scenario year later than MHN base year?;
 %let progdir = %scan(&sysparm, 13, $);
 %let misslink = %scan(&sysparm, 14, $);
 %let linkdict = %scan(&sysparm, 15, $);
@@ -85,7 +85,7 @@ data routes; infile in1 dsd missover firstobs=2;
 
 *** Process Future Scenario Bus coding ***;
 %macro future;
-    %if &scen > &basescen %then %do;
+    %if &procfut = 1 %then %do;
         * Set headway multipliers for each time period;
         %let hdwymult = 2;  * For peak shoulders;
         %if &tp = 3 or &tp = 7 %then %let hdwymult = 1;
@@ -98,17 +98,20 @@ data routes; infile in1 dsd missover firstobs=2;
             replace = compress(mode || "-" || substr(descr, 1, pos - 1));
 
         data rep; infile "&replace" dsd missover firstobs=2;
-            input linename $ replace $ timeper $;
+            length repgrp $30;
+            input linename $ replace $ repgrp $ timeper $;
             proc sort; by linename;
         data rep0(keep=linename new); set rep;
             new = 1;
+            proc sort nodupkey; by linename;
         data rep00(keep=linename keeptod); set rep(where=(timeper = "0" or timeper ? "&tp"));
             keeptod = 1;
+            proc sort nodupkey; by linename;
         data _null_; set rep00 nobs=newobs;
             call symput('newln', left(put(newobs, 8.))); run;
 
         %if &newln > 0 %then %do;  *** execute block only if there are future lines for time period;
-            data rep1(keep=replace del); set rep(where=(replace is not null and (timeper = "0" or timeper ? "&tp")));
+            data rep1(keep=replace repgrp del); set rep(where=(replace is not null and (timeper = "0" or timeper ? "&tp")));
                 del = 1;
                 proc sort nodupkey; by replace;
 
@@ -123,19 +126,21 @@ data routes; infile in1 dsd missover firstobs=2;
             data rte1; set routes(where=(del is null and keeptod is null and new is null));  *** current coding moving through to final file;
 
             data exist; set routes(where=(del = 1));  *** lines being replaced;
-                proc summary nway; class replace; var headway;
+                proc summary nway; class repgrp; var headway;
                     output out=existing min=exhdw;  *** get headways of existing lines being deleted;
 
             proc summary nway data=rte1; class mode; var headway;
                 output out=modeavg mean=modeavg;  *** get avg mode headway for period (existing routes);
 
             *** Create Final Route Table ***;
+            data rep2(keep=linename repgrp); set rep(where=(replace is not null and (timeper = "0" or timeper ? "&tp")));
+                proc sort nodupkey; by linename;
             data rte2(drop=new del replace); set routes(where=(keeptod = 1));
                 proc sort; by linename;
-            data rte2(drop=timeper); merge rte2(in=hit) rep; by linename;
+            data rte2; merge rte2(in=hit) rep2; by linename;
                 if hit;
-                proc sort; by replace;  *** reset replace value to route table coding value for matching;
-            data rte2; merge rte2(in=hit) existing; by replace;
+                proc sort; by repgrp;  *** reset replace value to route table coding value for matching;
+            data rte2; merge rte2(in=hit) existing; by repgrp;
                 if hit;
                 proc sort; by mode;  *** attach existing line headway for period;
             data rte2(drop=_type_ _freq_); merge rte2(in=hit) modeavg; by mode;

@@ -298,7 +298,7 @@ for scen in scen_list:
         arcpy.Delete_management(rep_runs_itin_view)
 
         # If scenario has future bus coding, process it.
-        if MHN.scenario_years[scen] > MHN.base_year:
+        if scen_year > MHN.base_year:
 
             # Export future bus header coding as necessary.
             bus_future_lyr = 'future_lyr'
@@ -320,12 +320,12 @@ for scen in scen_list:
             replace_view = MHN.make_skinny_table_view(bus_future_lyr, 'replace_view', replace_attr, bus_future_query)
             replace_csv = os.path.join(scen_tran_path, 'replace.csv')
             with open(replace_csv, 'w') as w:
-                w.write(','.join(replace_attr) + '\n')
+                w.write('{},REPLACE,REP_GROUP,TOD\n'.format(bus_future_id_field))
                 with arcpy.da.SearchCursor(replace_view, replace_attr) as cursor:
                     for tr_line, rep_rtes, rep_tod in cursor:
                         rep_list = rep_rtes.split(':')  # REPLACE values are colon-delimited
                         for rep_id in rep_list:
-                            w.write('{},{},{}\n'.format(tr_line, rep_id.strip(), rep_tod))
+                            w.write('{},{},{},{}\n'.format(tr_line, rep_id.strip(), rep_rtes.replace(' ', ''), rep_tod))
             arcpy.Delete_management(replace_view)
 
             # Corresponding future bus itineraries.
@@ -609,12 +609,15 @@ for scen in scen_list:
         MHN.write_attribute_csv(busway_nodes_view, busway_nodes_csv, busway_nodes_attr)
         arcpy.Delete_management(busway_nodes_view)
 
+        # Set flag for processing future bus routes
+        process_future = 1 if scen_year > MHN.base_year else 0
+
         # Call generate_transit_files_2.sas -- creates bus batchin files.
         sas2_sas = os.path.join(MHN.prog_dir, '{}.sas'.format(sas2_name))
         sas2_output = os.path.join(tran_path, '{}_{}.txt'.format(sas2_name, scen))
         sas2_args = (scen_tran_path, scen_hwy_path, rep_runs_csv, rep_runs_itin_csv, replace_csv, pnr_csv,
                      scen, tod, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])),
-                     str(MHN.max_poe), min(MHN.scenario_years.keys()), MHN.prog_dir, missing_links_csv,
+                     str(MHN.max_poe), process_future, MHN.prog_dir, missing_links_csv,
                      link_dict_txt, short_path_txt, path_errors_txt, busway_links_csv, busway_nodes_csv,
                      sas2_output)
         if tod == out_tod_periods[0] and os.path.exists(sas2_output):
