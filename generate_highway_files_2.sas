@@ -1,7 +1,7 @@
 /*
     generate_highway_files_2.sas
     Authors: cheither, npeterson, nferguson & tschmidt
-    Revised: 1/19/22
+    Revised: 1/25/22
     ---------------------------------------------------------------------------
     Program uses base conditions and project data from the MHN to build Emme
     scenario highway networks. Emme batchin files are the output of this
@@ -277,56 +277,6 @@ data network; set network;
 
 data emme2; set network;
 
-* - - - - - - - - - - - - - - - - - - - - - - - - - - *;
-** VERIFY THAT EACH LINK HAS A MODE **;
-data check; set network;
-    if modes = 0;
-    proc print; var anode bnode modes;
-    title "NETWORK LINKS WITHOUT A CODED MODE";
-
-** VERIFY THAT EACH LINK HAS AMPM CODED **;
-data check; set network;
-    if ampm1 = 0;
-    proc print; var anode bnode ampm1;
-    title "NETWORK LINKS WITHOUT AMPM CODED";
-
-** VERIFY THAT EACH LINK HAS A TYPE **;
-data check; set emme2;
-    if type1 = 0;
-    proc print; var anode bnode type1;
-    title "NETWORK LINKS WITHOUT A CODED TYPE";
-
-** VERIFY THAT EACH LINK HAS LANES **;
-data check; set emme2;
-    if thruln1 = 0;
-    proc print; var anode bnode thruln1;
-    title "NETWORK LINKS WITHOUT CODED LANES";
-
-** VERIFY THAT EACH LINK HAS LANE WIDTHS **;
-data check; set emme2;
-    if thruft1 = 0;
-    proc print; var anode bnode thruft1;
-    title "NETWORK LINKS WITHOUT CODED LANE WIDTHS";
-
-** VERIFY THAT EACH NON-TOLL LINK HAS A SPEED **;
-data check; set emme2;
-    if posted1 = 0 and type1 ^= 7;
-    proc print; var anode bnode posted1;
-    title "NETWORK LINKS WITHOUT CODED SPEEDS";
-
-** VERIFY THAT EACH TOLL LINK HAS A TOLL AMOUNT **;
-data check; set emme2;
-    if type1 = 7 and toll = 0;
-    proc print; var anode bnode type1 toll;
-    title "SUSPICIOUS TOLL CHARGES";
-
-** VERIFY THAT EACH LINK HAS A LENGTH **;
-data check; set emme2;
-    if miles = 0;
-    proc print; var anode bnode miles;
-    title "NETWORK LINKS WITHOUT A CODED LENGTH";
-* - - - - - - - - - - - - - - - - - - - - - - - - - - *;
-
 
 *--------------------------------------------------;
   ** FORMAT LINKS FOR EMME EXTRA ATTRIBUTE FILE **;
@@ -406,14 +356,19 @@ data coord; infile in4 dlm=',' dsd firstobs=2;
     filename out5 "&dir.\&scen.\&scen.0&tod..n2";
 
     ** IDENTIFY ANY TOD-SPECIFIC ATTRIBUTE CHANGES **;
-    data per; set period(where=(tp ? "&tod"));
+    %if &tod = 0 %then %do;
+      data per; set period(where=(tp ? "3"));  ** Use TOD 3 coding for template network **;
+    %end;
+    %else %do;
+      data per; set period(where=(tp ? "&tod"));
+    %end;
     data temp; set per nobs=totobs; call symput('tot', left(put(totobs, 8.))); run;
-        %if &tot > 0 %then %do;
-            data links&tod; update links per; by anode bnode;
-        %end;
-        %else %do;
-            data links&tod; set links;
-        %end;
+    %if &tot > 0 %then %do;
+        data links&tod; update links per; by anode bnode;
+    %end;
+    %else %do;
+        data links&tod; set links;
+    %end;
 
     ** FINAL RESOLUTION OF THROUGH-LANES DUE TO PEAK PERIOD PARKING RESTRICTIONS **;
     data links&tod; set links&tod;
@@ -543,9 +498,59 @@ data coord; infile in4 dlm=',' dsd firstobs=2;
 *--------------------------------------------;
  ** MACRO CREATES NETWORK SUMMARY REPORT **;
 *--------------------------------------------;
-%macro report(timeper);
+%macro report(tod);
 
-    data report; set links&timeper;
+    * - - - - - - - - - - - - - - - - - - - - - - - - - - *;
+    ** VERIFY THAT EACH LINK HAS A MODE **;
+    data check; set links&tod;
+        if modes = 0 or mode = '';
+        proc print; var anode bnode modes mode;
+        title "NETWORK LINKS WITHOUT CODED/EMME MODE - TOD &tod";
+
+    ** VERIFY THAT EACH LINK HAS AMPM CODED **;
+    data check; set links&tod;
+        if ampm1 = 0;
+        proc print; var anode bnode ampm1;
+        title "NETWORK LINKS WITHOUT CODED AMPM - TOD &tod";
+
+    ** VERIFY THAT EACH LINK HAS A TYPE **;
+    data check; set links&tod;
+        if type1 = 0;
+        proc print; var anode bnode type1;
+        title "NETWORK LINKS WITHOUT CODED TYPE - TOD &tod";
+
+    ** VERIFY THAT EACH LINK HAS LANES **;
+    data check; set links&tod;
+        if thruln1 = 0;
+        proc print; var anode bnode thruln1;
+        title "NETWORK LINKS WITHOUT CODED LANES - TOD &tod";
+
+    ** VERIFY THAT EACH LINK HAS LANE WIDTHS **;
+    data check; set links&tod;
+        if thruft1 = 0;
+        proc print; var anode bnode thruft1;
+        title "NETWORK LINKS WITHOUT CODED LANE WIDTHS - TOD &tod";
+
+    ** VERIFY THAT EACH NON-TOLL LINK HAS A SPEED **;
+    data check; set links&tod;
+        if posted1 = 0 and type1 ^= 7;
+        proc print; var anode bnode posted1;
+        title "NETWORK LINKS WITHOUT CODED SPEEDS - TOD &tod";
+
+    ** VERIFY THAT EACH TOLL LINK HAS A TOLL AMOUNT **;
+    data check; set links&tod;
+        if type1 = 7 and toll = 0;
+        proc print; var anode bnode type1 toll;
+        title "SUSPICIOUS TOLL CHARGES - TOD &tod";
+
+    ** VERIFY THAT EACH LINK HAS A LENGTH **;
+    data check; set links&tod;
+        if miles = 0;
+        proc print; var anode bnode miles;
+        title "NETWORK LINKS WITHOUT CODED LENGTH - TOD &tod";
+    * - - - - - - - - - - - - - - - - - - - - - - - - - - *;
+
+    data report; set links&tod;
         lanemile = thruln1 * miles;
         cltlmi = cltl * miles;
         sigicmi = sigic * miles;
@@ -576,7 +581,7 @@ data coord; infile in4 dlm=',' dsd firstobs=2;
         proc print label noobs; var area node _freq_ miles lanemile cltlmi sigicmi tollmi parkmi trckmi;
             sum _freq_ miles lanemile node cltlmi sigicmi tollmi parkmi trckmi;
             format node _freq_ comma6. miles lanemile cltlmi sigicmi tollmi parkmi trckmi comma9.2;
-            title "&dir SCENARIO &scen EMME SUMMARY: &scen.0&timeper";
+            title "&dir SCENARIO &scen EMME SUMMARY: &scen.0&tod";
             title2 "(hwy2.sas)";
 
 %mend report;
