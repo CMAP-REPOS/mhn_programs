@@ -220,7 +220,7 @@ arcpy.Merge_management((unaltered_itin_view, temp_itin_table), updated_itin_tabl
 timestamp = MHN.timestamp()
 backup_gdb = '{}_{}.gdb'.format(MHN.gdb[:-4], timestamp)
 arcpy.Copy_management(MHN.gdb, backup_gdb)
-arcpy.AddMessage('\nGeodatabase temporarily backed up to {}. (If import fails for any reason, replace {} with this.)'.format(backup_gdb, MHN.gdb))
+arcpy.AddWarning('\nGeodatabase temporarily backed up to {}. (If import fails for any reason, replace {} with this.)'.format(backup_gdb, MHN.gdb))
 
 arcpy.AddMessage('\nSaving changes to disk...')
 
