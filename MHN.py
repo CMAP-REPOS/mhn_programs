@@ -237,6 +237,7 @@ class MasterHighwayNetwork(object):
         154: "South Halsted Bus Enhancements",
         155: "I-294 BRT Stations",
         156: "Milwaukee Corridor/O'Hare Improvements",
+        157: "I-57 & Eagle Lake Rd Interchange",
         158: "US 6",
         159: "US 30",
         160: "US 45 & Milburn Bypass",
