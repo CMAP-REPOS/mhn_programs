@@ -2,7 +2,7 @@
 '''
     update_highway_project_years.py
     Author: npeterson
-    Revised: 6/26/19
+    Revised: 3/29/22
     ---------------------------------------------------------------------------
     This script updates the completion years of projects to be included in
     Conformity analyses. The final completion year file is received from the
@@ -141,7 +141,7 @@ def clear_transit_project_years(proj_years_dict, hwyproj_ids, rail_fc, bus_fc, m
     for tipid, scen in trans_proj_scens.items():
         if tipid in proj_years_dict and MHN.scenario_years[str(scen)] < proj_years_dict[tipid]:
             early_scenarios.add(tipid)
-        elif tipid in proj_years_dict and MHN.scenario_years[str(scen - 100)] > proj_years_dict[tipid]:
+        elif tipid in proj_years_dict and MHN.scenario_years.get(str(scen - 100), MHN.base_year) > proj_years_dict[tipid]:
             late_scenarios.add(tipid)
         elif tipid not in proj_years_dict and MHN.scenario_years[str(scen)] < MHN.max_year:
             unknown_tipids.add(tipid)
