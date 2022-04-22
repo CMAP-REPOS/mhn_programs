@@ -9,8 +9,6 @@
     direction-dependent attributes will also be adjusted.
 
 '''
-import os
-import sys
 import arcpy
 arcpy.env.OverwriteOutput = True
 

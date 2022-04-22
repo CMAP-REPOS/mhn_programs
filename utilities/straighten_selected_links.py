@@ -7,8 +7,6 @@
     Delete all non-endpoint vertices for selected links.
 
 '''
-import os
-import sys
 import arcpy
 
 # -----------------------------------------------------------------------------
