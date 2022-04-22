@@ -20,7 +20,6 @@
 
 '''
 import os
-import sys
 import operator
 import arcpy
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality

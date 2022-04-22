@@ -21,9 +21,7 @@
 
 '''
 import os
-import csv
 import re
-import sys
 import arcpy
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 

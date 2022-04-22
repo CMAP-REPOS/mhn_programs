@@ -11,7 +11,6 @@
 
 '''
 import os
-import sys
 import arcpy
 from operator import itemgetter
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
