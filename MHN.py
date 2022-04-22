@@ -22,12 +22,13 @@ class MasterHighwayNetwork(object):
     base_year = 2015  # BASELINK=1 network year, not necessarily scenario 100 (i.e. base_year was recently 2009, while scenario 100 was 2010)
 
     bus_years = {
-        'base':    2015,
-        'current': 2016
+        'base':    2015,  # Year that bus_base feature class represents
+        'current': 2016   # Year that bus_current feature class represents
     }
 
     centroid_ranges = {
-        'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
+        ## zones17 (C19Q1 and later)
+        'CBD':     range(   1,   48),  # NB. range(i,j) includes i & *excludes* j
         'Chicago': range(   1,  718),
         'Cook':    range(   1, 1733),
         'McHenry': range(2584, 2703),
@@ -45,7 +46,7 @@ class MasterHighwayNetwork(object):
         }
 
         # ## zones09 (C18Q3 and earlier)
-        # 'CBD':     range(   1,   48),  # NB. range(i,j) includes i & excludes j
+        # 'CBD':     range(   1,   48),  # NB. range(i,j) includes i & *excludes* j
         # 'Chicago': range(   1,  310),
         # 'Cook':    range(   1,  855),
         # 'McHenry': range( 855,  959),
@@ -66,6 +67,7 @@ class MasterHighwayNetwork(object):
     max_poe = max(centroid_ranges['POE'])
 
     scenario_years = {
+        ### Current scenario codes (C22Q2 and later)
         '100': 2019,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
         '200': 2025,
         '300': 2030,
@@ -74,7 +76,7 @@ class MasterHighwayNetwork(object):
         '600': 2045,  # UrbanSim only
         '700': 2050
 
-        ### Old codes (C17Q2-C21Q4)
+        ### Old scenario codes (C17Q2-C21Q4)
         # '100': 2015,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
         # '200': 2020,
         # '300': 2025,
@@ -83,7 +85,7 @@ class MasterHighwayNetwork(object):
         # '600': 2040,
         # '700': 2050
 
-        ### Old codes (C17Q1 and earlier):
+        ### Older scenario codes (C17Q1 and earlier):
         # '100': 2010,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
         # '200': 2015,
         # '300': 2020,
@@ -92,8 +94,8 @@ class MasterHighwayNetwork(object):
         # '600': 2040
     }
 
-    min_year = min(year for scen, year in scenario_years.items())
-    max_year = max(year for scen, year in scenario_years.items())
+    min_year = min(scenario_years.values())
+    max_year = max(scenario_years.values())
 
     tod_periods = {
         '1':  ('8PM-6AM',                                   # 1: overnight
