@@ -247,6 +247,7 @@ class MasterHighwayNetwork(object):
         162: "IL 47",
         163: "IL 56",
         164: "IL 60",
+        166: "IL 47 Cross St to Kennedy Rd",
         9901: "(A1) O'Hare Express Service",
         9902: "(A2) South Lakefront Improvements",
         9903: "(A3) I-55 Reconstruction & IL 126 Interchange Reconfiguration",
