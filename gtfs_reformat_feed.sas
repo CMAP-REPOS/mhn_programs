@@ -125,10 +125,17 @@ data hdwy; set hdwy;
         if group ^= gp then delete;
     end;
 
-    if &tod = 1 then maxtime = 600;
-    else if &tod in (2, 4) then maxtime = 60;
-    else if &tod = 5 then maxtime = 240;
-    else maxtime = 120;
+    * Highway/TBM transit TODs.;
+    * if &tod = 1 then maxtime = 600;
+    * else if &tod in (2, 4) then maxtime = 60;
+    * else if &tod = 5 then maxtime = 240;
+    * else maxtime = 120;
+
+    * ABM transit TODs.;
+    if &tod = 1 then maxtime = 720;
+    else if &tod in (3) then maxtime = 420;
+    else if &tod = 4 then maxtime = 120;
+    else maxtime = 180;
 
     if runs = 1 then hdwy = maxtime;
     else hdwy = abs(start - st) / 60;
