@@ -669,6 +669,7 @@ data links; set network2(where=(ampm1 not in (3)));
 %report(5)  ** midday **;  run;
 
 
+
 *============================================================================*;
  ** CREATE BATCHIN FILES FOR SCENARIO PM PEAK (4PM-6PM), AND ITS BEGINNING **;
  ** (2PM-4PM) AND ENDING SHOULDERS (6PM-8PM). LINKS WITH AMPM1 OF 2 (AM    **;

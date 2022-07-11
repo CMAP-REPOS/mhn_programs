@@ -40,10 +40,21 @@ options noxwait;
 %let patherr = 0;
 %let badnode = 0;
 
+
 %macro time;
     %global tp;   ** Set Value for Highway Network Input File **;
+
+    /*
+    *** Old transit TODs (C21Q4 and earlier);
     %if &tod = am %then %let tp = 3;
     %else %let tp = &tod;
+    */
+
+    %if &tod = 2 %then %let tp = 3;
+    %if &tod = 3 %then %let tp = 5;
+    %if &tod = 4 %then %let tp = 7;
+    %else %let tp = &tod;
+    
 %mend time;
 %time
 run;
@@ -158,9 +169,17 @@ data routes; infile in1 dsd missover firstobs=2;
                 else hfin = max(modeavg, 90);         *** -- Priority 3: maximum of mode average/90 minutes;
 
                 ** Limit headway to length of time period;
+
+                /*
+                *** Old transit TODs (C21Q4 and earlier)
                 if &tp = 1 then maxtime = 600;
                 else if &tp in (2, 4) then maxtime = 60;
                 else if &tp = 5 then maxtime = 240;
+                */
+
+                if &tp = 1 then maxtime = 720;
+                else if &tp = 3 then maxtime = 180;
+                else if &tp = 5 then maxtime = 420;
                 else maxtime = 120;
                 hfin = min(hfin, maxtime);
 
@@ -828,10 +847,19 @@ data pacebus; set pacebus end=eof;
         *** calculate average number of buses per route on link for time period ***;
         data temp; set verify;
             *** Set Total Minutes for time period ***;
+
+            /*
+            *** Old transit TODs (C21Q4 and earlier);
             if &tod = 1 then minutes = 600;
             else if &tod = 2 or &tod = 4 then minutes = 60;
             else if &tod = 5 then minutes = 240;
+            */
+
+            if &tod = 1 then minutes = 720;
+            else if &tod = 2 then minutes = 180;
+            else if &tod = 3 then minutes = 420;
             else minutes = 120;
+
             buses = round(minutes / headway, 0.1);
             tod = &tod;
             proc summary nway; class tod itina itinb; var buses;

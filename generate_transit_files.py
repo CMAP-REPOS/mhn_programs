@@ -35,7 +35,7 @@ scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string
 root_path = arcpy.GetParameterAsText(2)             # String, no default
 abm_output = arcpy.GetParameter(3)                  # Boolean, default = False
 
-out_tod_periods = sorted(MHN.tod_periods.keys())
+out_tod_periods = sorted(MHN.tod_periods['transit'].keys())
 
 if not os.path.exists(root_path):
     MHN.die("{} doesn't exist!".format(root_path))
@@ -129,7 +129,7 @@ for bus_fc in bus_fc_dict:
         # Export header info of bus routes in current TOD.
         bus_id_field = MHN.route_systems[bus_fc][1]
         bus_route_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'HEADWAY', 'SPEED', 'ROUTE_ID', 'START']
-        bus_route_query = MHN.tod_periods[tod][1]
+        bus_route_query = MHN.tod_periods['transit'][tod][1]
         bus_route_view = MHN.make_skinny_table_view(bus_fc, 'bus_route_view', bus_route_attr, bus_route_query)
         MHN.write_attribute_csv(bus_route_view, bus_route_csv, bus_route_attr)
         selected_bus_routes = MHN.make_attribute_dict(bus_route_view, bus_id_field, attr_list=[])
@@ -241,10 +241,28 @@ for scen in scen_list:
         busway_links_csv = os.path.join(scen_tran_path, 'busway_links.csv')
         busway_nodes_csv = os.path.join(scen_tran_path, 'busway_nodes.csv')
 
-        if tod == 'am':  # Use TOD 3 highways for AM transit
+        ### Old transit TODs (C21Q4 and earlier)
+        # if tod == 'am':  # Use TOD 3 highways for AM transit
+        #     hwy_l1 = os.path.join(scen_hwy_path, '{}03.l1'.format(scen))
+        #     hwy_n1 = os.path.join(scen_hwy_path, '{}03.n1'.format(scen))
+        #     hwy_n2 = os.path.join(scen_hwy_path, '{}03.n2'.format(scen))
+        # else:
+        #    hwy_l1 = os.path.join(scen_hwy_path, '{}0{}.l1'.format(scen, tod))
+        #    hwy_n1 = os.path.join(scen_hwy_path, '{}0{}.n1'.format(scen, tod))
+        #    hwy_n2 = os.path.join(scen_hwy_path, '{}0{}.n2'.format(scen, tod))
+        
+        if tod == 2:  # Use TOD 3 highways for AM transit
             hwy_l1 = os.path.join(scen_hwy_path, '{}03.l1'.format(scen))
             hwy_n1 = os.path.join(scen_hwy_path, '{}03.n1'.format(scen))
             hwy_n2 = os.path.join(scen_hwy_path, '{}03.n2'.format(scen))
+        elif tod == 3:  # Use TOD 5 highways for midday transit
+            hwy_l1 = os.path.join(scen_hwy_path, '{}05.l1'.format(scen))
+            hwy_n1 = os.path.join(scen_hwy_path, '{}05.n1'.format(scen))
+            hwy_n2 = os.path.join(scen_hwy_path, '{}05.n2'.format(scen))
+        elif tod == 4:  # Use TOD 7 highways for PM transit
+            hwy_l1 = os.path.join(scen_hwy_path, '{}07.l1'.format(scen))
+            hwy_n1 = os.path.join(scen_hwy_path, '{}07.n1'.format(scen))
+            hwy_n2 = os.path.join(scen_hwy_path, '{}07.n2'.format(scen))
         else:
             hwy_l1 = os.path.join(scen_hwy_path, '{}0{}.l1'.format(scen, tod))
             hwy_n1 = os.path.join(scen_hwy_path, '{}0{}.n1'.format(scen, tod))
@@ -279,7 +297,7 @@ for scen in scen_list:
             rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'CT_VEH', 'SPEED', 'GROUP_HEADWAY']  # CT_VEH instead of VEHICLE_TYPE
         else:
             rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'GROUP_HEADWAY']
-        rep_runs_query = MHN.tod_periods[tod][1]
+        rep_runs_query = MHN.tod_periods['transit'][tod][1]
         rep_runs_view = MHN.make_skinny_table_view(rep_runs_table, 'rep_runs_view', rep_runs_attr, rep_runs_query)
         rep_runs_csv = os.path.join(scen_tran_path, 'rep_runs.csv')
         MHN.write_attribute_csv(rep_runs_view, rep_runs_csv, rep_runs_attr)
@@ -585,8 +603,8 @@ for scen in scen_list:
                                 ampm2 = attr2['NEW_AMPM2'] if attr2['NEW_AMPM2'] else ampm2
 
                     # Determine whether to write A->B and B->A links
-                    write_ab = True if tod in MHN.ampm_tods[ampm1] else False
-                    write_ba = True if dirs in ('2', '3') and tod in MHN.ampm_tods[ampm2] else False
+                    write_ab = True if tod in MHN.ampm_tods['transit'][ampm1] else False
+                    write_ba = True if dirs in ('2', '3') and tod in MHN.ampm_tods['transit'][ampm2] else False
 
                     # Write directional link data to output CSV
                     if write_ab:
