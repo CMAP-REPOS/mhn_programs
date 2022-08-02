@@ -345,6 +345,20 @@ for scen in scen_list:
                             w.write('{},{},{},{}\n'.format(tr_line, rep_id.strip(), rep_rtes.replace(' ', ''), rep_tod))
             arcpy.Delete_management(replace_view)
 
+            # Another future bus header set for reroute data.
+            # Output one row per route being rerouted.
+            reroute_attr = [bus_future_id_field, 'REROUTE', 'TOD']
+            reroute_view = MHN.make_skinny_table_view(bus_future_lyr, 'reroute_view', reroute_attr, bus_future_query)
+            reroute_csv = os.path.join(scen_tran_path, 'reroute.csv')
+            with open(reroute_csv, 'w') as w:
+                w.write('{},REROUTE,RRTE_GROUP,TOD\n'.format(bus_future_id_field))
+                with arcpy.da.SearchCursor(reroute_view, reroute_attr) as cursor:
+                    for tr_line, rrte_rtes, rrte_tod in cursor:
+                        rrte_list = rrte_rtes.split(':')  # REROUTE values are colon-delimited
+                        for rrte_id in rrte_list:
+                            w.write('{},{},{},{}\n'.format(tr_line, rrte_id.strip(), rrte_rtes.replace(' ', ''), rrte_tod))
+            arcpy.Delete_management(reroute_view)
+
             # Corresponding future bus itineraries.
             bus_future_order_field = MHN.route_systems[MHN.bus_future][2]
             bus_future_itin_attr = [bus_future_id_field, 'ITIN_A', 'ITIN_B', bus_future_order_field, 'LAYOVER', 'DWELL_CODE', 'ZONE_FARE', 'LINE_SERV_TIME', 'TTF', 'F_MEAS', 'T_MEAS', 'MILES']
@@ -373,6 +387,12 @@ for scen in scen_list:
             replace_csv = os.path.join(scen_tran_path, 'replace.csv')
             with open(replace_csv, 'w') as w:
                 w.write(','.join(replace_attr) + '\n')
+            
+            # Write dummy reroute CSV when no future coding applies.
+            reroute_attr = [bus_future_id_field, 'REROUTE', 'TOD']
+            reroute_csv = os.path.join(scen_tran_path, 'reroute.csv')
+            with open(reroute_csv, 'w') as w:
+                w.write(','.join(reroute_attr) + '\n')
 
         # Identify any missing itinerary endpoints (1st itin_a/last itin_b).
         scen_nodes = set()
@@ -632,7 +652,7 @@ for scen in scen_list:
         # Call generate_transit_files_2.sas -- creates bus batchin files.
         sas2_sas = os.path.join(MHN.prog_dir, '{}.sas'.format(sas2_name))
         sas2_output = os.path.join(tran_path, '{}_{}.txt'.format(sas2_name, scen))
-        sas2_args = (scen_tran_path, scen_hwy_path, rep_runs_csv, rep_runs_itin_csv, replace_csv, pnr_csv,
+        sas2_args = (scen_tran_path, scen_hwy_path, rep_runs_csv, rep_runs_itin_csv, replace_csv, reroute_csv, pnr_csv,
                      scen, tod, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])),
                      str(MHN.max_poe), process_future, MHN.prog_dir, missing_links_csv,
                      link_dict_txt, short_path_txt, path_errors_txt, busway_links_csv, busway_nodes_csv,
@@ -654,6 +674,7 @@ for scen in scen_list:
             os.remove(busway_links_csv)
             os.remove(busway_nodes_csv)
             MHN.delete_if_exists(replace_csv)
+            MHN.delete_if_exists(reroute_csv)
 
 
         # ---------------------------------------------------------------------
