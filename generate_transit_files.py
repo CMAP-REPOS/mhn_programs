@@ -726,7 +726,7 @@ for scen in scen_list:
 
                 for line in itin:
                     attr = line.strip().split()
-                    if len(attr) == 0 or attr[0] in ('c', 't', 'path=no'):
+                    if len(attr) == 0 or attr[0] in ('c', 't', 'path=no', 'dwt=0.01'):
                         continue
 
                     # Set mode and first is_stop for header lines
@@ -737,10 +737,7 @@ for scen in scen_list:
 
                     # Add stop nodes to CTA/Metra stop dicts
                     else:
-                        if attr[0].startswith('dwt='):
-                            anode = int(attr[1])
-                        else:
-                            anode = int(attr[0])
+                        anode = int(attr[0])
 
                         # If stops allowed, add to appropriate stop dict
                         if is_stop:
