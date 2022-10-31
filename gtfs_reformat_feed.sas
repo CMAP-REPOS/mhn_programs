@@ -125,9 +125,16 @@ data hdwy; set hdwy;
         if group ^= gp then delete;
     end;
 
+    /*
+    *** Old transit TODs (C21Q4 and earlier);
     if &tod = 1 then maxtime = 600;
     else if &tod in (2, 4) then maxtime = 60;
     else if &tod = 5 then maxtime = 240;
+    */
+
+    if &tod = 1 then maxtime = 720;
+    else if &tod = 2 then maxtime = 180;
+    else if &tod = 3 then maxtime = 420;
     else maxtime = 120;
 
     if runs = 1 then hdwy = maxtime;

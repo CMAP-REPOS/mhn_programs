@@ -14,24 +14,27 @@ options noxwait;
 %let lines = %scan(&sysparm, 3, $);
 %let itins = %scan(&sysparm, 4, $);
 %let replace = %scan(&sysparm, 5, $);
-%let pnrcsv = %scan(&sysparm, 6, $);
-%let scen = %scan(&sysparm, 7, $);
-%let tod = %scan(&sysparm, 8, $);        * time-of-day period;
-%let zone1 = %scan(&sysparm, 9, $);      * zone09 CBD start zone;
-%let zone2 = %scan(&sysparm, 10, $);     * zone09 CBD end zone;
-%let maxzone = %scan(&sysparm, 11, $);   * highest zone09 POE zone number;
-%let procfut = %scan(&sysparm, 12, $);   * is scenario year later than MHN base year?;
-%let progdir = %scan(&sysparm, 13, $);
-%let misslink = %scan(&sysparm, 14, $);
-%let linkdict = %scan(&sysparm, 15, $);
-%let shrt = %scan(&sysparm, 16, $);
-%let pathfail = %scan(&sysparm, 17, $);
-%let mode4lk = %scan(&sysparm, 18, $);
-%let mode4nd = %scan(&sysparm, 19, $);
-%let outtxt = %scan(&sysparm, 20, $);
+%let reroute = %scan(&sysparm, 6, $);
+%let pnrcsv = %scan(&sysparm, 7, $);
+%let scen = %scan(&sysparm, 8, $);
+%let tod = %scan(&sysparm, 9, $);        * time-of-day period;
+%let zone1 = %scan(&sysparm, 10, $);      * zone09 CBD start zone;
+%let zone2 = %scan(&sysparm, 11, $);     * zone09 CBD end zone;
+%let maxzone = %scan(&sysparm, 12, $);   * highest zone09 POE zone number;
+%let procfut = %scan(&sysparm, 13, $);   * is scenario year later than MHN base year?;
+%let progdir = %scan(&sysparm, 14, $);
+%let misslink = %scan(&sysparm, 15, $);
+%let linkdict = %scan(&sysparm, 16, $);
+%let shrt = %scan(&sysparm, 17, $);
+%let pathfail = %scan(&sysparm, 18, $);
+%let mode4lk = %scan(&sysparm, 19, $);
+%let mode4nd = %scan(&sysparm, 20, $);
+%let outtxt = %scan(&sysparm, 21, $);
 %let shrtpath = %sysfunc(tranwrd(&shrt, /, \));
 %let pypath = %sysfunc(tranwrd(&progdir./pypath.txt, /, \));
 %let newln = 0;
+%let modln = 0;
+%let moditin = 0;
 %let tothold = 0;
 %let totfix = 0;
 %let xmin = 0; %let xmax = 0; %let ymin = 0; %let ymax = 0;
@@ -40,14 +43,25 @@ options noxwait;
 %let patherr = 0;
 %let badnode = 0;
 
+
 %macro time;
     %global tp;   ** Set Value for Highway Network Input File **;
+
+    /*
+    *** Old transit TODs (C21Q4 and earlier);
     %if &tod = am %then %let tp = 3;
     %else %let tp = &tod;
+    */
+
+    %if &tod = 2 %then %let tp = 3;
+    %if &tod = 3 %then %let tp = 5;
+    %if &tod = 4 %then %let tp = 7;
+    %else %let tp = &tod;
+    
 %mend time;
 %time
 run;
-%put time period: &tp;
+%put time period: &tod;
 
 /* ------------------------------------------------------------------------------ */
 *** INPUT FILES ***;
@@ -87,10 +101,15 @@ data routes; infile in1 dsd missover firstobs=2;
 %macro future;
     %if &procfut = 1 %then %do;
         * Set headway multipliers for each time period;
+
+        /*
+        *** Old transit TODs (C21Q4 and earlier);
         %let hdwymult = 2;  * For peak shoulders;
-        %if &tp = 3 or &tp = 7 %then %let hdwymult = 1;
-        %else %if &tp = 1 %then %let hdwymult = 4;
-        %else %if &tp = 5 %then %let hdwymult = 3;
+        */
+
+        %if &tod = 2 or &tod = 4 %then %let hdwymult = 1;
+        %else %if &tod = 1 %then %let hdwymult = 4;
+        %else %if &tod = 3 %then %let hdwymult = 3;
 
         data routes; set routes;
             length replace $8.;
@@ -104,14 +123,14 @@ data routes; infile in1 dsd missover firstobs=2;
         data rep0(keep=linename new); set rep;
             new = 1;
             proc sort nodupkey; by linename;
-        data rep00(keep=linename keeptod); set rep(where=(timeper = "0" or timeper ? "&tp"));
+        data rep00(keep=linename keeptod); set rep(where=(timeper = "0" or timeper ? "&tod"));
             keeptod = 1;
             proc sort nodupkey; by linename;
         data _null_; set rep00 nobs=newobs;
             call symput('newln', left(put(newobs, 8.))); run;
 
         %if &newln > 0 %then %do;  *** execute block only if there are future lines for time period;
-            data rep1(keep=replace repgrp del); set rep(where=(replace is not null and (timeper = "0" or timeper ? "&tp")));
+            data rep1(keep=replace repgrp del); set rep(where=(replace is not null and (timeper = "0" or timeper ? "&tod")));
                 del = 1;
                 proc sort nodupkey; by replace;
 
@@ -133,7 +152,7 @@ data routes; infile in1 dsd missover firstobs=2;
                 output out=modeavg mean=modeavg;  *** get avg mode headway for period (existing routes);
 
             *** Create Final Route Table ***;
-            data rep2(keep=linename repgrp); set rep(where=(replace is not null and (timeper = "0" or timeper ? "&tp")));
+            data rep2(keep=linename repgrp); set rep(where=(replace is not null and (timeper = "0" or timeper ? "&tod")));
                 proc sort nodupkey; by linename;
             data rte2(drop=new del replace); set routes(where=(keeptod = 1));
                 proc sort; by linename;
@@ -158,9 +177,17 @@ data routes; infile in1 dsd missover firstobs=2;
                 else hfin = max(modeavg, 90);         *** -- Priority 3: maximum of mode average/90 minutes;
 
                 ** Limit headway to length of time period;
+
+                /*
+                *** Old transit TODs (C21Q4 and earlier)
                 if &tp = 1 then maxtime = 600;
                 else if &tp in (2, 4) then maxtime = 60;
                 else if &tp = 5 then maxtime = 240;
+                */
+
+                if &tod = 1 then maxtime = 720;
+                else if &tod = 2 then maxtime = 180;
+                else if &tod = 3 then maxtime = 420;
                 else maxtime = 120;
                 hfin = min(hfin, maxtime);
 
@@ -168,9 +195,70 @@ data routes; infile in1 dsd missover firstobs=2;
 
             data routes(drop=new del keeptod exhdw modeavg hfin maxtime); set rte1 rte2;
                 proc sort; by linename;
+            %end;
+
+        data routes(drop=pos); set routes;
+            length reroute $8.;
+            pos = anyspace(descr);
+            reroute = compress(mode || "-" || substr(descr, 1, pos - 1));
+
+        data rrte; infile "&reroute" dsd missover firstobs=2;
+            length rrtegrp $30;
+            input linename $ reroute $ rrtegrp $ timeper $;
+            proc sort; by linename;
+
+        data rrte0(keep=linename modline); set rrte(where=(reroute is not null));
+            modline = 1;
+            proc sort nodupkey; by linename;
+
+        data rrte00(keep=linename keeptod); set rrte(where=(reroute is not null and (timeper = "0" or timeper ? "&tod")));
+            keeptod = 1;
+            proc sort nodupkey; by linename;
+
+        data _null_; set rrte00 nobs=newobs;
+            call symput('modln', left(put(newobs, 8.)));
+            run;
+
+        %if &modln > 0 %then %do;  *** execute block only if there are future itinerary modifications for time period;
+
+            data rrte; merge rrte(in=hit) rrte0 rrte00; by linename;
+			    if hit;
+
+            data rrte1(keep=linename rrtegrp modline); set rrte(where=(modline = 1));  *** dummy line IDs with itinerary modifications;
+				proc sort nodupkey; by linename;
+
+			data rrte2(keep=reroute rrtegrp mod); set rrte(where=(keeptod = 1));  ***  route IDs being modified;
+			    mod = modline;
+                proc sort nodupkey; by reroute;
+
+		    *** Select Base Scenario Routes With Itinerary Modified by Future Coding ***;
+            data routes; merge routes(in=hit) rrte1(drop=rrtegrp); by linename;
+                if hit;
+                proc sort; by reroute;
+
+            data routes; merge routes(in=hit) rrte2; by reroute;
+                if hit;
+                proc sort; by linename;
+
+            data rte3; set routes(where=(missing(modline)));  *** remove dummy lines from final file;
+
+            data modify(keep=descr linename rrtegrp mod); set routes(where=(mod = 1));  *** lines with itineraries being modified;
+
+            data modlines(keep=descr linename modline); set routes(where=(modline = 1)); *** dummy lines with itinerary modifications;
+
+			data modlines; merge modlines(in=hit) rrte1(drop=modline); by linename;
+
+            data routes(drop=modline mod); set rte3;
+			    proc sort; by linename;
+
+            data _null_; set modify nobs=newobs;
+                call symput('moditin', left(put(newobs, 8.)));
+	            run;
+
+            %end;
+
         %end;
-    %end;
-%mend future;
+    %mend future;
 %future
 run;
 
@@ -187,10 +275,91 @@ data check; set routes(where=(headway = 0));
 *----------------------------------------;
 data itins; infile in2 dsd missover firstobs=2;
     input linename $ itina itinb order layover dwcode zfare ltime ttf fmeas tmeas miles;
-        if ttf = 0 then ttf = 1;
-    proc sort; by linename itina itinb;
+    if ttf = 0 then ttf = 1;
+    proc sort; by linename order;
+
+%macro futureitin;
+
+    %if &moditin > 0 %then %do;  *** execute block only if there are itineraries that are being modified;
+
+        data itins; merge itins(in=hit) modify modlines; by linename;  *** flag modified itineraries and existing itineraries being modified;
+			if hit;
+
+		data itin1; set itins(where=(missing(mod) and missing(modline)));  *** select existing itineraries not being modified;
+
+        data existitin; set itins(where=(mod = 1));  *** select existing itineraries being modified;
+		    proc sort; by itina rrtegrp;
+
+		data modifyitin(drop=linename); set itins(where=(modline = 1));  *** select modified itineraries;
+		    modlinename = linename;
+		    proc sort; by modlinename order;
+
+		data modifyends(keep=modlinename itina itinb order rrtegrp); set modifyitin; by modlinename order;  *** select modified itinerary ends;
+            if first.modlinename then output;
+			if last.modlinename then output;
+
+		data modifystart(drop=modlinename itinb order); set modifyends(where=(order = 1));  *** select start nodes;
+		    modstart = modlinename;
+            proc sort; by itina rrtegrp;
+
+		data modifyfinish(drop=modlinename itina order); set modifyends(where=(order > 1));  *** select finish nodes;
+		    modfinish = modlinename;
+		    proc sort; by itinb rrtegrp;
+
+		data existitin; merge existitin(in=hit) modifystart; by itina rrtegrp;  *** add dummy line id to existing itineraries at start nodes;
+		    proc sort; by itinb rrtegrp;
+
+        data existitin; merge existitin(in=hit) modifyfinish; by itinb rrtegrp;  *** add dummy line id to existing itineraries at finish nodes;
+		    proc sort; by linename order;
+
+		data existitin(drop=part line); set existitin; by linename;  *** partition existing itineraries and add dummy line id to parts being rerouted;
+		    retain part line;
+            if first.linename then do;
+                part = 1; line = linename;
+				end;
+            if mod(part, 2) = 1 and line = linename and not missing(modstart) then do;
+			    part = part + 1; line = modstart;
+				end;
+			if line = lag(modfinish) then do;
+			    part = part + 1; line = linename;
+				end;
+			modpart = part; modlinename = line;
+
+		data mod1(keep=linename modpart modlinename); set existitin(where=(modlinename ~= linename));  *** select partitions to modify;
+		    proc sort nodupkey; by linename modpart modlinename;
+			proc sort; by modlinename;
+
+		proc sort data=modifyitin; by modlinename;
+
+		proc sql; create table mod2(drop=modlinename_1) as  
+            select * from mod1 as t1
+            left join modifyitin(rename=(modlinename = modlinename_1)) as t2
+            on t1.modlinename = t2.modlinename_1;  *** join modified itineraries to partitions to modify;
+			quit;
+			proc sort; by linename order;
+
+		data mod3; set existitin mod2;  *** append modified itinerary partitions to existing itineraries;
+		    proc sort; by linename modpart order;
+
+		data itin2(drop=modorder) ; set mod3(where=(modlinename = linename or modline = 1)); by linename;  *** filter out itinerary partitions that are being replaced and update itinerary order;
+		    retain modorder;
+			if first.linename then modorder = 1;
+			order = modorder;
+			modorder = modorder + 1;
+
+		data itins(keep=linename itina itinb order layover dwcode zfare ltime ttf fmeas tmeas miles); set itin1 itin2;
+		    proc sort; by linename order;
+
+        %end;
+
+    %mend futureitin;
+
+%futureitin
+run;
+
 data itins; set itins;
     miles = round(miles, 0.01);
+    proc sort; by linename itina itinb;
 
 data r(keep=linename mode headway); set routes;
     proc sort; by linename;
@@ -639,10 +808,9 @@ data segout; set segout; by linename;
 
 data out1; set segout; by linename;
     length desc $22 dwell $4 d $9;
-    layov = lag1(layover);
     if dwcode = 1 then dwell = '0';
     else dwell = '0.01';
-    if descr ^= ' ' then layov = 0;
+    if descr ^= ' ' then layover = 0;
     name = "'" || compress(linename) || "'";
     desc = "'" || descr || "'";
     ltime = round(ltime, 0.1);
@@ -663,20 +831,29 @@ data out1; set out1;
             "c &sysdate" /
             "c us1 holds segment travel time, us2 holds zone fare" /
             "t lines";
-    end;
+        end;
     if descr ^= ' ' then do;
-        put 'a' +1 name +2 mode +2 vehtype +2 headway +2 speed +2 desc /
-            +2 'path=no';
-    end;
+        put 'a' +2 name +2 mode +2 vehtype +2 headway +2 speed +2 desc /
+            +4 'path=no';
+        end;
+    else if (order = 1 & end = 1) then do;
+        put +4 'dwt=0.01' /
+            +4 itina +(7-length(left(trim(itina)))) d +(10-length(left(trim(d)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2 /
+            +4 itinb +(7-length(left(trim(itinb)))) 'lay=' +0 layover;
+        end;
+	else if order = 1 then do;
+	    put +4 'dwt=0.01' /
+		    +4 itina +(7-length(left(trim(itina)))) d +(10-length(left(trim(d)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2;
+		end;
     else if end = 1 then do;
-        put +4 d +(10-length(left(trim(d)))) itina +(7-length(left(trim(itina)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2 /
-            +4 'dwt=0.01' +3 itinb +(7-length(left(trim(itinb)))) 'lay=' +0 layover;
-    end;
-    else if layov > 0 then do;
-        put +4 d +(10-length(left(trim(d)))) itina +(7-length(left(trim(itina)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2 +2 'lay=' +0 layov;
+        put +4 itina +(7-length(left(trim(itina)))) d +(10-length(left(trim(d)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2 /
+            +4 itinb +(7-length(left(trim(itinb)))) 'lay=' +0 layover;
+        end;
+    else if layover > 0 then do;
+        put +4 itina +(7-length(left(trim(itina)))) d +(10-length(left(trim(d)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2 +2 'lay=' +0 layover;
     end;
     else do;
-        put +4 d +(10-length(left(trim(d)))) itina +(7-length(left(trim(itina)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2;
+        put +4 itina +(7-length(left(trim(itina)))) d +(10-length(left(trim(d)))) tf +2 us1 +(6-length(left(trim(ltime)))) us2;
     end;
 
 
@@ -828,10 +1005,19 @@ data pacebus; set pacebus end=eof;
         *** calculate average number of buses per route on link for time period ***;
         data temp; set verify;
             *** Set Total Minutes for time period ***;
+
+            /*
+            *** Old transit TODs (C21Q4 and earlier);
             if &tod = 1 then minutes = 600;
             else if &tod = 2 or &tod = 4 then minutes = 60;
             else if &tod = 5 then minutes = 240;
+            */
+
+            if &tod = 1 then minutes = 720;
+            else if &tod = 2 then minutes = 180;
+            else if &tod = 3 then minutes = 420;
             else minutes = 120;
+
             buses = round(minutes / headway, 0.1);
             tod = &tod;
             proc summary nway; class tod itina itinb; var buses;
