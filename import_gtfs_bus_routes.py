@@ -223,7 +223,7 @@ header_attr = {}
 
 route_fields = (
     common_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'HEADWAY', 'SPEED',
-    'FEEDLINE', 'DIRECTION', 'CT_VEH', 'ROUTE_ID', 'START', 'AM_SHARE',
+    'FEEDLINE', 'DIRECTION', 'ROUTE_ID', 'START', 'AM_SHARE',
     'STARTHOUR', 'LONGNAME', 'TERMINAL'
 )
 

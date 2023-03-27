@@ -33,7 +33,6 @@ mhn_gdb_path = arcpy.GetParameterAsText(0)          # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
 scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
 root_path = arcpy.GetParameterAsText(2)             # String, no default
-abm_output = arcpy.GetParameter(3)                  # Boolean, default = False
 
 out_tod_periods = sorted(MHN.tod_periods['transit'].keys())
 
@@ -293,10 +292,7 @@ for scen in scen_list:
         arcpy.Delete_management(bus_lyr)
 
         # Export header info of representative bus runs in current TOD.
-        if abm_output:
-            rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'CT_VEH', 'SPEED', 'GROUP_HEADWAY']  # CT_VEH instead of VEHICLE_TYPE
-        else:
-            rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'GROUP_HEADWAY']
+        rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'GROUP_HEADWAY']
         rep_runs_query = MHN.tod_periods['transit'][tod][1]
         rep_runs_view = MHN.make_skinny_table_view(rep_runs_table, 'rep_runs_view', rep_runs_attr, rep_runs_query)
         rep_runs_csv = os.path.join(scen_tran_path, 'rep_runs.csv')
@@ -321,10 +317,7 @@ for scen in scen_list:
             bus_future_lyr = 'future_lyr'
             arcpy.MakeFeatureLayer_management(MHN.bus_future, bus_future_lyr)
             bus_future_id_field = MHN.route_systems[MHN.bus_future][1]
-            if abm_output:
-                bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'CT_VEH', 'SPEED', 'HEADWAY']  # CT_VEH instead of VEHICLE_TYPE
-            else:
-                bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
+            bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
             bus_future_query = ''' "SCENARIO" LIKE '%{}%' '''.format(scen[0])  # SCENARIO field contains first character of applicable scenario codes
             bus_future_view = MHN.make_skinny_table_view(bus_future_lyr, 'bus_future_view', bus_future_attr, bus_future_query)
             bus_future_csv = os.path.join(scen_tran_path, 'bus_future.csv')

@@ -742,8 +742,7 @@ data rte; set rte (keep=newline descr mode type headway speed line route_id rln 
         trmnl='TERMINAL'
         start='START'
         strthour='STARTHOUR'
-        ampct='AM_SHARE'
-        vehicle='CT_VEH';
+        ampct='AM_SHARE';
    proc sort; by newline;
    proc export outfile=out1 dbms=csv label replace;
 

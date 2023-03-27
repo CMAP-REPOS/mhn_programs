@@ -175,7 +175,7 @@ header_attr = {}
 
 route_fields = (
     common_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'HEADWAY', 'SPEED',
-    'SCENARIO', 'REPLACE', 'REROUTE', 'TOD', 'NOTES', 'CT_VEH'
+    'SCENARIO', 'REPLACE', 'REROUTE', 'TOD', 'NOTES'
 )
 
 with open(future_route_csv, 'r') as raw_routes:
