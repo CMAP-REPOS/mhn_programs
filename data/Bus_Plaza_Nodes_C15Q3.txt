@@ -1,0 +1,55 @@
+c Bus Plazas
+c Matt Stratton, 5/23/2012
+c Updated by Noel Peterson, 8/20/2015
+c Sources: Pace <http://www.pacebus.com/sub/bus_system/transit_centers.asp> 
+c  and CTA <selected bus terminals, mostly at CTA/Metra rail stations>
+c Terminals were matched with the nearest MHN nodes on bus routes
+c -----------------------------------------------------------------------------
+c node,stop_type,stop_name
+7247,3,Aurora Transportation Center
+11133,3,Buffalo Grove Transportation Center
+15507,3,Chicago Heights Transportation Center
+7473,3,Elgin Transportation Center
+10781,3,Gurnee Mills Transfer Facility
+19841,3,Harvey Transportation Center
+9842,3,Northwest Transportation Center
+7992,3,Prairie Stone Transportation Center
+11804,3,Hodgkins UPS Bus Terminal
+10594,3,Arlington Heights Metra
+11003,3,Clarendon Hills Metra
+12309,3,Deerfield Metra
+11780,3,Des Plaines Metra
+12876,3,Forest Park CTA Station
+13079,3,Highland Park Metra
+14925,3,Homewood Metra
+12577,3,Lake Cook Road Metra
+13026,3,North Riverside Park Mall Turnaround
+13001,3,Oak Park CTA/Metra
+9674,3,Palatine Metra
+14706,3,Park Forest Turnaround
+16098,3,Riverdale Bus Turnaround
+16107,3,South Suburban College
+12910,3,Summit CTA/Pace
+12657,3,Waukegan Metra
+14687,3,Howard - Red
+15905,3,69th - Red
+23897,3,95th - Red
+13508,3,Jefferson Park - Blue
+12927,3,Harlem - Blue (O'Hare)
+21624,3,Rosemont - Blue
+14922,3,Ashland/63rd - Green
+13613,3,54th/Cermak - Pink
+15232,3,Halsted - Orange
+14888,3,Ashland - Orange
+14699,3,35th/Archer - Orange
+14598,3,Western - Orange
+14283,3,Kedzie - Orange
+14003,3,Pulaski - Orange
+13781,3,Midway - Orange
+23220,3,Western - Brown
+14592,3,Davis - Purple
+13637,3,Skokie - Yellow
+15421,3,Union Station
+16139,3,Navy Pier
+13616,3,Old Orchard Mall
+13797,3,Ford City Mall
