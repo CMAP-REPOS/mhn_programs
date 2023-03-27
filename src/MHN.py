@@ -288,6 +288,7 @@ class MasterHighwayNetwork(object):
         self.gdb = mhn_gdb_path
 
         # Directories
+        self.root_dir = os.path.dirname(self.gdb)
         self.script_dir = sys.path[0]  # Directory containing this module
         if os.path.basename(self.script_dir) == 'utilities':
             self.src_dir = os.path.dirname(self.script_dir)
@@ -686,7 +687,7 @@ class MasterHighwayNetwork(object):
             arg_str = ''
         else:
             arg_str = '$'.join(str(arg) for arg in arg_list)
-        bat = os.path.join(self.prog_dir, 'sasrun.bat')
+        bat = os.path.join(self.src_dir, 'sasrun.bat')
         cmd = [bat, sas_file, arg_str, sas_log, sas_lst]
         # arcpy.AddMessage('{}: {}'.format(sas_file, arg_str))  # Helpful for debugging
         return subprocess.check_call(cmd, startupinfo=startupinfo)
