@@ -22,7 +22,7 @@ options noxwait;
 %let zone2 = %scan(&sysparm, 11, $);     * zone09 CBD end zone;
 %let maxzone = %scan(&sysparm, 12, $);   * highest zone09 POE zone number;
 %let procfut = %scan(&sysparm, 13, $);   * is scenario year later than MHN base year?;
-%let progdir = %scan(&sysparm, 14, $);
+%let srcdir = %scan(&sysparm, 14, $);
 %let misslink = %scan(&sysparm, 15, $);
 %let linkdict = %scan(&sysparm, 16, $);
 %let shrt = %scan(&sysparm, 17, $);
@@ -31,7 +31,7 @@ options noxwait;
 %let mode4nd = %scan(&sysparm, 20, $);
 %let outtxt = %scan(&sysparm, 21, $);
 %let shrtpath = %sysfunc(tranwrd(&shrt, /, \));
-%let pypath = %sysfunc(tranwrd(&progdir./pypath.txt, /, \));
+%let pypath = %sysfunc(tranwrd(&srcdir./pypath.txt, /, \));
 %let newln = 0;
 %let modln = 0;
 %let moditin = 0;
@@ -621,7 +621,7 @@ data _null_; set hold nobs=totobs;
 
             data _null_;
                 %put a=&a b=&b;
-                x "%str(%'&runpython.%') &progdir.\shortest_path.py &a &b &linkdict &shrtpath";
+                x "%str(%'&runpython.%') &srcdir.\shortest_path.py &a &b &linkdict &shrtpath";
             %let count = %eval(&count + 1);
         %end;
 

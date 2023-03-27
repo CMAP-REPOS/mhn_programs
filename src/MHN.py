@@ -288,17 +288,15 @@ class MasterHighwayNetwork(object):
         self.gdb = mhn_gdb_path
 
         # Directories
-        self.root_dir = os.path.dirname(self.gdb)
-        self.imp_dir = self.ensure_dir(os.path.join(self.root_dir, 'import'))
-        self.out_dir = self.ensure_dir(os.path.join(self.root_dir, 'output'))
-        self.temp_dir = self.ensure_dir(os.path.join(self.root_dir, 'temp'))
         self.script_dir = sys.path[0]  # Directory containing this module
         if os.path.basename(self.script_dir) == 'utilities':
-            self.prog_dir = os.path.dirname(self.script_dir)
+            self.src_dir = os.path.dirname(self.script_dir)
             self.util_dir = self.script_dir
         else:
-            self.prog_dir = self.script_dir
-            self.util_dir = os.path.join(self.prog_dir, 'utilities')
+            self.src_dir = self.script_dir
+            self.util_dir = os.path.join(self.src_dir, 'utilities')
+        self.temp_dir = self.ensure_dir(os.path.realpath(os.path.join(self.src_dir, '../temp')))
+        self.in_dir = os.path.realpath(os.path.join(self.src_dir, '../input'))
         self.mem = 'in_memory'
 
         # MHN geodatabase structure, projection

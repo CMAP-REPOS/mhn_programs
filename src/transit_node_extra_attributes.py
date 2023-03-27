@@ -29,10 +29,10 @@ import arcpy
 #RAIL_NODE = r'M:\proj1\nrf\Development\Activity-Based Model\2019 Scenario\data\input\mrn-c20q4-zone_fares.gdb\railnet\railnet_node'
 #BATCHIN_DIR = r'M:\proj1\nrf\Development\Activity-Based Model\2019 Scenario\data\output\transit\200'
 #CTA_BUS_SHP = r'M:\proj1\nrf\Development\Activity-Based Model\2019 Scenario\data\input\CTABusStops_CTA_201908.shp'
-CTA_MATCH = os.path.join(MHN.prog_dir, 'data', 'cta_stops_match_20161206.csv')
-PACE_MATCH = os.path.join(MHN.prog_dir, 'data', 'pace_stops_match_20161206.csv')
-BUS_PLAZA = os.path.join(MHN.prog_dir, 'data', 'Bus_Plaza_Nodes_C15Q3.txt')
-RAIL_TERMINAL = os.path.join(MHN.prog_dir, 'data', 'Rail_Terminal_Nodes_C15Q3.txt')
+CTA_MATCH = os.path.join(MHN.in_dir, 'data', 'cta_stops_match_20161206.csv')
+PACE_MATCH = os.path.join(MHN.in_dir, 'data', 'pace_stops_match_20161206.csv')
+BUS_PLAZA = os.path.join(MHN.in_dir, 'data', 'Bus_Plaza_Nodes_C15Q3.txt')
+RAIL_TERMINAL = os.path.join(MHN.in_dir, 'data', 'Rail_Terminal_Nodes_C15Q3.txt')
 
 # Output files
 OUT_BUS_CSV = os.path.join(tran_path, 'bus_node_extra_attributes.csv')

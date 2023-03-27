@@ -8,14 +8,14 @@
 */
 options noxwait;
 
-%let progdir = %scan(&sysparm, 1, $);
+%let srcdir = %scan(&sysparm, 1, $);
 %let busrte = %scan(&sysparm, 2, $);   * Bus header CSV;
 %let busitin = %scan(&sysparm, 3, $);  * Bus itinerary CSV;
 %let oneline = %scan(&sysparm, 4, $);  * One-line itineraries, passed to gtfs_collapse_routes.py;
 %let feedgrp = %scan(&sysparm, 5, $);  * Grouped bus routes, passed back from gtfs_collapse_routes.py;
 %let runs = %scan(&sysparm, 6, $);     * Final output CSV of this program;
 %let tod = %scan(&sysparm, 7, $);      * TOD period;
-%let pypath = %sysfunc(tranwrd(&progdir./pypath.txt, /, \));
+%let pypath = %sysfunc(tranwrd(&srcdir./pypath.txt, /, \));
 
 *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*;
 filename in1 "&busitin";
@@ -71,7 +71,7 @@ data null; infile "&pypath" length=reclen obs=1;
     call symput('runpython', trim(location));
     run;
 
-x "%str(%'&runpython.%') &progdir.\gtfs_collapse_routes.py &oneline &feedgrp";
+x "%str(%'&runpython.%') &srcdir.\gtfs_collapse_routes.py &oneline &feedgrp";
 x "if exist &pypath (del &pypath /Q)"; run;
 
 

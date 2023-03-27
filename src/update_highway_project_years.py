@@ -57,11 +57,11 @@ if not os.path.exists(tipid_uncodable_csv):
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
 tipid_all_csv = os.path.join(MHN.temp_dir, 'tipid_all.csv')
-early_scenarios_csv = os.path.join(MHN.out_dir, 'early_transit_scenarios.csv')
-late_scenarios_csv = os.path.join(MHN.out_dir, 'late_transit_scenarios.csv')
-unknown_trans_ids_csv = os.path.join(MHN.out_dir, 'unknown_transit_tipids.csv')
-in_year_not_mhn_txt = os.path.join(MHN.out_dir, 'in_year_not_mhn.txt')
-in_mhn_not_year_txt = os.path.join(MHN.out_dir, 'in_mhn_not_year.txt')
+early_scenarios_csv = os.path.join(MHN.temp_dir, 'early_transit_scenarios.csv')
+late_scenarios_csv = os.path.join(MHN.temp_dir, 'late_transit_scenarios.csv')
+unknown_trans_ids_csv = os.path.join(MHN.temp_dir, 'unknown_transit_tipids.csv')
+in_year_not_mhn_txt = os.path.join(MHN.temp_dir, 'in_year_not_mhn.txt')
+in_mhn_not_year_txt = os.path.join(MHN.temp_dir, 'in_mhn_not_year.txt')
 
 
 # -----------------------------------------------------------------------------

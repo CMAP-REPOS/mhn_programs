@@ -51,7 +51,7 @@ options noxwait;
 %let transact = %scan(&sysparm, 3, $);
 %let network = %scan(&sysparm, 4, $);
 %let nodes = %scan(&sysparm, 5, $);
-%let progdir = %scan(&sysparm, 6, $);
+%let srcdir = %scan(&sysparm, 6, $);
 %let head = %scan(&sysparm, 7, $);
 %let itin = %scan(&sysparm, 8, $);
 %let pseudo = %scan(&sysparm, 9, $);
@@ -64,7 +64,7 @@ options noxwait;
 %let counter = %scan(&sysparm, 16, $);
 %let maxzn = %scan(&sysparm, 17, $);
 %let lst = %scan(&sysparm, 18, $);
-%let pypath = %sysfunc(tranwrd(&progdir./pypath.txt, /, \));
+%let pypath = %sysfunc(tranwrd(&srcdir./pypath.txt, /, \));
 %let count = 1;
 %let tothold = 0;
 %let samenode = 0;
@@ -643,7 +643,7 @@ data temp; set hold nobs=totobs; call symput('tothold', left(put(totobs, 8.))); 
 
             data _null_;
                 %put a=&a b=&b;
-                x "%str(%'&runpython.%') &progdir.\shortest_path.py &a &b &linkdict &shrtpath";
+                x "%str(%'&runpython.%') &srcdir.\shortest_path.py &a &b &linkdict &shrtpath";
             %let count = %eval(&count + 1);
         %end;
 
@@ -660,7 +660,7 @@ data temp; set hold nobs=totobs; call symput('tothold', left(put(totobs, 8.))); 
             %end;
         /* ADD LOGIC TO VERIFY NUMBER OF ENTRIES IN SHORT_PATH IS EQUAL TO &TOTFIX, ELSE STOP SCRIPTS */
 
-        %include "&progdir./read_path_output.sas";
+        %include "&srcdir./read_path_output.sas";
     %end;
 %mend itinfix;
 %itinfix

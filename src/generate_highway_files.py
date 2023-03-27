@@ -122,7 +122,7 @@ MHN.write_attribute_csv(overlap_network_view, overlap_network_csv, overlap_netwo
 arcpy.Delete_management(overlap_network_view)
 
 # Process attribute tables with coding_overlap.sas.
-sas1_sas = ''.join((MHN.prog_dir, '/', sas1_name, '.sas'))
+sas1_sas = ''.join((MHN.src_dir, '/', sas1_name, '.sas'))
 sas1_args = [MHN.temp_dir]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):
@@ -200,7 +200,7 @@ for scen in scen_list:
     arcpy.Delete_management(hwy_nodes_view)
 
     # Process attribute tables with generate_highway_files_2.sas.
-    sas2_sas = os.path.join(MHN.prog_dir, '{}.sas'.format(sas2_name))
+    sas2_sas = os.path.join(MHN.src_dir, '{}.sas'.format(sas2_name))
     sas2_args = [hwy_path, scen, MHN.max_poe, MHN.base_year, int(abm_output)]
     MHN.submit_sas(sas2_sas, sas2_log, sas2_lst, sas2_args)
     if not os.path.exists(sas2_log):
