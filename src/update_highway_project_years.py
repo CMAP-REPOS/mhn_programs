@@ -195,8 +195,12 @@ def get_trans_proj_scens(table):
     tipid_scens = {}
 
     # Iterate through headers with valid TIPIDs & scenarios
-    fields = ['NOTES', 'SCENARIO']
-    sql = ''' "NOTES" LIKE '%__-__-____%' AND "SCENARIO" NOT IN ('9') '''
+    if table == mrn_future_fc:
+        fields = ['TIP_ID', 'SCENARIO']
+        sql = ''' "TIP_ID" LIKE '%__-__-____%' AND "SCENARIO" NOT IN ('9') '''
+    else:
+        fields = ['NOTES', 'SCENARIO']
+        sql = ''' "NOTES" LIKE '%__-__-____%' AND "SCENARIO" NOT IN ('9') '''
     with arcpy.da.SearchCursor(table, fields, sql) as cursor:
         for row in cursor:
 
