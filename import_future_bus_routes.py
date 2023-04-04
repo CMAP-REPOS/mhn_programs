@@ -175,7 +175,7 @@ header_attr = {}
 
 route_fields = (
     common_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'HEADWAY', 'SPEED',
-    'SCENARIO', 'REPLACE', 'TOD', 'NOTES', 'CT_VEH'
+    'SCENARIO', 'REPLACE', 'REROUTE', 'TOD', 'NOTES', 'CT_VEH'
 )
 
 with open(future_route_csv, 'r') as raw_routes:
@@ -192,6 +192,8 @@ with arcpy.da.UpdateCursor(temp_routes_fc, route_fields) as cursor:
         row[1:] = attr_list[1:]
         if row[route_fields.index('REPLACE')] == 'X':
             row[route_fields.index('REPLACE')] = ' '
+        if row[route_fields.index('REROUTE')] == 'X':
+            row[route_fields.index('REROUTE')] = ' '
         if row[route_fields.index('NOTES')] == 'X':
             row[route_fields.index('NOTES')] = ' '
         cursor.updateRow(row)

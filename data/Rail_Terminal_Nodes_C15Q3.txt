@@ -1,0 +1,9 @@
+c Bus Plazas
+c Noel Peterson, 9/9/2015
+c Major rail terminals were manually specified.
+c -----------------------------------------------------------------------------
+c node,stop_type,stop_name
+42201,5,Ogilvie Transportation Center
+42292,5,Union Station
+42344,5,Millenium Station
+42430,5,LaSalle Street Station

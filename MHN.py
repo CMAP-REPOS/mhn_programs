@@ -97,32 +97,56 @@ class MasterHighwayNetwork(object):
     min_year = min(scenario_years.values())
     max_year = max(scenario_years.values())
 
+    # Highway/transit TODs.
     tod_periods = {
-        '1':  ('8PM-6AM',                                   # 1: overnight
-               '"STARTHOUR" >= 20 OR "STARTHOUR" <= 5'),
-        '2':  ('6AM-7AM',                                   # 2: AM shoulder 1
-               '"STARTHOUR" = 6'),
-        '3':  ('7AM-9AM',                                   # 3: AM peak
-               '"STARTHOUR" IN (7, 8)'),
-        '4':  ('9AM-10AM',                                  # 4: AM shoulder 2
-               '"STARTHOUR" = 9'),
-        '5':  ('10AM-2PM',                                  # 5: midday
-               '"STARTHOUR" >= 10 AND "STARTHOUR" <= 13'),
-        '6':  ('2PM-4PM',                                   # 6: PM shoulder 1
-               '"STARTHOUR" IN (14, 15)'),
-        '7':  ('4PM-6PM',                                   # 7: PM peak
-               '"STARTHOUR" IN (16, 17)'),
-        '8':  ('6PM-8PM',                                   # 8: PM shoulder 2
-               '"STARTHOUR" IN (18, 19)'),
-        'am': ('7AM-9AM',                                   # am: Same as TOD 3, but for buses w/ >50% service in period
-               '"AM_SHARE" >= 0.5')
+        'highway': {
+            '1':  ('8PM-6AM',                                   # 1: overnight
+                   '"STARTHOUR" >= 20 OR "STARTHOUR" <= 5'),
+            '2':  ('6AM-7AM',                                   # 2: AM shoulder 1
+                   '"STARTHOUR" = 6'),
+            '3':  ('7AM-9AM',                                   # 3: AM peak
+                   '"STARTHOUR" IN (7, 8)'),
+            '4':  ('9AM-10AM',                                  # 4: AM shoulder 2
+                   '"STARTHOUR" = 9'),
+            '5':  ('10AM-2PM',                                  # 5: midday
+                   '"STARTHOUR" >= 10 AND "STARTHOUR" <= 13'),
+            '6':  ('2PM-4PM',                                   # 6: PM shoulder 1
+                   '"STARTHOUR" IN (14, 15)'),
+            '7':  ('4PM-6PM',                                   # 7: PM peak
+                   '"STARTHOUR" IN (16, 17)'),
+            '8':  ('6PM-8PM',                                   # 8: PM shoulder 2
+                   '"STARTHOUR" IN (18, 19)'),
+        },
+        # Condensed TODs for transit (C22Q2 and later)
+        'transit': {
+            '1':  ('6PM-6AM',                                  # 1: overnight
+                   '"STARTHOUR" >= 18 OR "STARTHOUR" < 6'),
+            '2':  ('6AM-9AM',                                  # 2: AM peak
+                   '"STARTHOUR" >= 6 AND "STARTHOUR" < 9'),
+            '3':  ('9AM-4PM',                                  # 3: midday
+                   '"STARTHOUR" >= 9 AND "STARTHOUR" < 16'),
+            '4':  ('4PM-6PM',                                  # 4: PM peak
+                   '"STARTHOUR" >= 16 AND "STARTHOUR" < 18')
+            
+            ### Replaced by longer transit AM peak period (C22Q2 and later)
+            # 'am': ('7AM-9AM',                                  # am: Same as TOD 3, but for buses w/ >50% service in period
+            #        '"AM_SHARE" >= 0.5')
+        }
     }
-
+    
     ampm_tods = {
-        '1': ('1', '2', '3', '4', '5', '6', '7', '8', 'am'),  # All periods
-        '2': ('2', '3', '4', '5', 'am'),                      # AM periods
-        '3': ('1', '6', '7', '8'),                            # PM periods
-        '4': ('1', '5')                                       # Off-peak periods
+        'highway': {
+            '1': ('1', '2', '3', '4', '5', '6', '7', '8'),  # All periods
+            '2': ('2', '3', '4', '5'),                      # AM periods
+            '3': ('1', '6', '7', '8'),                      # PM periods
+            '4': ('1', '5')                                 # Off-peak periods
+        },
+        'transit': {
+            '1': ('1', '2', '3', '4'),  # All periods
+            '2': ('2', '3'),            # AM periods
+            '3': ('1', '4'),            # PM periods
+            '4': ('1', '3')             # Off-peak periods
+        }
     }
 
     rsps = {

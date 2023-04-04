@@ -66,6 +66,7 @@ data rte; set rte(where=(tr_line is not null));
  length des $22. nt $32.;
   tr_line=lowcase(tr_line);
   if replace='' then replace='X';
+  if reroute='' then reroute='X';
   if notes='' then notes='X';
   description=upcase(description);
   d=compress(description,"'");
@@ -79,7 +80,7 @@ data chk; set rte(where=(scenario in (.,0))); proc print; title "Scenario Values
 
 
     ** Replace File for ARC **;
-data rte; set rte (keep=tr_line des mode veh_type headway speed scenario replace tod nt ct_veh);
+data rte; set rte (keep=tr_line des mode veh_type headway speed scenario replace reroute tod nt ct_veh);
   label tr_line='TRANSIT_LINE'
         des='DESCRIPTION'
         mode='MODE'
@@ -88,6 +89,7 @@ data rte; set rte (keep=tr_line des mode veh_type headway speed scenario replace
         speed='SPEED'
         scenario='SCENARIO'
         replace='REPLACE'
+        reroute='REROUTE'
         tod='TOD'
         nt='NOTES'
         ct_veh='CT_VEH';
