@@ -49,7 +49,7 @@ mhn_links_query = ''' "BASELINK" IN ('0', '1') '''  # Ignore BASELINK > 1
 mhn_links_view = MHN.make_skinny_table_view(MHN.arc, 'mhn_links_view', mhn_links_attr, mhn_links_query)
 MHN.write_attribute_csv(mhn_links_view, mhn_links_csv, mhn_links_attr)
 
-sas1_sas = os.path.join(MHN.prog_dir, '{0}.sas'.format(sas1_name))
+sas1_sas = os.path.join(MHN.src_dir, '{0}.sas'.format(sas1_name))
 sas1_args = [xls, mhn_links_csv, projects_csv, sas1_lst]
 MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
 if not os.path.exists(sas1_log):

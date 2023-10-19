@@ -57,11 +57,11 @@ if not os.path.exists(tipid_uncodable_csv):
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
 tipid_all_csv = os.path.join(MHN.temp_dir, 'tipid_all.csv')
-early_scenarios_csv = os.path.join(MHN.out_dir, 'early_transit_scenarios.csv')
-late_scenarios_csv = os.path.join(MHN.out_dir, 'late_transit_scenarios.csv')
-unknown_trans_ids_csv = os.path.join(MHN.out_dir, 'unknown_transit_tipids.csv')
-in_year_not_mhn_txt = os.path.join(MHN.out_dir, 'in_year_not_mhn.txt')
-in_mhn_not_year_txt = os.path.join(MHN.out_dir, 'in_mhn_not_year.txt')
+early_scenarios_csv = os.path.join(MHN.temp_dir, 'early_transit_scenarios.csv')
+late_scenarios_csv = os.path.join(MHN.temp_dir, 'late_transit_scenarios.csv')
+unknown_trans_ids_csv = os.path.join(MHN.temp_dir, 'unknown_transit_tipids.csv')
+in_year_not_mhn_txt = os.path.join(MHN.temp_dir, 'in_year_not_mhn.txt')
+in_mhn_not_year_txt = os.path.join(MHN.temp_dir, 'in_mhn_not_year.txt')
 
 
 # -----------------------------------------------------------------------------
@@ -195,8 +195,12 @@ def get_trans_proj_scens(table):
     tipid_scens = {}
 
     # Iterate through headers with valid TIPIDs & scenarios
-    fields = ['NOTES', 'SCENARIO']
-    sql = ''' "NOTES" LIKE '%__-__-____%' AND "SCENARIO" NOT IN ('9') '''
+    if table == mrn_future_fc:
+        fields = ['TIP_ID', 'SCENARIO']
+        sql = ''' "TIP_ID" LIKE '%__-__-____%' AND "SCENARIO" NOT IN ('9') '''
+    else:
+        fields = ['NOTES', 'SCENARIO']
+        sql = ''' "NOTES" LIKE '%__-__-____%' AND "SCENARIO" NOT IN ('9') '''
     with arcpy.da.SearchCursor(table, fields, sql) as cursor:
         for row in cursor:
 

@@ -33,7 +33,6 @@ mhn_gdb_path = arcpy.GetParameterAsText(0)          # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
 scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
 root_path = arcpy.GetParameterAsText(2)             # String, no default
-abm_output = arcpy.GetParameter(3)                  # Boolean, default = False
 
 out_tod_periods = sorted(MHN.tod_periods['transit'].keys())
 
@@ -64,9 +63,9 @@ bus_route_csv = os.path.join(MHN.temp_dir, 'bus_route.csv')
 bus_itin_csv = os.path.join(MHN.temp_dir, 'bus_itin.csv')
 oneline_itin_txt = os.path.join(MHN.temp_dir, 'oneline_itin.txt')  # gtfs_collapse_routes.py input file (called by gtfs_reformat_feed.sas)
 feed_groups_txt = os.path.join(MHN.temp_dir, 'feed_groups.txt')    # gtfs_collapse_routes.py output file
-missing_links_csv = os.path.join(MHN.out_dir, 'missing_bus_links.csv')
-link_dict_txt = os.path.join(MHN.out_dir, 'link_dictionary.txt')  # shortest_path.py input file (called by generate_transit_files_2.sas)
-short_path_txt = os.path.join(MHN.out_dir, 'short_path.txt')      # shortest_path.py output file
+missing_links_csv = os.path.join(MHN.temp_dir, 'missing_bus_links.csv')
+link_dict_txt = os.path.join(MHN.temp_dir, 'link_dictionary.txt')  # shortest_path.py input file (called by generate_transit_files_2.sas)
+short_path_txt = os.path.join(MHN.temp_dir, 'short_path.txt')      # shortest_path.py output file
 path_errors_txt = os.path.join(MHN.temp_dir, 'path_errors.txt')
 
 
@@ -144,15 +143,15 @@ for bus_fc in bus_fc_dict:
         arcpy.Delete_management(bus_itin_view)
 
         # Process exported route & itin tables with gtfs_reformat_feed.sas.
-        sas1_sas = os.path.join(MHN.prog_dir, '{}.sas'.format(sas1_name))
+        sas1_sas = os.path.join(MHN.src_dir, '{}.sas'.format(sas1_name))
         sas1_output = os.path.join(MHN.temp_dir, 'bus_{}_runs_{}.csv'.format(which_bus, tod))
-        sas1_args = [MHN.prog_dir, bus_route_csv, bus_itin_csv, oneline_itin_txt, feed_groups_txt, sas1_output, tod]
+        sas1_args = [MHN.src_dir, bus_route_csv, bus_itin_csv, oneline_itin_txt, feed_groups_txt, sas1_output, tod]
         MHN.delete_if_exists(sas1_output)
         MHN.submit_sas(sas1_sas, sas1_log, sas1_lst, sas1_args)
         if not os.path.exists(sas1_log):
             MHN.die('{} did not run!'.format(sas1_sas))
         elif not os.path.exists(feed_groups_txt):
-            MHN.die('{} did not run! (Called by {}.)'.format(os.path.join(MHN.prog_dir, 'gtfs_collapse_routes.py'), sas1_sas))
+            MHN.die('{} did not run! (Called by {}.)'.format(os.path.join(MHN.src_dir, 'gtfs_collapse_routes.py'), sas1_sas))
         elif os.path.exists(sas1_lst) or not os.path.exists(sas1_output):
             MHN.die('{} did not run successfully. Please review {}.'.format(sas1_sas, sas1_log))
         else:
@@ -293,10 +292,7 @@ for scen in scen_list:
         arcpy.Delete_management(bus_lyr)
 
         # Export header info of representative bus runs in current TOD.
-        if abm_output:
-            rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'CT_VEH', 'SPEED', 'GROUP_HEADWAY']  # CT_VEH instead of VEHICLE_TYPE
-        else:
-            rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'GROUP_HEADWAY']
+        rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'GROUP_HEADWAY']
         rep_runs_query = MHN.tod_periods['transit'][tod][1]
         rep_runs_view = MHN.make_skinny_table_view(rep_runs_table, 'rep_runs_view', rep_runs_attr, rep_runs_query)
         rep_runs_csv = os.path.join(scen_tran_path, 'rep_runs.csv')
@@ -321,10 +317,7 @@ for scen in scen_list:
             bus_future_lyr = 'future_lyr'
             arcpy.MakeFeatureLayer_management(MHN.bus_future, bus_future_lyr)
             bus_future_id_field = MHN.route_systems[MHN.bus_future][1]
-            if abm_output:
-                bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'CT_VEH', 'SPEED', 'HEADWAY']  # CT_VEH instead of VEHICLE_TYPE
-            else:
-                bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
+            bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
             bus_future_query = ''' "SCENARIO" LIKE '%{}%' '''.format(scen[0])  # SCENARIO field contains first character of applicable scenario codes
             bus_future_view = MHN.make_skinny_table_view(bus_future_lyr, 'bus_future_view', bus_future_attr, bus_future_query)
             bus_future_csv = os.path.join(scen_tran_path, 'bus_future.csv')
@@ -650,11 +643,11 @@ for scen in scen_list:
         process_future = 1 if scen_year > MHN.base_year else 0
 
         # Call generate_transit_files_2.sas -- creates bus batchin files.
-        sas2_sas = os.path.join(MHN.prog_dir, '{}.sas'.format(sas2_name))
+        sas2_sas = os.path.join(MHN.src_dir, '{}.sas'.format(sas2_name))
         sas2_output = os.path.join(tran_path, '{}_{}.txt'.format(sas2_name, scen))
         sas2_args = (scen_tran_path, scen_hwy_path, rep_runs_csv, rep_runs_itin_csv, replace_csv, reroute_csv, pnr_csv,
                      scen, tod, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])),
-                     str(MHN.max_poe), process_future, MHN.prog_dir, missing_links_csv,
+                     str(MHN.max_poe), process_future, MHN.src_dir, missing_links_csv,
                      link_dict_txt, short_path_txt, path_errors_txt, busway_links_csv, busway_nodes_csv,
                      sas2_output)
         if tod == out_tod_periods[0] and os.path.exists(sas2_output):
@@ -912,7 +905,7 @@ for scen in scen_list:
             arcpy.Delete_management(fc)
 
         # Call generate_transit_files_3.sas -- writes access.network file.
-        sas3_sas = os.path.join(MHN.prog_dir, '{}.sas'.format(sas3_name))
+        sas3_sas = os.path.join(MHN.src_dir, '{}.sas'.format(sas3_name))
         sas3_output = os.path.join(scen_tran_path, 'access.network_{}'.format(tod))
         sas3_args = [scen_tran_path, scen, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])), tod]
         MHN.submit_sas(sas3_sas, sas3_log, sas3_lst, sas3_args)
@@ -1055,7 +1048,7 @@ with open(relim_csv, 'wt') as w:
         w.write('{},1.0\n'.format(line_id))
 
 # Node extra attribute CSVs
-exec(open(os.path.join(MHN.prog_dir, 'transit_node_extra_attributes.py')).read())
+exec(open(os.path.join(MHN.src_dir, 'transit_node_extra_attributes.py')).read())
 
 # -----------------------------------------------------------------------------
 #  Clean up script-level data.

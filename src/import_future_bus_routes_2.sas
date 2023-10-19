@@ -80,7 +80,7 @@ data chk; set rte(where=(scenario in (.,0))); proc print; title "Scenario Values
 
 
     ** Replace File for ARC **;
-data rte; set rte (keep=tr_line des mode veh_type headway speed scenario replace reroute tod nt ct_veh);
+data rte; set rte (keep=tr_line des mode veh_type headway speed scenario replace reroute tod nt);
   label tr_line='TRANSIT_LINE'
         des='DESCRIPTION'
         mode='MODE'
@@ -91,8 +91,7 @@ data rte; set rte (keep=tr_line des mode veh_type headway speed scenario replace
         replace='REPLACE'
         reroute='REROUTE'
         tod='TOD'
-        nt='NOTES'
-        ct_veh='CT_VEH';
+        nt='NOTES';
    proc sort; by tr_line;
    proc export outfile=out1 dbms=csv label replace;
 
