@@ -812,6 +812,8 @@ for scen in scen_list:
         # Create CBD and non-CBD layers for CTA (rail) stops and bus stops.
         cbd_query = '"{0}" >= {1} AND "{0}" <= {2}'.format(MHN.zone_attr, min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['CBD']))
         noncbd_query = '"{0}" < {1} OR "{0}" > {2}'.format(MHN.zone_attr, min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['CBD']))
+        chirem_query = '"{0}" > {1} AND "{0}" <= {2}'.format(MHN.zone_attr, max(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['Chicago'])) #rest of Chicago -- toleary 2024-01-30
+        nonchi_query = '"{0}" < {1} OR "{0}" > {2}'.format(MHN.zone_attr, min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['Chicago'])) #outside of chicago -- toleary 2024-01-30
 
         cta_cbd_lyr = 'cta_cbd_lyr'
         arcpy.MakeFeatureLayer_management(cta_stop_xy_z, cta_cbd_lyr, cbd_query)
@@ -823,15 +825,39 @@ for scen in scen_list:
         cta_noncbd_fc = os.path.join(MHN.mem, 'cta_noncbd_fc')
         arcpy.CopyFeatures_management(cta_noncbd_lyr, cta_noncbd_fc)
 
+        #toleary - add chirem and nonchi
+        cta_chirem_lyr = 'cta_chirem_lyr'
+        arcpy.MakeFeatureLayer_management(cta_stop_xy_z, cta_chirem_lyr, chirem_query)
+        cta_chirem_fc = os.path.join(MHN.mem, 'cta_chirem_fc')
+        arcpy.CopyFeatures_management(cta_chirem_lyr, cta_chirem_fc)
+
+        cta_nonchi_lyr = 'cta_nonchi_lyr'
+        arcpy.MakeFeatureLayer_management(cta_stop_xy_z, cta_nonchi_lyr, nonchi_query)
+        cta_nonchi_fc = os.path.join(MHN.mem, 'cta_nonchi_fc')
+        arcpy.CopyFeatures_management(cta_nonchi_lyr, cta_nonchi_fc)
+        ###
+
         bus_cbd_lyr = 'bus_cbd_lyr'
         arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_cbd_lyr, cbd_query)
         bus_cbd_fc = os.path.join(MHN.mem, 'bus_cbd_fc')
         arcpy.CopyFeatures_management(bus_cbd_lyr, bus_cbd_fc)
 
-        bus_noncbd_lyr = 'bus_noncdb_lyr'
+        bus_noncbd_lyr = 'bus_noncbd_lyr'
         arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_noncbd_lyr, noncbd_query)
         bus_noncbd_fc = os.path.join(MHN.mem, 'bus_noncbd_fc')
         arcpy.CopyFeatures_management(bus_noncbd_lyr, bus_noncbd_fc)
+
+        #toleary - add chirem and nonchi -- 2024-01-30
+        bus_chirem_lyr = 'bus_chirem_lyr'
+        arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_cbd_lyr, chirem_query)
+        bus_chirem_fc = os.path.join(MHN.mem, 'bus_chirem_fc')
+        arcpy.CopyFeatures_management(bus_chirem_lyr, bus_chirem_fc)
+
+        bus_nonchi_lyr = 'bus_nonchi_lyr'
+        arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_nonchi_lyr, nonchi_query)
+        bus_nonchi_fc = os.path.join(MHN.mem, 'bus_nonchi_fc')
+        arcpy.CopyFeatures_management(bus_nonchi_lyr, bus_nonchi_fc)
+        ###
 
         # Perform distance calculations
         def calculate_distances(pts_1, pts_1_field, pts_2, pts_2_field, dist_limit, out_csv):
@@ -890,6 +916,13 @@ for scen in scen_list:
         # -- Modes u, v, w, x, y & z.
         busz_txt = calculate_distances(bus_cbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 7920, os.path.join(scen_tran_path, 'busz.txt'))  # Large search distance; results will be heavily trimmed
         busz2_txt = calculate_distances(bus_noncbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz2.txt'))  # Large search distance; results will be heavily trimmed
+        
+            ## toleary -- add chirem and nonchi, for cta and bus
+        busz3_txt = calculate_distances(bus_chirem_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz3.txt'))  # Large search distance; results will be heavily trimmed
+        busz4_txt = calculate_distances(bus_nonchi_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz4.txt'))  # large search distance, results will be heavily trimmed
+        ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'ctaz3.txt'))
+        ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'ctaz4.txt'))
+
         ctaz_txt = calculate_distances(cta_cbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz.txt'))
         ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz2.txt'))
         metraz_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'metraz.txt'))
