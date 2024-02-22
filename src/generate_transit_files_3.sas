@@ -35,10 +35,10 @@ filename in13 "&dirpath.\buscentroids.txt";
 filename in14 "&dirpath.\railaccess.txt";
 
 /* toleary 2/20 -- add in chirem, nonchi -- i.e., ctaz3-4, busz3-4*/
-filename in15 "&dirpath.\busz3.txt"
-filename in16 "&dirpath.\busz4.txt"
-filename in17 "&dirpath.\ctaz3.txt"
-filename in18 "&dirpath.\ctaz4.txt"
+filename in15 "&dirpath.\busz3.txt";
+filename in16 "&dirpath.\busz4.txt";
+filename in17 "&dirpath.\ctaz3.txt";
+filename in18 "&dirpath.\ctaz4.txt";
 
 ** OUTPUT FILES **;
 filename out1 "&dirpath.\access.network_&tod";
