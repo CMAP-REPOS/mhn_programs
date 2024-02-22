@@ -917,21 +917,27 @@ for scen in scen_list:
         busz_txt = calculate_distances(bus_cbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 7920, os.path.join(scen_tran_path, 'busz.txt'))  # Large search distance; results will be heavily trimmed
         busz2_txt = calculate_distances(bus_noncbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz2.txt'))  # Large search distance; results will be heavily trimmed
         
+        ctaz_txt = calculate_distances(cta_cbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz.txt'))
+        ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz2.txt'))
+        metraz_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 79200, os.path.join(scen_tran_path, 'metraz.txt')) #toleary: large search distance, results will be trimmed in sas 
+
             ## toleary -- add chirem and nonchi, for cta and bus
         busz3_txt = calculate_distances(bus_chirem_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz3.txt'))  # Large search distance; results will be heavily trimmed
         busz4_txt = calculate_distances(bus_nonchi_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz4.txt'))  # large search distance, results will be heavily trimmed
-        ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'ctaz3.txt'))
-        ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'ctaz4.txt'))
+        ctaz3_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'ctaz3.txt'))
+        ctaz4_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'ctaz4.txt'))
 
-        ctaz_txt = calculate_distances(cta_cbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz.txt'))
-        ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz2.txt'))
-        metraz_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'metraz.txt'))
 
         bcent_txt = distance_to_zone_centroid(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', MHN.zone_attr, centroid_fc, 'NODE', os.path.join(scen_tran_path, 'buscentroids.txt'))
+
 
         c1z_txt = MHN.write_attribute_csv(cta_cbd_fc, os.path.join(scen_tran_path, 'c1z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
         c2z_txt = MHN.write_attribute_csv(cta_noncbd_fc, os.path.join(scen_tran_path, 'c2z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
         mz_txt = MHN.write_attribute_csv(metra_stop_xy_z, os.path.join(scen_tran_path, 'mz.txt'), ['metra_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
+
+        c3z_txt = MHN.write_attribute_csv(cta_chirem_fc, os.path.join(scen_tran_path, 'c3z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
+        c4z_txt = MHN.write_attribute_csv(cta_nonchi_fc, os.path.join(scen_tran_path, 'c4z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
+        
 
         # Clean up temp point features/layers.
         for fc in (cta_stop_xy_z, metra_stop_xy_z, bus_stop_xy_z, cta_bus_xy, pace_bus_xy, cta_cbd_fc, cta_noncbd_fc, bus_cbd_fc, bus_noncbd_fc):
@@ -940,7 +946,7 @@ for scen in scen_list:
         # Call generate_transit_files_3.sas -- writes access.network file.
         sas3_sas = os.path.join(MHN.src_dir, '{}.sas'.format(sas3_name))
         sas3_output = os.path.join(scen_tran_path, 'access.network_{}'.format(tod))
-        sas3_args = [scen_tran_path, scen, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])), tod]
+        sas3_args = [scen_tran_path, scen, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['Chicago'])), str(max(MHN.centroid_ranges['Central_Area'])), tod]
         MHN.submit_sas(sas3_sas, sas3_log, sas3_lst, sas3_args)
         if not os.path.exists(sas3_log):
             MHN.die('{} did not run!'.format(sas3_sas))

@@ -30,6 +30,7 @@ class MasterHighwayNetwork(object):
         ## zones17 (C19Q1 and later)
         'CBD':     range(   1,   48),  # NB. range(i,j) includes i & *excludes* j
         'Chicago': range(   1,  718),
+        'Central_Area': range(1, 78),
         'Cook':    range(   1, 1733),
         'McHenry': range(2584, 2703),
         'Lake':    range(2326, 2584),

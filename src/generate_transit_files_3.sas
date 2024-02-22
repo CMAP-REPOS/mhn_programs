@@ -10,9 +10,11 @@ options pagesize=50 linesize=125;
 
 %let dirpath = %scan(&sysparm, 1, $);
 %let scen = %scan(&sysparm, 2, $);
-%let zone1 = %scan(&sysparm, 3, $);  ** Zone09 CBD start zone;
-%let zone2 = %scan(&sysparm, 4, $);  ** Zone09 CBD end zone;
-%let tod = %scan(&sysparm, 5, $);
+%let zone1 = %scan(&sysparm, 3, $);  ** Zone17 CBD start zone;
+%let zone2 = %scan(&sysparm, 4, $);  ** Zone17 CBD end zone;
+%let zone3 = %scan(&sysparm, 5, $);  ** Zone17 Chi end zone (toleary 2/21/2024);
+%let zone4 = %scan(&sysparm, 6, $);  ** Zone17 Central Area end zone (toleary 2/21/2024);
+%let tod = %scan(&sysparm, 7, $);
 
 /* ------------------------------------------------------------------------------ */
 ** INPUT FILES **;
@@ -31,6 +33,12 @@ filename in11 "&dirpath.\metraz.txt";
 filename in12 "&dirpath.\mz.txt";
 filename in13 "&dirpath.\buscentroids.txt";
 filename in14 "&dirpath.\railaccess.txt";
+
+/* toleary 2/20 -- add in chirem, nonchi -- i.e., ctaz3-4, busz3-4*/
+filename in15 "&dirpath.\busz3.txt"
+filename in16 "&dirpath.\busz4.txt"
+filename in17 "&dirpath.\ctaz3.txt"
+filename in18 "&dirpath.\ctaz4.txt"
 
 ** OUTPUT FILES **;
 filename out1 "&dirpath.\access.network_&tod";
@@ -130,7 +138,21 @@ data bus2(drop=dist); infile in5 dlm=',' missover;
     input stop centroid dist;
     miles = round(dist / 5280, 0.01);
 
-data bus; set bus bus2;
+/* Out of CBD, in Chicago*/
+data bus3(drop=dist); infile in15 dlm=',' missover;
+    input stop centroid dist;
+    miles = round(dist / 5280, 0.01);
+
+/* outside chicago */
+data bus4(drop=dist); infile in16 dlm=',' missover;
+    input stop centroid dist;
+    miles = round(dist / 5280, 0.01);
+
+/* OLD BUS */
+/* data bus; set bus bus2;
+    proc sort; by stop; */
+
+data bus; set bus bus3 bus4;
     proc sort; by stop;
 
 *---------------------------------;
@@ -256,7 +278,10 @@ data final2(drop=_type_ _freq_); merge final1 dir2diff(in=hit); by linename;
 /* ELIMINATE REDUNDANCIES */
 proc summary nway; var miles; class stop centroid; output out=finlist mean=;
 
+/* toleary 2-21-2024: new method to access/egress: no limit to # links within distance*/
+/* negate below */
 /* ORDER ACCESS LINKS BY CENTROID BY MILES */
+/*
 proc sort data=finlist; by centroid miles;
 
 data finlist (drop=_type_ _freq_); set finlist;
@@ -266,24 +291,37 @@ data finlist; set finlist;
     retain ord 1;
     ord + 1;
     if centroid ^= match then ord = 1;
-    output;
-
+    output; */
+/* toleary: old method listed below. kept distance, removed ord */ 
 /* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
 /* MODE x - IN CBD MAX. OF 8 PER ZONE, OUTSIDE CBD MAX. OF 2 PER ZONE */
-data corex extrax; set finlist;
+/* data corex extrax; set finlist;
     mode = 'x';
     if miles > 0.55 then output extrax;
     else if centroid in (&zone1:&zone2) and ord > 8 then output extrax;
     else if centroid not in (&zone1:&zone2) and ord > 2 then output extrax;
-    else output corex;
+    else output corex; */
 
+/* CBD links */
+data corex extrax; set finlist;
+    mode = 'x';
+    if miles > 0.75 then output extrax;
+    if miles > 0.25 and centroid in (&zone1:&zone2) then output extrax;
+    else if miles > 0.55 and centroid in (&zone2:&zone3) then output extrax;
+    else output corex;    
+
+/* toleary: old method listed below. removed ord, changed distance to match x*/
 /* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
 /* MODE u - MAXIMUM OF 3 PER ZONE */
 data coreu extrau; set finlist;
     mode = 'u';
-    if miles > 0.55 then output extrau;
+    /* if miles > 0.55 then output extrau;
     else if ord > 3 then output extrau;
-    else output coreu;
+    else output coreu; */
+    if miles > 0.25 and centroid in (&zone1:&zone2) then output extrau;
+    else if miles > 0.55 and centroid in (&zone2:&zone3) then output extrau;
+    else if miles > 0.75 then output extrau;
+    else output coreu;    
 
 /* ADD EXTRA u/x LINKS TO ENSURE ROUTES HAVE ACCESS TO ALL ZONES THEY STOP IN */
 data zndist (drop=dist); infile in13 dlm=',' missover;
@@ -367,7 +405,19 @@ data cta2(drop=dist); infile in8 dlm=',' missover;
     input stop centroid dist;
     miles = round(dist / 5280, 0.01);
 
-data cta1; set cta1 cta2;
+/* toleary -- add outside cbd in chicago, nonchicago */
+data cta3(drop=dist); infile in17 dlm=',' missover;
+    input stop centroid dist;
+    miles = round(dist / 5280, 0.01);
+
+data cta4(drop=dist); infile in18 dlm=',' missover;
+    input stop centroid dist;
+    miles = round(dist / 5280, 0.01);
+
+/* old cta */
+/* data cta1; set cta1 cta2;
+    proc sort; by stop centroid; */
+data cta1; set cta1 cta3 cta4;
     proc sort; by stop centroid;
 
 *----------------------------------;
@@ -405,6 +455,7 @@ data force(drop=t); set force;
     t = stop; stop = centroid; centroid = t;  ** Reverse direction;
     output;
 
+/* toleary -- old method commented out below. removed ord, used distance*/
 /* ORDER ACCESS LINKS BY CENTROID BY MILES */
 data ctarail; set ctarail;
     match = lag1(centroid);
@@ -418,19 +469,29 @@ data ctarail; set ctarail;
 /* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
 /* MODE y - IN CBD MAX. OF 6 PER ZONE, OUTSIDE CBD MAX. OF 2 PER ZONE */
 /* THESE LINKS WILL BE ADDED TO THOSE IN DATASET FORCE. */
-data ctay(drop=match ord); set ctarail;
+/* data ctay(drop=match ord); set ctarail;
     if &zone1 <= centroid <= &zone2 and ord > 6 then delete;
     if centroid < &zone1 and ord > 2 then delete;
     if centroid > &zone2 and ord > 2 then delete;
+    mode = 'y'; */
+data ctay(drop=match ord); set ctarail;
+    if &zone1 <= centroid <= &zone4 and miles > 0.55 then delete;
+    if centroid > &zone4 and miles > 1.5 then delete;
     mode = 'y';
 
 /* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
 /* MODE v - MAXIMUM OF 2 PER ZONE */
 /* THESE LINKS WILL BE ADDED TO THOSE IN DATASET FORCE. */
-data ctav(drop=match ord t); set ctarail;
+/* data ctav(drop=match ord t); set ctarail;
     if ord > 2 then delete;
     mode = 'v';
     t = stop; stop = centroid; centroid = t;  ** Reverse direction;
+    output; */
+data ctav(drop=match ord t); set ctarail;
+    if &zone1 <= centroid <= &zone4 and miles > 0.55 then delete;
+    if centroid > &zone4 and miles > 1.5 then delete;
+    mode = 'v';
+    t = stop; stop = centroid; centroid = t; ** Reverse direction;
     output;
 
 
@@ -457,12 +518,20 @@ data metra1(drop=t); merge mzone metra1; by stop centroid;
     if centroid > 0;
     /*MAKE SURE EACH STATION CONNECTS TO ZONE IT IS IN */
     if miles = '.' then miles = 0.55;
-    mode = 'z';
+    * toleary 2/22/2024, new method for metra connections-- works like cta and bus, but with higher distances;
+    /* mode = 'z';
     output;
     mode = 'w';
     t = stop; stop = centroid; centroid = t;  ** Reverse direction;
+    output; */
+    if &zone1 <= centroid <= &zone4 and miles > 1.2 then delete;
+    if &zone4 < centroid <= &zone3 and miles > 3 then delete;
+    if centroid > &zone3 and miles > 15 then delete;
+    mode = 'z';
     output;
-
+    mode = 'w';
+    t = stop; stop = centroid; centroid = t; ** reverse direction;
+    output;
 
 /*==============================================*/
 /*  3. COMBINE ALL, WRITE OUT BATCHIN FILE      */
