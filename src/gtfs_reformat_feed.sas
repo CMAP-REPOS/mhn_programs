@@ -15,7 +15,8 @@ options noxwait;
 %let feedgrp = %scan(&sysparm, 5, $);  * Grouped bus routes, passed back from gtfs_collapse_routes.py;
 %let runs = %scan(&sysparm, 6, $);     * Final output CSV of this program;
 %let tod = %scan(&sysparm, 7, $);      * TOD period;
-%let pypath = %sysfunc(tranwrd(&srcdir./pypath.txt, /, \));
+/* %let pypath = %sysfunc(tranwrd(&srcdir./pypath.txt, /, \)); */
+%let pypath = "C:\Users\toleary\AppData\Local\Programs\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe";
 
 *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*;
 filename in1 "&busitin";
