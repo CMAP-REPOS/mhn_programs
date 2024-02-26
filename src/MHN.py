@@ -300,6 +300,7 @@ class MasterHighwayNetwork(object):
         self.temp_dir = self.ensure_dir(os.path.realpath(os.path.join(self.src_dir, '../temp')))
         self.in_dir = os.path.realpath(os.path.join(self.src_dir, '../input'))
         self.mem = 'in_memory'
+        # self.mem = r'C:\Users\toleary\0_Tasks\temp_gis'
 
         # MHN geodatabase structure, projection
         self.hwynet_name = 'hwynet'

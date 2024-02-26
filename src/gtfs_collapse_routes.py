@@ -11,7 +11,7 @@
       route-id, linename, itin_a1-itin_b1-dwcode1, itin_a2-itin_b2-dwcode2, ...
 
 '''
-# from __future__ import print_function  # Keep in case system Python is 2.x
+from __future__ import print_function  # Keep in case system Python is 2.x
 import csv
 import os
 import sys
@@ -21,11 +21,7 @@ import sys
 # -----------------------------------------------------------------------------
 threshold = 85                                             ### Threshold to compare runs & determine they are similar enough to combine.
 infl = sys.argv[1]
-# infl = r'C:\Users\toleary\OneDrive - Chicago Metropolitan Agency for Planning\Repos\mhn_programs\temp\oneline_itin.txt'
-# arcpy.AddMessage('oneline_itin.txt: ', infl)
 groups = sys.argv[2]
-# arcpy.AddMessage('feed_groups.txt: ', groups)
-# groups = r'C:\Users\toleary\OneDrive - Chicago Metropolitan Agency for Planning\Repos\mhn_programs\temp\feed_groups.txt'
 
 if os.path.exists(groups):
     os.remove(groups)

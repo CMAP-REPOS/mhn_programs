@@ -15,8 +15,7 @@ options noxwait;
 %let feedgrp = %scan(&sysparm, 5, $);  * Grouped bus routes, passed back from gtfs_collapse_routes.py;
 %let runs = %scan(&sysparm, 6, $);     * Final output CSV of this program;
 %let tod = %scan(&sysparm, 7, $);      * TOD period;
-/* %let pypath = %sysfunc(tranwrd(&srcdir./pypath.txt, /, \)); */
-%let pypath = "C:\Users\toleary\AppData\Local\Programs\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe";
+%let pypath = %sysfunc(tranwrd(&srcdir./pypath.txt, /, \));
 
 *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*;
 filename in1 "&busitin";
@@ -63,7 +62,7 @@ data s; set s; by line order;
 *-----------------------------------------------------------------------------;
  *** Run python script to collapse runs into TOD routes ***;
 *-----------------------------------------------------------------------------;
-x "if exist &pypath (del &pypath /Q)";
+x "if exist &pypath (del &pypath /Q)"; */
 %let command = %nrstr(for %i in (pythonw.exe) do @echo.%~$PATH:i);
 x "&command >> &pypath"; run;
 
