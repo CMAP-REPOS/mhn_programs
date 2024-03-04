@@ -62,7 +62,7 @@ data s; set s; by line order;
 *-----------------------------------------------------------------------------;
  *** Run python script to collapse runs into TOD routes ***;
 *-----------------------------------------------------------------------------;
-x "if exist &pypath (del &pypath /Q)"; */
+x "if exist &pypath (del &pypath /Q)";
 %let command = %nrstr(for %i in (pythonw.exe) do @echo.%~$PATH:i);
 x "&command >> &pypath"; run;
 

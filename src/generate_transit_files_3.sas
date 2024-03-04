@@ -8,13 +8,13 @@
 */
 options pagesize=50 linesize=125;
 
-%let dirpath = %scan(&sysparm, 1, $);
-%let scen = %scan(&sysparm, 2, $);
+%let dirpath = %scan(&sysparm, 1, $);** directory path;
+%let scen = %scan(&sysparm, 2, $);   ** transit scenario number;
 %let zone1 = %scan(&sysparm, 3, $);  ** Zone17 CBD start zone;
 %let zone2 = %scan(&sysparm, 4, $);  ** Zone17 CBD end zone;
 %let zone3 = %scan(&sysparm, 5, $);  ** Zone17 Chi end zone (toleary 2/21/2024);
 %let zone4 = %scan(&sysparm, 6, $);  ** Zone17 Central Area end zone (toleary 2/21/2024);
-%let tod = %scan(&sysparm, 7, $);
+%let tod = %scan(&sysparm, 7, $);    ** time of day;
 
 /* ------------------------------------------------------------------------------ */
 ** INPUT FILES **;
@@ -23,10 +23,10 @@ filename in2a "&dirpath.\metracta.txt";
 filename in2b "&dirpath.\metrapace.txt";
 filename in3 "&dirpath.\ctadist.txt";
 filename in4 "&dirpath.\busz.txt";
-filename in5 "&dirpath.\busz2.txt";
+*filename in5 "&dirpath.\busz4.txt";
 filename in6 "&dirpath.\itin.final";
-filename in7 "&dirpath.\ctaz.txt";
-filename in8 "&dirpath.\ctaz2.txt";
+filename in7 "&dirpath.\ctaz3.txt";
+filename in8 "&dirpath.\ctaz4.txt";
 filename in9 "&dirpath.\c1z.txt";
 filename in10 "&dirpath.\c2z.txt";
 filename in11 "&dirpath.\metraz.txt";
@@ -133,10 +133,10 @@ data bus(drop=dist); infile in4 dlm=',' missover;
     input stop centroid dist;
     miles = round(dist / 5280, 0.01);
 
-/* Outside of CBD */
+/* Outside of CBD
 data bus2(drop=dist); infile in5 dlm=',' missover;
     input stop centroid dist;
-    miles = round(dist / 5280, 0.01);
+    miles = round(dist / 5280, 0.01); */
 
 /* Out of CBD, in Chicago*/
 data bus3(drop=dist); infile in15 dlm=',' missover;
@@ -280,8 +280,8 @@ proc summary nway; var miles; class stop centroid; output out=finlist mean=;
 
 /* toleary 2-21-2024: new method to access/egress: no limit to # links within distance*/
 /* negate below */
+
 /* ORDER ACCESS LINKS BY CENTROID BY MILES */
-/*
 proc sort data=finlist; by centroid miles;
 
 data finlist (drop=_type_ _freq_); set finlist;
@@ -291,7 +291,8 @@ data finlist; set finlist;
     retain ord 1;
     ord + 1;
     if centroid ^= match then ord = 1;
-    output; */
+    output; 
+
 /* toleary: old method listed below. kept distance, removed ord */ 
 /* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
 /* MODE x - IN CBD MAX. OF 8 PER ZONE, OUTSIDE CBD MAX. OF 2 PER ZONE */
@@ -302,15 +303,15 @@ data finlist; set finlist;
     else if centroid not in (&zone1:&zone2) and ord > 2 then output extrax;
     else output corex; */
 
-/* CBD links */
+/* Limit links based on distance and geography */
 data corex extrax; set finlist;
     mode = 'x';
-    if miles > 0.75 then output extrax;
-    if miles > 0.25 and centroid in (&zone1:&zone2) then output extrax;
-    else if miles > 0.55 and centroid in (&zone2:&zone3) then output extrax;
+    if miles > 0.75 then output extrax;                                         ** outside chicago, limit is 0.75 mi;
+    if miles > 0.25 and centroid in (&zone1:&zone2) then output extrax;         ** within chicago cbd, limit is 0.25 mi;
+    else if miles > 0.55 and centroid in (&zone2:&zone3) then output extrax;    ** within chicago outside cbd, limit is 0.55 mi;
     else output corex;    
 
-/* toleary: old method listed below. removed ord, changed distance to match x*/
+/* toleary: old method listed below. removed ord, treats modes x and u the same */
 /* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
 /* MODE u - MAXIMUM OF 3 PER ZONE */
 data coreu extrau; set finlist;
@@ -318,9 +319,10 @@ data coreu extrau; set finlist;
     /* if miles > 0.55 then output extrau;
     else if ord > 3 then output extrau;
     else output coreu; */
-    if miles > 0.25 and centroid in (&zone1:&zone2) then output extrau;
-    else if miles > 0.55 and centroid in (&zone2:&zone3) then output extrau;
-    else if miles > 0.75 then output extrau;
+
+    if miles > 0.25 and centroid in (&zone1:&zone2) then output extrau;         ** outside chicago, limit is 0.75 mi;
+    else if miles > 0.55 and centroid in (&zone2:&zone3) then output extrau;    ** within chicago cbd, limit is 0.25 mi;
+    else if miles > 0.75 then output extrau;                                    ** within chicago outside cbd, limit is 0.55 mi;
     else output coreu;    
 
 /* ADD EXTRA u/x LINKS TO ENSURE ROUTES HAVE ACCESS TO ALL ZONES THEY STOP IN */
@@ -587,6 +589,10 @@ data railacc; infile in14 dlm=',' missover;
     
 data all(drop=accmode); merge all (in=hit1) railacc (in=hit2); by anode bnode;
     if hit1 and not hit2;
+
+*craig's rec to add a final thing that gets rid of duplicate access/egress links;
+proc sort data=all nodupkey; 
+    by anode bnode;
 
 ** Write final output;
 data print1; set all;

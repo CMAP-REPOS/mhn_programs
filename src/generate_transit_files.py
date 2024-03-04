@@ -3,6 +3,7 @@
     generate_transit_files.py
     Author: npeterson
     Revised: 1/22/22
+    hi
     ---------------------------------------------------------------------------
     This program creates the Emme transit batchin files needed to model a
     scenario network. The scenario, output path and CT-RAMP flag are passed to
@@ -849,7 +850,7 @@ for scen in scen_list:
 
         #toleary - add chirem and nonchi -- 2024-01-30
         bus_chirem_lyr = 'bus_chirem_lyr'
-        arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_cbd_lyr, chirem_query)
+        arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_chirem_lyr, chirem_query)
         bus_chirem_fc = os.path.join(MHN.mem, 'bus_chirem_fc')
         arcpy.CopyFeatures_management(bus_chirem_lyr, bus_chirem_fc)
 
@@ -917,15 +918,15 @@ for scen in scen_list:
         busz_txt = calculate_distances(bus_cbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 7920, os.path.join(scen_tran_path, 'busz.txt'))  # Large search distance; results will be heavily trimmed
         busz2_txt = calculate_distances(bus_noncbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz2.txt'))  # Large search distance; results will be heavily trimmed
         
-        ctaz_txt = calculate_distances(cta_cbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz.txt'))
-        ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz2.txt'))
+        # ctaz_txt = calculate_distances(cta_cbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz.txt'))
+        # ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz2.txt'))
         metraz_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 79200, os.path.join(scen_tran_path, 'metraz.txt')) #toleary: large search distance, results will be trimmed in sas 
 
             ## toleary -- add chirem and nonchi, for cta and bus
         busz3_txt = calculate_distances(bus_chirem_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz3.txt'))  # Large search distance; results will be heavily trimmed
         busz4_txt = calculate_distances(bus_nonchi_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz4.txt'))  # large search distance, results will be heavily trimmed
-        ctaz3_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'ctaz3.txt'))
-        ctaz4_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'ctaz4.txt'))
+        ctaz3_txt = calculate_distances(cta_chirem_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'ctaz3.txt'))
+        ctaz4_txt = calculate_distances(cta_nonchi_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'ctaz4.txt'))
 
 
         bcent_txt = distance_to_zone_centroid(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', MHN.zone_attr, centroid_fc, 'NODE', os.path.join(scen_tran_path, 'buscentroids.txt'))
@@ -958,10 +959,14 @@ for scen in scen_list:
             os.remove(ctadist_txt)
             os.remove(metracta_txt)
             os.remove(metrapace_txt)
-            os.remove(busz_txt)
-            os.remove(busz2_txt)
-            os.remove(ctaz_txt)
-            os.remove(ctaz2_txt)
+            # os.remove(busz_txt)
+            # os.remove(busz2_txt)
+            # os.remove(ctaz_txt)
+            # os.remove(ctaz2_txt)
+            os.remove(busz3_txt)
+            os.remove(busz4_txt)
+            os.remove(ctaz3_txt)
+            os.remove(ctaz4_txt)
             os.remove(metraz_txt)
             os.remove(bcent_txt)
             os.remove(c1z_txt)
