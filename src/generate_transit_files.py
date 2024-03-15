@@ -1245,11 +1245,20 @@ for scen in scen_list:
 
     scen_hwy_vols_bylink = scen_hwy_vols.groupby(['ANODE','BNODE','hwy_tod']).agg({'hwyvol':'sum'}).reset_index()
     scen_hwy_vols_bylink['@busveq'] = scen_hwy_vols_bylink['hwyvol'] * 3
-
-
-    #BEGIN TOD ITERATOR --   
+    scen_hwy_vols_bylink = scen_hwy_vols_bylink[['ANODE','BNODE','@busveq','hwy_tod']].copy()
+    
+    #create total daily and append to scen_hwy_vols_bylink
+    tot_daily_vol = scen_hwy_vols_bylink.groupby(['ANODE','BNODE']).agg({'@busveq':'sum'}).reset_index()
+    tot_daily_vol['hwy_tod'] = '0'
+    scen_hwy_vols_bylink = pd.concat([scen_hwy_vols_bylink, tot_daily_vol])
+    
+    #add total daily to the iterator used below
+    tod_iter = sorted(MHN.tod_periods['highway'].keys())
+    tod_iter.append('0')
+    
+    # BEGIN TOD ITERATOR (for writing to hwy .l2 files) --   
     arcpy.AddMessage('writing busveq to .l2 files...')
-    for tod in MHN.tod_periods['highway'].keys():
+    for tod in tod_iter:
         arcpy.AddMessage('tod {}...'.format(tod))
         #extra attributes highway batchin file
         hwy_l2 = os.path.join(hwy_path, scen, '{}0{}.l2'.format(scen, tod))
@@ -1277,7 +1286,9 @@ for scen in scen_list:
         with open(hwy_l2, 'w') as file: #overwrite
             file.writelines(lines)
     #-- END TOD ITERATOR
+    
 #-- END SCEN ITERATOR
+
 
 arcpy.AddMessage('Done with @busveq!')
 
