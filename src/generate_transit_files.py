@@ -100,6 +100,19 @@ centroid_lyr = MHN.make_skinny_feature_layer(MHN.node, 'centroid_lyr', [node_oid
 centroid_fc = os.path.join(MHN.mem, 'centroid_fc')
 arcpy.CopyFeatures_management(centroid_lyr, centroid_fc)
 
+# #feature classes made for metra - central area, chicago remainder, outside chicago
+# centroid_lyr_centarea = MHN.make_skinny_feature_layer(MHN.node, 'centroid_lyr_centarea', [node_oid_field, 'NODE'], '"NODE" >= {} AND "NODE" <= {}'.format(min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['Central_Area'])))
+# centroid_fc_centarea = os.path.join(MHN.mem, 'centroid_fc_centarea')
+# arcpy.CopyFeatures_management(centroid_lyr_centarea, centroid_fc_centarea)
+
+# centroid_lyr_chirem = MHN.make_skinny_feature_layer(MHN.node, 'centroid_lyr_chirem', [node_oid_field, 'NODE'], '"NODE" > {} AND "NODE" <= {}'.format(max(MHN.centroid_ranges['CBD'], max(MHN.centroid_ranges['Chicago']))))
+# centroid_fc_chirem = os.path.join(MHN.mem, 'centroid_fc_chirem')
+# arcpy.CopyFeatures_management(centroid_lyr_chirem, centroid_fc_chirem)
+
+# centroid_lyr_outsidechi = MHN.make_skinny_feature_layer(MHN.node, 'centroid_lyr_outsidechi', [node_oid_field, 'NODE'], '"NODE" > {}'.format(max(MHN.centroid_ranges['Chicago'])))
+# centroid_fc_outsidechi = os.path.join(MHN.mem, 'centroid_fc_outsidechi')
+# arcpy.CopyFeatures_management(centroid_lyr_outsidechi, centroid_fc_outsidechi)
+
 zone_lyr = MHN.make_skinny_feature_layer(MHN.zone, 'zone_lyr', [MHN.zone_attr])
 
 
@@ -810,47 +823,34 @@ for scen in scen_list:
         arcpy.Delete_management(metra_stop_xy)
         arcpy.Delete_management(bus_stop_xy)
 
-        # Create CBD and non-CBD layers for CTA (rail) stops and bus stops.
-        cbd_query = '"{0}" >= {1} AND "{0}" <= {2}'.format(MHN.zone_attr, min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['CBD']))
-        noncbd_query = '"{0}" < {1} OR "{0}" > {2}'.format(MHN.zone_attr, min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['CBD']))
-        chirem_query = '"{0}" > {1} AND "{0}" <= {2}'.format(MHN.zone_attr, max(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['Chicago'])) #rest of Chicago -- toleary 2024-01-30
-        nonchi_query = '"{0}" < {1} OR "{0}" > {2}'.format(MHN.zone_attr, min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['Chicago'])) #outside of chicago -- toleary 2024-01-30
-
+        # Create layers for CTA (rail) stops and bus stops.
+        cbd_query = '"{0}" >= {1} AND "{0}" <= {2}'.format(MHN.zone_attr, min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['CBD'])) #cbd (used for modes c, u, and x -- cta/bus transfer, and bus access/egress)
+        noncbd_query = '"{0}" > {1}'.format(MHN.zone_attr, max(MHN.centroid_ranges['CBD'])) # non-cbd (used for mode c -- cta/bus transfer)
+        cent_query = '"{0}" >= {1} AND "{0}" <= {2}'.format(MHN.zone_attr, min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['Central_Area'])) #central area (used for modes v, w, y, and z -- CTA and Metra access/egress)
+        noncent_query = '"{0}" < {1} OR "{0}" > {2}'.format(MHN.zone_attr, min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['Central_Area'])) #non-central area (used for modes v and y -- CTA access/egress)
+        chirem_cbd_query = '"{0}" > {1} AND "{0}" <= {2}'.format(MHN.zone_attr, max(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['Chicago'])) #rest of Chicago, non-CBD (used for modes u and x -- bus access/egress)
+        chirem_cent_query = '"{0}" > {1} AND "{0}" <= {2}'.format(MHN.zone_attr, max(MHN.centroid_ranges['Central_Area']), max(MHN.centroid_ranges['Chicago'])) #rest of Chicago, non-Central Area (used for modes w and z -- Metra access/egress)
+        nonchi_query = '"{0}" < {1} OR "{0}" > {2}'.format(MHN.zone_attr, min(MHN.centroid_ranges['CBD']), max(MHN.centroid_ranges['Chicago'])) #outside of chicago (used for modes u, w, x, and z -- bus and Metra access/egress)
+        
+        #for mode c (bus/cta transfer)
         cta_cbd_lyr = 'cta_cbd_lyr'
         arcpy.MakeFeatureLayer_management(cta_stop_xy_z, cta_cbd_lyr, cbd_query)
         cta_cbd_fc = os.path.join(MHN.mem, 'cta_cbd_fc')
         arcpy.CopyFeatures_management(cta_cbd_lyr, cta_cbd_fc)
-
-        cta_noncbd_lyr = 'cta_noncdb_lyr'
+        
+        cta_noncbd_lyr = 'cta_noncbd_lyr'
         arcpy.MakeFeatureLayer_management(cta_stop_xy_z, cta_noncbd_lyr, noncbd_query)
         cta_noncbd_fc = os.path.join(MHN.mem, 'cta_noncbd_fc')
         arcpy.CopyFeatures_management(cta_noncbd_lyr, cta_noncbd_fc)
-
-        #toleary - add chirem and nonchi
-        cta_chirem_lyr = 'cta_chirem_lyr'
-        arcpy.MakeFeatureLayer_management(cta_stop_xy_z, cta_chirem_lyr, chirem_query)
-        cta_chirem_fc = os.path.join(MHN.mem, 'cta_chirem_fc')
-        arcpy.CopyFeatures_management(cta_chirem_lyr, cta_chirem_fc)
-
-        cta_nonchi_lyr = 'cta_nonchi_lyr'
-        arcpy.MakeFeatureLayer_management(cta_stop_xy_z, cta_nonchi_lyr, nonchi_query)
-        cta_nonchi_fc = os.path.join(MHN.mem, 'cta_nonchi_fc')
-        arcpy.CopyFeatures_management(cta_nonchi_lyr, cta_nonchi_fc)
-        ###
-
+        
+        #for modes u/x (bus access/egress)
         bus_cbd_lyr = 'bus_cbd_lyr'
         arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_cbd_lyr, cbd_query)
         bus_cbd_fc = os.path.join(MHN.mem, 'bus_cbd_fc')
         arcpy.CopyFeatures_management(bus_cbd_lyr, bus_cbd_fc)
 
-        bus_noncbd_lyr = 'bus_noncbd_lyr'
-        arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_noncbd_lyr, noncbd_query)
-        bus_noncbd_fc = os.path.join(MHN.mem, 'bus_noncbd_fc')
-        arcpy.CopyFeatures_management(bus_noncbd_lyr, bus_noncbd_fc)
-
-        #toleary - add chirem and nonchi -- 2024-01-30
         bus_chirem_lyr = 'bus_chirem_lyr'
-        arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_chirem_lyr, chirem_query)
+        arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_chirem_lyr, chirem_cbd_query)
         bus_chirem_fc = os.path.join(MHN.mem, 'bus_chirem_fc')
         arcpy.CopyFeatures_management(bus_chirem_lyr, bus_chirem_fc)
 
@@ -858,6 +858,34 @@ for scen in scen_list:
         arcpy.MakeFeatureLayer_management(bus_stop_xy_z, bus_nonchi_lyr, nonchi_query)
         bus_nonchi_fc = os.path.join(MHN.mem, 'bus_nonchi_fc')
         arcpy.CopyFeatures_management(bus_nonchi_lyr, bus_nonchi_fc)
+        
+        #for mode v/y (cta access/egress)
+        cta_cent_lyr = 'cta_cent_lyr'
+        arcpy.MakeFeatureLayer_management(cta_stop_xy_z, cta_cent_lyr, cent_query)
+        cta_cent_fc = os.path.join(MHN.mem, 'cta_cent_fc')
+        arcpy.CopyFeatures_management(cta_cent_lyr, cta_cent_fc)
+        
+        cta_noncent_lyr = 'cta_noncent_lyr'
+        arcpy.MakeFeatureLayer_management(cta_stop_xy_z, cta_noncent_lyr, noncent_query)
+        cta_noncent_fc = os.path.join(MHN.mem, 'cta_noncent_fc')
+        arcpy.CopyFeatures_management(cta_noncent_lyr, cta_noncent_fc)
+        
+        #for modes w/z (metra access/egress)
+        metra_cent_lyr = 'metra_cent_lyr'
+        arcpy.MakeFeatureLayer_management(metra_stop_xy_z, metra_cent_lyr, cent_query)
+        metra_cent_fc = os.path.join(MHN.mem, 'metra_cent_fc')
+        arcpy.CopyFeatures_management(metra_cent_lyr, metra_cent_fc)
+        
+        metra_chirem_lyr = 'metra_chirem_lyr'
+        arcpy.MakeFeatureLayer_management(metra_stop_xy_z, metra_chirem_lyr, chirem_cent_query)
+        metra_chirem_fc = os.path.join(MHN.mem, 'metra_chirem_fc')
+        arcpy.CopyFeatures_management(metra_chirem_lyr, metra_chirem_fc)
+        
+        metra_nonchi_lyr = 'metra_nonchi_lyr'
+        arcpy.MakeFeatureLayer_management(metra_stop_xy_z, metra_nonchi_lyr, nonchi_query)
+        metra_nonchi_fc = os.path.join(MHN.mem, 'metra_nonchi_fc')
+        arcpy.CopyFeatures_management(metra_nonchi_lyr, metra_nonchi_fc)
+        
         ###
 
         # Perform distance calculations
@@ -905,50 +933,58 @@ for scen in scen_list:
             del centroid_geom
             return out_csv
 
-
+        # the following txt files get used in sas3_sas (generate_transit_files_3.sas) -- 
+        
         # -- Mode c: 1/8 mile inside CBD; 1/2 mile outside CBD.
-        cbddist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_cbd_lyr, 'cta_stop_xy_PNT_ID', 660, os.path.join(scen_tran_path, 'cbddist.txt'))
-        ctadist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_noncbd_lyr, 'cta_stop_xy_PNT_ID', 2640, os.path.join(scen_tran_path, 'ctadist.txt'))
+        cbddist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_cbd_fc, 'cta_stop_xy_PNT_ID', 660, os.path.join(scen_tran_path, 'cbddist.txt'))
+        ctadist_txt = calculate_distances(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', cta_noncbd_fc, 'cta_stop_xy_PNT_ID', 2640, os.path.join(scen_tran_path, 'ctadist.txt'))
 
         # -- Mode m: 1/4 mile from modes B,E; 0.55 miles from modes P,L,Q.
         metracta_txt = calculate_distances(cta_bus_xy, 'cta_bus_xy_PNT_ID', metra_stop_xy_z, 'metra_stop_xy_PNT_ID', 1320, os.path.join(scen_tran_path, 'metracta.txt'))
         metrapace_txt = calculate_distances(pace_bus_xy, 'pace_bus_xy_PNT_ID', metra_stop_xy_z, 'metra_stop_xy_PNT_ID', 2904, os.path.join(scen_tran_path, 'metrapace.txt'))
 
-        # -- Modes u, v, w, x, y & z.
-        busz_txt = calculate_distances(bus_cbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 7920, os.path.join(scen_tran_path, 'busz.txt'))  # Large search distance; results will be heavily trimmed
-        busz2_txt = calculate_distances(bus_noncbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz2.txt'))  # Large search distance; results will be heavily trimmed
+        # -- Modes u, v, w, x, y & z: access/egress links
+        #u,x - bus
+        busz_txt = calculate_distances(bus_cbd_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 1320, os.path.join(scen_tran_path, 'busz.txt'))  #cbd - 0.25 mi
+        busz2_txt = calculate_distances(bus_chirem_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'busz2.txt')) #chicago remainder - 0.55 mi
+        busz3_txt = calculate_distances(bus_nonchi_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 3960, os.path.join(scen_tran_path, 'busz3.txt'))  #outside chicago - 0.75 mi
         
-        # ctaz_txt = calculate_distances(cta_cbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz.txt'))
-        # ctaz2_txt = calculate_distances(cta_noncbd_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz2.txt'))
-        metraz_txt = calculate_distances(metra_stop_xy_z, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 79200, os.path.join(scen_tran_path, 'metraz.txt')) #toleary: large search distance, results will be trimmed in sas 
+        #v,y - cta rail
+        ctaz_txt = calculate_distances(cta_cent_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 2904, os.path.join(scen_tran_path, 'ctaz.txt')) #central area - 0.55 mi
+        ctaz2_txt = calculate_distances(cta_noncent_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 7920, os.path.join(scen_tran_path, 'ctaz2.txt')) #outside central - 1.5 mi
 
-            ## toleary -- add chirem and nonchi, for cta and bus
-        busz3_txt = calculate_distances(bus_chirem_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz3.txt'))  # Large search distance; results will be heavily trimmed
-        busz4_txt = calculate_distances(bus_nonchi_fc, 'bus_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'busz4.txt'))  # large search distance, results will be heavily trimmed
-        ctaz3_txt = calculate_distances(cta_chirem_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'ctaz3.txt'))
-        ctaz4_txt = calculate_distances(cta_nonchi_fc, 'cta_stop_xy_PNT_ID', centroid_fc, 'NODE', 26400, os.path.join(scen_tran_path, 'ctaz4.txt'))
-
+        #w,z - metra
+        #-- filter the centroids here -- 
+        metraz_txt = calculate_distances(metra_cent_fc, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 6336, os.path.join(scen_tran_path, 'metraz.txt')) #central area - 1.2 mi
+        metraz2_txt = calculate_distances(metra_chirem_fc, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 15840, os.path.join(scen_tran_path, 'metraz2.txt')) #chi rem - 3.0 mi
+        metraz3_txt = calculate_distances(metra_nonchi_fc, 'metra_stop_xy_PNT_ID', centroid_fc, 'NODE', 79200, os.path.join(scen_tran_path, 'metraz3.txt')) #outside chi - 15 mi
 
         bcent_txt = distance_to_zone_centroid(bus_stop_xy_z, 'bus_stop_xy_PNT_ID', MHN.zone_attr, centroid_fc, 'NODE', os.path.join(scen_tran_path, 'buscentroids.txt'))
 
-
-        c1z_txt = MHN.write_attribute_csv(cta_cbd_fc, os.path.join(scen_tran_path, 'c1z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
-        c2z_txt = MHN.write_attribute_csv(cta_noncbd_fc, os.path.join(scen_tran_path, 'c2z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
+        c1z_txt = MHN.write_attribute_csv(cta_cent_fc, os.path.join(scen_tran_path, 'c1z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
+        c2z_txt = MHN.write_attribute_csv(cta_noncent_fc, os.path.join(scen_tran_path, 'c2z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
+        
         mz_txt = MHN.write_attribute_csv(metra_stop_xy_z, os.path.join(scen_tran_path, 'mz.txt'), ['metra_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
-
-        c3z_txt = MHN.write_attribute_csv(cta_chirem_fc, os.path.join(scen_tran_path, 'c3z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
-        c4z_txt = MHN.write_attribute_csv(cta_nonchi_fc, os.path.join(scen_tran_path, 'c4z.txt'), ['cta_stop_xy_PNT_ID', MHN.zone_attr], include_headers=False)
         
 
         # Clean up temp point features/layers.
-        for fc in (cta_stop_xy_z, metra_stop_xy_z, bus_stop_xy_z, cta_bus_xy, pace_bus_xy, cta_cbd_fc, cta_noncbd_fc, bus_cbd_fc, bus_noncbd_fc):
+        for fc in (cta_stop_xy_z, metra_stop_xy_z, bus_stop_xy_z, cta_bus_xy, pace_bus_xy, cta_cbd_fc, cta_noncbd_fc, cta_cent_fc, cta_noncent_fc, bus_cbd_fc, bus_chirem_fc, bus_nonchi_fc, metra_cent_fc, metra_chirem_fc, metra_nonchi_fc):
             arcpy.Delete_management(fc)
 
         # Call generate_transit_files_3.sas -- writes access.network file.
         sas3_sas = os.path.join(MHN.src_dir, '{}.sas'.format(sas3_name))
         sas3_output = os.path.join(scen_tran_path, 'access.network_{}'.format(tod))
-        sas3_args = [scen_tran_path, scen, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['Chicago'])), str(max(MHN.centroid_ranges['Central_Area'])), tod]
+        sas3_args = [
+            scen_tran_path,                                 #transit folder
+            scen,                                           #transit scenario number
+            str(min(MHN.centroid_ranges['CBD'])),           #z17 cbd start zone
+            str(max(MHN.centroid_ranges['CBD'])),           #z17 cbd end zone
+            str(max(MHN.centroid_ranges['Central_Area'])),  #z17 central area end zone
+            str(max(MHN.centroid_ranges['Chicago'])),       #z17 chicago end zone
+            tod                                             #time of day  
+        ]
         MHN.submit_sas(sas3_sas, sas3_log, sas3_lst, sas3_args)
+        
         if not os.path.exists(sas3_log):
             MHN.die('{} did not run!'.format(sas3_sas))
         elif os.path.exists(sas3_lst) or not os.path.exists(sas3_output):
@@ -959,21 +995,21 @@ for scen in scen_list:
             os.remove(ctadist_txt)
             os.remove(metracta_txt)
             os.remove(metrapace_txt)
-            # os.remove(busz_txt)
-            # os.remove(busz2_txt)
-            # os.remove(ctaz_txt)
-            # os.remove(ctaz2_txt)
+            os.remove(busz_txt)
+            os.remove(busz2_txt)
             os.remove(busz3_txt)
-            os.remove(busz4_txt)
-            os.remove(ctaz3_txt)
-            os.remove(ctaz4_txt)
+            os.remove(ctaz_txt)
+            os.remove(ctaz2_txt)
             os.remove(metraz_txt)
+            os.remove(metraz2_txt)
+            os.remove(metraz3_txt)
             os.remove(bcent_txt)
             os.remove(c1z_txt)
             os.remove(c2z_txt)
             os.remove(mz_txt)
             os.remove(itin_final)
             os.remove(rail_access)
+
 
         ### End of TOD loop ###
 
