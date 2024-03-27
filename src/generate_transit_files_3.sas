@@ -551,10 +551,13 @@ data metra; set metra1 metra2 metra3;
     if &zonecnta < centroid <= &zonechi and miles > 3 then delete;
     if centroid > &zonechi and miles > 15 then delete; */
 
+*toleary 2024-03-27: test #2 which changes metra over 1.2 miles from modes w/z to f/g;
 data metra(drop=t); set metra; 
-    mode = 'z';
+    if miles <= 1.2 then mode = 'z';
+    else if miles > 1.2 then mode = 'g';
     output;
-    mode = 'w';
+    if miles <= 1.2 then mode = 'w';
+    else if miles > 1.2 then mode = 'f';
     t = stop; stop = centroid; centroid = t; ** reverse direction;
     output;
 
@@ -601,8 +604,16 @@ data z(drop=mode); set all;
     if mode = 'z';
     mode8 = mode;
 
-data all; merge c m u v w x y z; by anode bnode;
-    modes = compress(mode1 || mode2 || mode3 || mode4 || mode5 || mode6 || mode7 || mode8);
+data f(drop=mode); set all;
+    if mode = 'f';
+    mode9 = mode;
+
+data g(drop=mode); set all;
+    if mode = 'g';
+    mode10 = mode;
+
+data all; merge c m u v w x y z f g; by anode bnode;
+    modes = compress(mode1 || mode2 || mode3 || mode4 || mode5 || mode6 || mode7 || mode8 || mode9 || mode10);
     if miles = 0 then miles = 0.01;
 
 ** Filter out access links already in rail.network_{tod};   
