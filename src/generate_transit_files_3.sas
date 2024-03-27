@@ -551,10 +551,13 @@ data metra; set metra1 metra2 metra3;
     if &zonecnta < centroid <= &zonechi and miles > 3 then delete;
     if centroid > &zonechi and miles > 15 then delete; */
 
+*toleary 2024-03-27: test #2 which changes metra over 1.2 miles from modes w/z to f/g;
 data metra(drop=t); set metra; 
-    mode = 'z';
+    if miles <= 1.2 then mode = 'z';
+    else if miles > 1.2 then mode = 'g';
     output;
-    mode = 'w';
+    if miles <= 1.2 then mode = 'w';
+    else if miles > 1.2 then mode = 'f';
     t = stop; stop = centroid; centroid = t; ** reverse direction;
     output;
 
