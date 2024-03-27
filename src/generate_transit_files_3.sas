@@ -358,14 +358,18 @@ data finlistx (keep=stop centroid miles mode); set corex needlink;
     mode = 'x';
     if 0.55 < miles <= 1.25 then miles = 0.75;
     else if miles > 1.25 then miles = 0.75;
-    else if miles = '.' then miles = 0.55;
+    *needlinks that are cbd will be set at 0.25 mi, and 0.55 mi otherwise;
+    else if miles = '.' and centroid in (&zonecbdl:&zonecbdh) then miles = 0.25;
+    else if miles = '.' and centroid > &zonecbdh then miles = 0.55;
     proc sort nodupkey; by stop centroid;
-    
+           
 data finlistu (keep=stop centroid miles mode); set coreu needlink;
     mode = 'u';
     if 0.55 < miles <= 1.25 then miles = 0.75;
     else if miles > 1.25 then miles = 0.75;
-    else if miles = '.' then miles = 0.55;
+    *needlinks that are cbd will be set at 0.25 mi, and 0.55 mi otherwise;
+    else if miles = '.' and centroid in (&zonecbdl:&zonecbdh) then miles = 0.25;
+    else if miles = '.' and centroid > &zonecbdh then miles = 0.55;
     proc sort nodupkey; by stop centroid;
 
 * Verify every bus line has access to centroids of all stop zones;
@@ -435,7 +439,6 @@ data force(drop=t); set force;
     t = stop; stop = centroid; centroid = t;  ** Reverse direction;
     output;
 
-/* toleary -- old method commented out below. removed ord, used distance*/
 /* ORDER ACCESS LINKS BY CENTROID BY MILES */
 data ctarail; set ctarail;
     match = lag1(centroid);
@@ -446,6 +449,7 @@ data ctarail; set ctarail;
     if centroid ^= match then ord = 1;
     output;
 
+/* toleary -- old method commented out below. removed ord, used distance*/
 /* FOLLOWING USES MARY LUPA'S LOGIC TO LIMIT NUMBER OF ACCESS LINKS PER ZONE */
 /* MODE y - IN CBD MAX. OF 6 PER ZONE, OUTSIDE CBD MAX. OF 2 PER ZONE */
 /* THESE LINKS WILL BE ADDED TO THOSE IN DATASET FORCE. */
@@ -455,7 +459,7 @@ data ctarail; set ctarail;
     if centroid > &zone2 and ord > 2 then delete;
     mode = 'y'; */
 data ctay(drop=match ord); set ctarail;
-    if &zonecbdl <= centroid <= &zonecnta and miles > 0.55 then delete;
+    if centroid in (&zonecbdl:&zonecnta) and miles > 0.55 then delete;
     if centroid > &zonecnta and miles > 1.5 then delete;
     mode = 'y';
 
