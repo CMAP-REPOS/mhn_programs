@@ -515,51 +515,75 @@ data mzone; infile in12 dlm=',' missover;
 *------------------------;
 *toleary 3/20/2024: trying something else here;
 *this one is just central area;
-data metra1; merge mzone metra1; by stop centroid;
+data metra1 metra1fg; merge mzone metra1; by stop centroid;
     if centroid > 0;
     if miles = '.' then miles = 0.55;
     if centroid > &zonecnta then delete;
     if centroid <= &zonecnta and miles > 1.2 then delete;
-    output;
+    if miles <= 1.2 then output metra1;
+    if miles > 1.2 then output metra1fg;
 
 *this one is non-central area chicago;
-data metra2; merge mzone metra2; by stop centroid;
+data metra2 metra2fg; merge mzone metra2; by stop centroid;
     if centroid > 0;
     if miles = '.' then miles = 0.55;
     if centroid <= &zonecnta then delete;
     if centroid > &zonechi then delete;
     if miles > 3 then delete;
-    output;
+    if miles <= 1.2 then output metra2;
+    if miles > 1.2 then output metra2fg;
 
 *this one is outside chicago only;
-data metra3; merge mzone metra3; by stop centroid;
+data metra3 metra3fg; merge mzone metra3; by stop centroid;
     if centroid > 0;
     if miles = '.' then miles = 0.55;
     if centroid <= &zonechi then delete;
-    if miles > 15 then delete;
-    output;
+    if miles <= 1.2 then output metra3;
+    if miles > 1.2 then output metra3fg;
+
+data metraw; set metra1 metra2 metra3; by stop centroid;
+    mode='w';
+data metraz; set metraw;
+    mode='z';
+    t=stop; stop=centroid; centroid=t; *reverse direction;
+/* toleary 2024-03-27: test #2 which changes metra over 1.2 miles from modes w/z to f/g */
+    
+data metraf; 
+    set metra1fg metra2fg metra3fg;
+    mode='f';
+    proc sort; by centroid miles;
+
+data metraf; 
+    set metraf;
+    /* if miles <= 1.2 then delete; */
+    by centroid;
+    retain rank 0;
+
+    if first.centroid then rank = 1;
+    else rank + 1;
+
+    if rank <= 3 then output;
+    drop rank;
+
+/* data metrag; 
+    set metra1fg metra2fg metra3fg;
+    proc sort; by centroid miles; */
+/* data metrag(drop=rank); 
+    set metrag;
+    if miles <= 1.2 then delete;
+    by centroid;
+    if first.centroid then rank = 1;
+    else rank = rank + 1;
+    if rank > 3 then delete; */
+data metrag; set metraf;
+    mode='g';
+    t=stop; stop=centroid; centroid=t; *reverse direction;
 
 *then merge together;        
-data metra; set metra1 metra2 metra3;
+data metra; 
+    set metraw metraz metraf metrag;
     proc sort; by stop centroid;
-
-/* data metra1(drop=t); merge mzone metra1; by stop centroid;
-    if centroid > 0;
-    *MAKE SURE EACH STATION CONNECTS TO ZONE IT IS IN;
-    if miles = '.' then miles = 0.55;
-    if &zonecbdl <= centroid <= &zonecnta and miles > 1.2 then delete;
-    if &zonecnta < centroid <= &zonechi and miles > 3 then delete;
-    if centroid > &zonechi and miles > 15 then delete; */
-
-*toleary 2024-03-27: test #2 which changes metra over 1.2 miles from modes w/z to f/g;
-data metra(drop=t); set metra; 
-    if miles <= 1.2 then mode = 'z';
-    else if miles > 1.2 then mode = 'g';
-    output;
-    if miles <= 1.2 then mode = 'w';
-    else if miles > 1.2 then mode = 'f';
-    t = stop; stop = centroid; centroid = t; ** reverse direction;
-    output;
+run;
 
 /*==============================================*/
 /*  3. COMBINE ALL, WRITE OUT BATCHIN FILE      */
@@ -633,7 +657,7 @@ data print1; set all;
     file out1;
     if _n_ = 1 then do;
         put "c BASE NETWORK LINK BATCHIN FILE FOR TRANSIT SCENARIO NETWORK &scen TOD &tod" /
-            "c ACCESS LINKS  (modes c,m,u,v,w,x,y,z)" /
+            "c ACCESS LINKS  (modes c,m,u,v,w,x,y,z,f,g)" /
             "c  &sysdate" / 'c a,i-node,j-node,length,modes,type,lanes,vdf' / 't links';
     end;
     put flag +3 anode +2 bnode +2 miles +2 modes +2 '1' +2 '0' +2 '1';
