@@ -1148,7 +1148,7 @@ for scen in scen_list:
         rteinfo = []
         for line in lines:
             if line.startswith('a'):
-                #splits the info into columns using double-space as delimiter (unless it's within quotation marks)
+                #regular expression splits the info into columns using double-space as delimiter (unless it's within quotation marks)
                 rte = re.split('''  (?=(?:[^'"]|'[^']*'|"[^"]*")*$)''', line) 
         
                 #cleanup
@@ -1237,9 +1237,9 @@ for scen in scen_list:
 
     scen_hwy_vols = pd.concat(hwy_vols, ignore_index=True)
 
-    # arcpy.AddMessage('scen {} total volumes before/after conversion to hwy tods:'.format(scen))
-    # arcpy.AddMessage('before -- {}'.format(scen_vol['vol'].sum()))
-    # arcpy.AddMessage('after -- {}'.format(scen_hwy_vols['hwyvol'].sum()))
+    arcpy.AddMessage('scen {} total volumes before/after conversion to hwy tods:'.format(scen))
+    arcpy.AddMessage('before -- {}'.format(scen_vol['vol'].sum()))
+    arcpy.AddMessage('after -- {}'.format(scen_hwy_vols['hwyvol'].sum()))
     if round(scen_vol['vol'].sum(),1) !=  round(scen_hwy_vols['hwyvol'].sum(),1):
         raise ValueError('Problem converting transit bus volumes to highway!')
 
@@ -1269,7 +1269,8 @@ for scen in scen_list:
 
         with open(hwy_l2, 'r') as file:
             lines = file.readlines()
-
+        if lines[0].endswith('@busveq'):
+            raise ValueError('.l2 file already contains @busveq! Re-run "Generate Highway Files."')
         lines[0] = lines[0].rstrip() + ',@busveq\n' #add @busveq column label
                 
         #add busveq values to each ij pair
