@@ -20,8 +20,10 @@
 
 '''
 import os
+import re
 import operator
 import arcpy
+import pandas as pd
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
 # -----------------------------------------------------------------------------
@@ -1049,6 +1051,247 @@ with open(relim_csv, 'wt') as w:
 
 # Node extra attribute CSVs
 exec(open(os.path.join(MHN.src_dir, 'transit_node_extra_attributes.py')).read())
+
+
+# --------------------------------------------------------------
+# generate @busveq and write into highway batchin files
+# --------------------------------------------------------------
+# write @busveq to highway batchin files
+
+arcpy.AddMessage('-- CREATING @BUSVEQ --')
+
+'''
+This section creates @busveq to place into the highway extra attribute batchin files.
+This is done by taking headway info from the bus batchin files.
+First, the script reads the highway and transit times of day, determines what fraction of the 
+day each time of day occupies, then derives the fraction that represents how much of each 
+transit TOD that a highway TOD occupies. (For example, transit TOD 1 is 6pm-6am, and 
+highway TOD 1 is 8pm-6am, so highway TOD 1 takes up 80% of transit TOD 1, and 0.8 is stored.)
+
+Bus volumes on links are estimated using bus itineraries and headway information. Volumes are 
+derived for each transit TOD, then these volumes are multiplied by the fraction described above to derive the 
+approximate volume for highway TOD.  
+
+Highway TOD bus volumes are then converted to bus vehicle equivalents (by multiplying *3).
+The highway extra attribute batchin files (with suffix '.l2') are then read, reconstructed,
+and overwritten to include @busveq as an extra attribute.
+'''
+
+# generate_hour_list() converts MHN.tod_periods to lists of hours instead of description+sql query
+# e.g.:
+# before: {'highway' : {'1': ('8PM-6AM', '"STARTHOUR">=20 OR "STARTHOUR"<=5'), ...}}
+# after: {'highway' : {'1': [20, 21, 22, 23, 0, 1, 2, 3, 4, 5], ...}}
+
+def generate_hour_list(time_range):
+    start, end = time_range.split('-')
+    start_hour = int(start[:-2])
+    end_hour = int(end[:-2])
+    if start.endswith('PM') and start_hour != 12:
+        start_hour += 12
+    if end.endswith('PM') and end_hour != 12:
+        end_hour += 12
+    if start_hour > end_hour:
+        hours = list(range(start_hour, 24))+list(range(0, end_hour))
+    else:
+        hours = list(range(start_hour, end_hour))
+    if end_hour == 24:
+        hours.append(0)
+    return hours
+
+# Generate hour lists for each time period by calling function above
+hour_lists = {}
+for mode, periods in MHN.tod_periods.items():
+    hour_lists[mode] = {}
+    for period, time_range in periods.items():
+        hour_lists[mode][period] = generate_hour_list(time_range[0])
+
+arcpy.AddMessage('hour_lists: \n{}'.format(hour_lists))
+
+#using hour_lists generated above, calculate % of each hwy tod inside a given trnt tod
+#output is of the format: {hwy_tod: [trnt_tod: fraction]}
+#where hwy_tod is number 1-8, trnt_tod is number 1-4, and 
+#fraction is (#hours in hwy_tod / #hours in trnt_tod)
+
+hwy_trnt_ratio = {}
+for hwy_period, hwy_hours in hour_lists['highway'].items():
+    trnt_periods = []
+    trnt_hours = []
+    for trnt_period_num, trnt_pd_hours in hour_lists['transit'].items():
+        if set(hwy_hours).intersection(trnt_pd_hours):
+            trnt_periods.append(trnt_period_num)
+            trnt_hours.extend(trnt_pd_hours)
+    fraction = float(len(hwy_hours)) / float(len(trnt_hours))
+    hwy_trnt_ratio[hwy_period] = [trnt_periods[0], fraction]
+
+arcpy.AddMessage('\nhwy_trnt_ratio: \n{}'.format(hwy_trnt_ratio))
+
+## -- 
+## for each scenario year: (1) derive bus volumes by transit time-of-day, 
+## then (2) convert volumes to highway time-of-day
+## --
+
+for scen in scen_list:
+    arcpy.AddMessage('scenario {}...'.format(scen))
+    #cycle through each transit time of day and derive volumes on roadways
+    scen_dfs = []
+    
+    ## GATHER AND COMBINE TRANSIT ITINERARY FILES FOR {TOD} IN {SCEN}--
+    for tod in MHN.tod_periods['transit'].keys():
+
+        itinerary = os.path.join(tran_path, scen, 'bus.itinerary_{}'.format(tod))
+
+        #read itinerary file for tod_period
+        with open(itinerary, 'r') as file:
+            lines = file.readlines()
+
+        #grab only route info (starts with 'a' in itinerary)
+        rteinfo = []
+        for line in lines:
+            if line.startswith('a'):
+                #regular expression splits the info into columns using double-space as delimiter (unless it's within quotation marks)
+                rte = re.split('''  (?=(?:[^'"]|'[^']*'|"[^"]*")*$)''', line) 
+        
+                #cleanup
+                rte = [item.replace('\n','') for item in rte] #remove newline character
+                rte = [item.replace('"','') for item in rte] #remove quotation marks
+                rte = [item.replace("'","") for item in rte]
+                rte.append(lines.index(line)) #stores the row in the itinerary that the route info is located
+                rteinfo.append(rte)
+                
+        rteinfo = [rte[1:] for rte in rteinfo] #remove the 'a' column
+        rteinfo.insert(0,['ROUTE_ID','MODE','VEHTYPE','HDWY','SPEED','DESC','INDEX']) #create a row of column labels
+
+        #next, grab the nodes of each route itinerary
+        indices = [[line[-1], line[0]] for line in rteinfo[1:]] #grab the row in the itinerary file that each route starts on
+        itin = [] #will include list of all the links along with their route info
+        #grab the nodes that each itinerary traverses
+        for rte in indices:
+            rte_name = rte[1]
+            rte_index_num = rte[0] 
+            itin_start = rte_index_num+3 #the line in `indices` that corresponds to the first line of a route's itinerary
+            
+            #find the last line in the route's itinerary
+            #if rte is not last in the list, the final row is the row just before the next rte
+            if rte != indices[-1]:
+                itin_end = indices[indices.index(rte)+1][0]-1 
+                rte_itin = lines[itin_start: itin_end]
+            #if rte is last in the list, read to the end
+            else:
+                rte_itin = lines[itin_start:]
+
+            #clean up itin files; we just want the nodes per rte
+            rte_itin = [rte.lstrip() for rte in rte_itin]
+            rte_itin = [rte.split(' ') for rte in rte_itin]
+            itin_nodes = [rte[0] for rte in rte_itin]
+            
+            #make i-j pairs (named 'ANODE' & 'BNODE' here) from the list of nodes
+            rte_itin_rebuild = []
+            for node in itin_nodes[:-1]:
+                nextnode = itin_nodes[itin_nodes.index(node)+1]
+                link = [rte_name, node, itin_nodes[itin_nodes.index(node)+1]] # link = [ROUTE_ID, ANODE, BNODE]
+                rte_itin_rebuild.append(link)
+
+
+            itin.append(rte_itin_rebuild)
+        
+        #prep for pandas 
+        itin = [link for route in itin for link in route] #flatten to list of [ROUTE_ID, ANODE, BNODE]
+        itin.insert(0, ['ROUTE_ID', 'ANODE', 'BNODE']) #add column labels
+    
+        
+        itin_df = pd.DataFrame(data=itin[1:], columns=itin[0])
+        rteinfo_df = pd.DataFrame(data=rteinfo[1:], columns=rteinfo[0])
+
+        
+        #merge into one and cleanup
+        final = pd.merge(itin_df, rteinfo_df, how='left', on='ROUTE_ID')
+
+        final.drop(labels=['VEHTYPE', 'SPEED', 'DESC','INDEX'], axis=1, inplace=True)
+        final['HDWY'] = final['HDWY'].astype(float)
+        for column in ['ANODE','BNODE']:
+            final[column] = final[column].astype(int)
+        
+        
+        #actual volumes analysis
+        final['trnt_tod'] = str(tod) #transit time period
+        final['hrs'] = len(hour_lists['transit'][str(tod)]) #hours in time period
+        
+        # arcpy.AddMessage('time period hours: {}'.format(len(hour_lists['transit'][str(tod)])))
+        
+        final['vol'] = final['hrs'] * (60 / final['HDWY'])
+
+        scen_dfs.append(final)
+        
+    scen_vol = pd.concat(scen_dfs)
+    
+    #convert transit tods to highway tods
+    hwy_vols = []
+    for hwy_tod in hwy_trnt_ratio:
+        tod_hwy_vol = scen_vol.loc[scen_vol['trnt_tod']==hwy_trnt_ratio[hwy_tod][0]].copy()
+        tod_hwy_vol['hwyvol'] = tod_hwy_vol['vol'] * hwy_trnt_ratio[hwy_tod][1]
+        tod_hwy_vol['hwy_tod'] = hwy_tod
+        hwy_vols.append(tod_hwy_vol)
+        # arcpy.AddMessage('hwy_tod={} \ntrnt_tod={}'.format(hwy_tod, hwy_trnt_ratio[hwy_tod][0]))
+        # arcpy.AddMessage("hwyvol=tod_hwy_vol['vol']*{}".format(hwy_trnt_ratio[hwy_tod][1]))
+
+
+    scen_hwy_vols = pd.concat(hwy_vols, ignore_index=True)
+
+    arcpy.AddMessage('scen {} total volumes before/after conversion to hwy tods:'.format(scen))
+    arcpy.AddMessage('before -- {}'.format(scen_vol['vol'].sum()))
+    arcpy.AddMessage('after -- {}'.format(scen_hwy_vols['hwyvol'].sum()))
+    if round(scen_vol['vol'].sum(),1) !=  round(scen_hwy_vols['hwyvol'].sum(),1):
+        raise ValueError('Problem converting transit bus volumes to highway!')
+
+    scen_hwy_vols_bylink = scen_hwy_vols.groupby(['ANODE','BNODE','hwy_tod']).agg({'hwyvol':'sum'}).reset_index()
+    scen_hwy_vols_bylink['@busveq'] = scen_hwy_vols_bylink['hwyvol'] * 3
+    scen_hwy_vols_bylink = scen_hwy_vols_bylink[['ANODE','BNODE','@busveq','hwy_tod']].copy()
+    
+    #create total daily and append to scen_hwy_vols_bylink
+    tot_daily_vol = scen_hwy_vols_bylink.groupby(['ANODE','BNODE']).agg({'@busveq':'sum'}).reset_index()
+    tot_daily_vol['hwy_tod'] = '0'
+    scen_hwy_vols_bylink = pd.concat([scen_hwy_vols_bylink, tot_daily_vol])
+    
+    #add total daily to the iterator used below
+    tod_iter = sorted(MHN.tod_periods['highway'].keys())
+    tod_iter.append('0')
+    
+    # BEGIN TOD ITERATOR (for writing to hwy .l2 files) --   
+    arcpy.AddMessage('writing busveq to .l2 files...')
+    for tod in tod_iter:
+        arcpy.AddMessage('tod {}...'.format(tod))
+        #extra attributes highway batchin file
+        hwy_l2 = os.path.join(hwy_path, scen, '{}0{}.l2'.format(scen, tod))
+
+        busveqs = scen_hwy_vols_bylink #renamed for convenience
+        busveqs = busveqs.loc[busveqs['hwy_tod']==tod, ['ANODE','BNODE','@busveq']].copy()
+        busveqs['ijpair'] = busveqs['ANODE'].astype('str') + '-' + busveqs['BNODE'].astype('str')
+
+        with open(hwy_l2, 'r') as file:
+            lines = file.readlines()
+        if lines[0].endswith('@busveq'):
+            raise ValueError('.l2 file already contains @busveq! Re-run "Generate Highway Files."')
+        lines[0] = lines[0].rstrip() + ',@busveq\n' #add @busveq column label
+                
+        #add busveq values to each ij pair
+        for i in range(1, len(lines)):
+            ijnode = lines[i].strip().split()[:2] #first two columns are inode and jnode
+            ijnode = str(ijnode[0]) + '-' + str(ijnode[1]) #make id to match with busveqs
+            if ijnode in busveqs['ijpair'].values:
+                num = busveqs.loc[busveqs['ijpair']==ijnode, '@busveq'].iloc[0]
+            else:
+                num = 0
+            lines[i] = lines[i].rstrip() + '  {}\n'.format(num)
+
+        #overwrite hwy extra attributes batchin file
+        with open(hwy_l2, 'w') as file: #overwrite
+            file.writelines(lines)
+    #-- END TOD ITERATOR
+    
+#-- END SCEN ITERATOR
+
+
+arcpy.AddMessage('Done with @busveq!')
 
 # -----------------------------------------------------------------------------
 #  Clean up script-level data.
