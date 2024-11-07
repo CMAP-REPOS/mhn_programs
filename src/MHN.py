@@ -127,11 +127,11 @@ class MasterHighwayNetwork(object):
                    '"STARTHOUR" >= 9 AND "STARTHOUR" < 16'),
             '4':  ('4PM-6PM',                                  # 4: PM peak
                    '"STARTHOUR" >= 16 AND "STARTHOUR" < 18')
-        },
             
-        ### Replaced by longer transit AM peak period (C22Q2 and later)
+            ### Replaced by longer transit AM peak period (C22Q2 and later)
             # 'am': ('7AM-9AM',                                  # am: Same as TOD 3, but for buses w/ >50% service in period
             #        '"AM_SHARE" >= 0.5')
+        }
     }
     
     ampm_tods = {
@@ -254,7 +254,7 @@ class MasterHighwayNetwork(object):
         142: "I-57",
         143: "Modern Metra Electric",
         144: "S.M.A.R.T. - Suburban Metropolitan Area Rapid Transit",
-        # 145: "Vollmer Rd", #no longer RSP 2024/03/15
+        145: "Vollmer Rd",
         146: "I-55 Dual Managed Lane",
         147: "Blue Line Capacity",
         151: "CREATE GS-02",
