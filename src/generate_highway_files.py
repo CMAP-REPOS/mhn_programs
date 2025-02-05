@@ -24,6 +24,12 @@ scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string
 root_path = arcpy.GetParameterAsText(2)             # String, no default
 create_tollsys_flag = arcpy.GetParameter(3)         # Boolean, default = True
 abm_output = arcpy.GetParameter(4)                  # Boolean, default = False
+rsp_eval = arcpy.GetParameter(5)                    # Boolean, default = False
+rsp_column = arcpy.GetParameterAsText(6)            # String, default = None
+rsp_number = arcpy.GetParameterAsText(7)            # String, default = None
+committed_projects_csv = arcpy.GetParameterAsText(8)# String, default = None
+base_year = arcpy.GetParameterAsText(9)            # String, default = None
+
 if os.path.exists(root_path):
     hwy_path = MHN.ensure_dir(os.path.join(root_path, 'highway'))
 else:
@@ -31,6 +37,16 @@ else:
 sas1_name = 'coding_overlap'
 sas2_name = 'generate_highway_files_2'
 
+# -----------------------------------------------------------------------------
+# grab committed projects from committed_projects_csv
+# -----------------------------------------------------------------------------
+## committed_projects_csv will have one tipid per line, in same format as mhn
+committed_tipids = []
+if committed_projects_csv:
+    with open(committed_projects_csv, 'r') as f:
+        for line in f:
+            committed_tipids.append(line.strip())
+            
 
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
@@ -82,7 +98,6 @@ if abm_output:
         return out_csv
     node_zones_csv = os.path.join(hwy_path, 'hwy_node_zones.csv')
     generate_node_zones_csv(node_zones_csv)
-
 
 # -----------------------------------------------------------------------------
 #  Check for hwyproj_coding lane conflicts/reductions in future networks.
@@ -158,10 +173,17 @@ for scen in scen_list:
     MHN.delete_if_exists(hwy_nodes_csv)
 
     arcpy.AddMessage('Generating Scenario {} ({}) highway files...'.format(scen, scen_year))
-
+    if rsp_eval == True:
+        arcpy.AddMessage(f'  -- RSP Run: {rsp_number}')
+        
     # Export coding for highway projects completed by scenario year.
     hwy_year_attr = [hwyproj_id_field, 'COMPLETION_YEAR']
     hwy_year_query = '"COMPLETION_YEAR" <= {}'.format(scen_year)
+    if rsp_eval == True:
+        if len(rsp_number)>0:
+            hwy_year_query = f''' "COMPLETION_YEAR" <= {base_year} OR "{rsp_column}" = {rsp_number} OR "{hwyproj_id_field}" IN ('{"','".join(id for id in committed_tipids)}') '''
+        else:
+            hwy_year_query = f''' "COMPLETION_YEAR" <= {base_year} OR "{hwyproj_id_field}" IN ('{"','".join(id for id in committed_tipids)}') '''
     hwy_year_view = MHN.make_skinny_table_view(MHN.hwyproj, 'hwy_year_view', hwy_year_attr, hwy_year_query)
     MHN.write_attribute_csv(hwy_year_view, hwy_year_csv, hwy_year_attr)
     hwy_projects = [r for r in arcpy.da.SearchCursor(hwy_year_view, [hwyproj_id_field, 'COMPLETION_YEAR'])]
