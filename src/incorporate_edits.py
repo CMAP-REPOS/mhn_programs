@@ -764,7 +764,7 @@ for dirpath, dirnames, filenames in arcpy.da.Walk(MHN.gdb, datatype='Relationshi
 # Replace old arcs.
 arcpy.AddMessage('-- {}...'.format(MHN.arc))
 arcpy.TruncateTable_management(MHN.arc)
-arcpy.Append_management(temp_arcs, MHN.arc, 'TEST')
+arcpy.Append_management(temp_arcs, MHN.arc, 'NO_TEST')
 arcpy.Delete_management(temp_arcs)
 
 # Replace old nodes.
@@ -781,7 +781,7 @@ for updated_route_system in updated_route_systems_list:
     header_updated = updated_route_system[0][1]
     arcpy.AddMessage('-- {}...'.format(header))
     arcpy.TruncateTable_management(header)
-    arcpy.Append_management(header_updated, header, 'TEST')
+    arcpy.Append_management(header_updated, header, 'NO_TEST')
     arcpy.Delete_management(header_updated)
 
     # Itinerary table:
@@ -789,7 +789,7 @@ for updated_route_system in updated_route_systems_list:
     itin_updated = updated_route_system[1][1]
     arcpy.AddMessage('-- {}...'.format(itin))
     arcpy.TruncateTable_management(itin)
-    arcpy.Append_management(itin_updated, itin, 'TEST')
+    arcpy.Append_management(itin_updated, itin, 'NO_TEST')
     arcpy.Delete_management(itin_updated)
 
 # Rebuild relationship classes.

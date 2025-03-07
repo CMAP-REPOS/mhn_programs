@@ -27,8 +27,9 @@ abm_output = arcpy.GetParameter(4)                  # Boolean, default = False
 rsp_eval = arcpy.GetParameter(5)                    # Boolean, default = False
 rsp_column = arcpy.GetParameterAsText(6)            # String, default = None
 rsp_number = arcpy.GetParameterAsText(7)            # String, default = None
-committed_projects_csv = arcpy.GetParameterAsText(8)# String, default = None
-base_year = arcpy.GetParameterAsText(9)            # String, default = None
+excl_roadway_csv = arcpy.GetParameterAsText(8)      # String, default = None
+nobuild_year = arcpy.GetParameterAsText(9)          # String, default = None
+horizon_year = arcpy.GetParameterAsText(10)
 
 if os.path.exists(root_path):
     hwy_path = MHN.ensure_dir(os.path.join(root_path, 'highway'))
@@ -38,15 +39,58 @@ sas1_name = 'coding_overlap'
 sas2_name = 'generate_highway_files_2'
 
 # -----------------------------------------------------------------------------
-# grab committed projects from committed_projects_csv
+# if for rsp evaluation, set up parameters
 # -----------------------------------------------------------------------------
-## committed_projects_csv will have one tipid per line, in same format as mhn
-committed_tipids = []
-if committed_projects_csv:
-    with open(committed_projects_csv, 'r') as f:
-        for line in f:
-            committed_tipids.append(line.strip())
+if rsp_eval == True: 
+    
+    excl_roadway = []
+    if excl_roadway_csv: #grab excluded hwy projects, if any
+        with open(excl_roadway_csv, 'r') as f:
+            for line in f:
+                excl_roadway.append(line.strip())          
+        
+        # for nobuild_year and horizon_year, find the closest 
+        # lesser scen year, and export networks as that scen year.
+        # (e.g., if nobuild_year=2034, networks will be 2034, 
+        # 'scenyear' export folder will be '300' (2030))
+        
+        mhn_yrmin = min(MHN.scenario_years.values())
+        mhn_yrmax = max(MHN.scenario_years.values())
+        
+        scens = sorted(MHN.scenario_years.keys())
+        for scen in scens: #for nobuild year
+            if int(nobuild_year) >= MHN.scenario_years[scen]:
+                rsp_scen = scen
+            else:
+                break #stop looking when scen year is larger than nobuild_year
+        
+
+        if int(nobuild_year) < mhn_yrmin or int(nobuild_year) > mhn_yrmax:
+            MHN.die('Chosen no-build year is not valid! '
+                    + f'Choose a number between {mhn_yrmin} and {mhn_yrmax}, inclusive.')
+        
+        for scen in scens: #for horizon year
+            if int(horizon_year) >= MHN.scenario_years[scen]:
+                horiz_scen = scen
+            else:
+                break #stop looking when scen year is larger than horizon_year
+        
+        if int(horizon_year) < mhn_yrmin or int(horizon_year) > mhn_yrmax:
+            MHN.die('Chosen horizon year is not valid!'
+                    + f'Choose a number between {mhn_yrmin} and {mhn_yrmax}, inclusive.'
+                    )
             
+    rsp_info_message = f'''
+    RSP evaluation:
+        - RSP ID: {rsp_number}
+        - Network "no-build" year: {nobuild_year} (scen. {rsp_scen})
+        - Horizon year: {horizon_year} (scen. {scen})
+    
+    Project IDs to be excluded from export:
+    {", ".join(id for id in excl_roadway)}
+    '''
+    arcpy.AddMessage(rsp_info_message)
+    scen_list = [rsp_scen] #ignore "scenario years" parameter if RSP eval; only export rsp_scen
 
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
@@ -77,7 +121,6 @@ if create_tollsys_flag or abm_output:
     tollsys_flag = os.path.join(hwy_path, 'tollsys.flag')
     MHN.write_arc_flag_file(tollsys_flag, '"TOLLSYS" = 1')
 
-
 # -----------------------------------------------------------------------------
 # Generate any scenario-independent, ABM-specific files, if desired.
 # -----------------------------------------------------------------------------
@@ -102,38 +145,56 @@ if abm_output:
 # -----------------------------------------------------------------------------
 #  Check for hwyproj_coding lane conflicts/reductions in future networks.
 # -----------------------------------------------------------------------------
-arcpy.AddMessage('\nChecking for conflicting highway project coding (i.e. lane reductions) and missing project years...\n')
+arcpy.AddMessage('\nChecking for conflicting highway project coding '
+                 + '(i.e. lane reductions) and missing project years...\n')
 hwyproj_id_field = MHN.route_systems[MHN.hwyproj][1]
 
 # Export projects with valid completion years.
 overlap_year_attr = [hwyproj_id_field, 'COMPLETION_YEAR']
 overlap_year_query = '"COMPLETION_YEAR" NOT IN (0,9999)'
-overlap_year_view = MHN.make_skinny_table_view(MHN.hwyproj, 'overlap_year_view', overlap_year_attr, overlap_year_query)
-MHN.write_attribute_csv(overlap_year_view, overlap_year_csv, overlap_year_attr)
+overlap_year_view = MHN.make_skinny_table_view(
+    MHN.hwyproj, 'overlap_year_view', 
+    overlap_year_attr, overlap_year_query)
+MHN.write_attribute_csv(overlap_year_view, overlap_year_csv, 
+                        overlap_year_attr)
 overlap_projects = [r[0] for r in arcpy.da.SearchCursor(overlap_year_view, [hwyproj_id_field])]
 arcpy.Delete_management(overlap_year_view)
 
 # Export coding for valid projects.
 overlap_transact_attr = [
-    hwyproj_id_field, 'ACTION_CODE', 'NEW_DIRECTIONS', 'NEW_TYPE1', 'NEW_TYPE2', 'NEW_AMPM1', 'NEW_AMPM2', 'NEW_POSTEDSPEED1',
-    'NEW_POSTEDSPEED2', 'NEW_THRULANES1', 'NEW_THRULANES2', 'NEW_THRULANEWIDTH1', 'NEW_THRULANEWIDTH2', 'ADD_PARKLANES1',
-    'ADD_PARKLANES2', 'ADD_SIGIC', 'ADD_CLTL', 'ADD_RRGRADECROSS', 'NEW_TOLLDOLLARS', 'NEW_MODES', 'ABB', 'REP_ANODE', 'REP_BNODE'
+    hwyproj_id_field, 'ACTION_CODE', 'NEW_DIRECTIONS', 'NEW_TYPE1', 
+    'NEW_TYPE2', 'NEW_AMPM1', 'NEW_AMPM2', 'NEW_POSTEDSPEED1',
+    'NEW_POSTEDSPEED2', 'NEW_THRULANES1', 'NEW_THRULANES2', 
+    'NEW_THRULANEWIDTH1', 'NEW_THRULANEWIDTH2', 'ADD_PARKLANES1',
+    'ADD_PARKLANES2', 'ADD_SIGIC', 'ADD_CLTL', 'ADD_RRGRADECROSS',
+    'NEW_TOLLDOLLARS', 'NEW_MODES', 'ABB', 'REP_ANODE', 'REP_BNODE'
 ]
-overlap_transact_query = ''' "{}" IN ('{}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in overlap_projects)))
-overlap_transact_view = MHN.make_skinny_table_view(MHN.route_systems[MHN.hwyproj][0], 'overlap_transact_view', overlap_transact_attr, overlap_transact_query)
-MHN.write_attribute_csv(overlap_transact_view, overlap_transact_csv, overlap_transact_attr)
+overlap_transact_query = ''' "{}" IN ('{}') '''.format(
+    hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id in overlap_projects)))
+overlap_transact_view = MHN.make_skinny_table_view(
+    MHN.route_systems[MHN.hwyproj][0], 'overlap_transact_view', 
+    overlap_transact_attr, overlap_transact_query)
+MHN.write_attribute_csv(
+    overlap_transact_view, overlap_transact_csv, 
+    overlap_transact_attr)
 overlap_project_arcs = [r[0] for r in arcpy.da.SearchCursor(overlap_transact_view, ['ABB'])]
 arcpy.Delete_management(overlap_transact_view)
 
 # Export base year arc attributes.
 overlap_network_attr = [
-    'ANODE', 'BNODE', 'ABB', 'DIRECTIONS', 'TYPE1', 'TYPE2', 'AMPM1', 'AMPM2', 'POSTEDSPEED1', 'POSTEDSPEED2',
-    'THRULANES1', 'THRULANES2', 'THRULANEWIDTH1', 'THRULANEWIDTH2', 'PARKLANES1', 'PARKLANES2', 'SIGIC',
-    'CLTL', 'RRGRADECROSS', 'TOLLDOLLARS', 'MODES', 'MILES'
+    'ANODE', 'BNODE', 'ABB', 'DIRECTIONS', 'TYPE1', 'TYPE2', 'AMPM1', 
+    'AMPM2', 'POSTEDSPEED1', 'POSTEDSPEED2','THRULANES1', 'THRULANES2', 
+    'THRULANEWIDTH1', 'THRULANEWIDTH2', 'PARKLANES1', 'PARKLANES2', 
+    'SIGIC', 'CLTL', 'RRGRADECROSS', 'TOLLDOLLARS', 'MODES', 'MILES'
 ]
-overlap_network_query = ''' "BASELINK" = '1' OR "ABB" IN ('{}') '''.format("','".join((abb for abb in overlap_project_arcs if abb[-1] != '1')))
-overlap_network_view = MHN.make_skinny_table_view(MHN.arc, 'overlap_network_view', overlap_network_attr, overlap_network_query)
-MHN.write_attribute_csv(overlap_network_view, overlap_network_csv, overlap_network_attr)
+overlap_network_query = ''' "BASELINK" = '1' OR "ABB" IN ('{}') '''.format(
+    "','".join((abb for abb in overlap_project_arcs if abb[-1] != '1')))
+overlap_network_view = MHN.make_skinny_table_view(
+    MHN.arc, 'overlap_network_view',
+    overlap_network_attr, overlap_network_query)
+MHN.write_attribute_csv(
+    overlap_network_view, overlap_network_csv, 
+    overlap_network_attr)
 arcpy.Delete_management(overlap_network_view)
 
 # Process attribute tables with coding_overlap.sas.
@@ -154,10 +215,17 @@ else:
 # -----------------------------------------------------------------------------
 #  Write data relevant to specified scenario and pass to SAS for processing.
 # -----------------------------------------------------------------------------
+
 for scen in scen_list:
     # Set scenario-specific parameters.
-    scen_year = MHN.scenario_years[scen]
-    scen_path = MHN.ensure_dir(os.path.join(hwy_path, scen))
+    if rsp_eval == True:
+        #for rsp eval, the queries are nobuild-based, and output location is horizon-based
+        scen_year = nobuild_year #for queries
+        scen_path = MHN.ensure_dir(os.path.join(hwy_path, horiz_scen)) #for output location
+    else:
+        scen_year = MHN.scenario_years[scen]
+        scen_path = MHN.ensure_dir(os.path.join(hwy_path, scen))
+        
     sas2_log = os.path.join(hwy_path, '{}_{}.log'.format(sas2_name, scen))
     sas2_lst = os.path.join(hwy_path, '{}_{}.lst'.format(sas2_name, scen))
     hwy_year_csv = os.path.join(scen_path, 'year.csv')
@@ -171,64 +239,90 @@ for scen in scen_list:
     MHN.delete_if_exists(hwy_transact_csv)
     MHN.delete_if_exists(hwy_network_csv)
     MHN.delete_if_exists(hwy_nodes_csv)
-
+    
     arcpy.AddMessage('Generating Scenario {} ({}) highway files...'.format(scen, scen_year))
     if rsp_eval == True:
-        arcpy.AddMessage(f'  -- RSP Run: {rsp_number}')
-        
+        arcpy.AddMessage(f'RSP RUN: \n - development year: {nobuild_year} \n - RSP number: {rsp_number}')    
+    
     # Export coding for highway projects completed by scenario year.
     hwy_year_attr = [hwyproj_id_field, 'COMPLETION_YEAR']
-    hwy_year_query = '"COMPLETION_YEAR" <= {}'.format(scen_year)
+    yr_q = f'"COMPLETION_YEAR" <= {scen_year}'
+    rsp_q = f'"{rsp_column}" = {rsp_number}'
+    excl_q = f'''"{hwyproj_id_field}" NOT IN ('{"','".join(id for id in excl_roadway)}')'''
+    hwy_year_query = yr_q
     if rsp_eval == True:
-        if len(rsp_number)>0:
-            hwy_year_query = f''' "COMPLETION_YEAR" <= {base_year} OR "{rsp_column}" = {rsp_number} OR "{hwyproj_id_field}" IN ('{"','".join(id for id in committed_tipids)}') '''
-        else:
-            hwy_year_query = f''' "COMPLETION_YEAR" <= {base_year} OR "{hwyproj_id_field}" IN ('{"','".join(id for id in committed_tipids)}') '''
+        if rsp_number.isnumeric(): #if selected an rsp number, include in query
+            hwy_year_query = f''' ({yr_q} OR {rsp_q}) AND {excl_q}'''
+        else: #if selection was "none, or no build," don't include in query
+            hwy_year_query = f'''{yr_q} AND {excl_q}'''
     hwy_year_view = MHN.make_skinny_table_view(MHN.hwyproj, 'hwy_year_view', hwy_year_attr, hwy_year_query)
     MHN.write_attribute_csv(hwy_year_view, hwy_year_csv, hwy_year_attr)
     hwy_projects = [r for r in arcpy.da.SearchCursor(hwy_year_view, [hwyproj_id_field, 'COMPLETION_YEAR'])]
     arcpy.Delete_management(hwy_year_view)
 
     hwy_transact_attr = [
-        hwyproj_id_field, 'ACTION_CODE', 'NEW_DIRECTIONS', 'NEW_TYPE1', 'NEW_TYPE2', 'NEW_AMPM1', 'NEW_AMPM2', 'NEW_POSTEDSPEED1',
-        'NEW_POSTEDSPEED2', 'NEW_THRULANES1', 'NEW_THRULANES2', 'NEW_THRULANEWIDTH1', 'NEW_THRULANEWIDTH2', 'ADD_PARKLANES1',
-        'ADD_PARKLANES2', 'ADD_SIGIC', 'ADD_CLTL', 'ADD_RRGRADECROSS', 'NEW_TOLLDOLLARS', 'NEW_MODES', 'TOD', 'ABB', 'REP_ANODE', 'REP_BNODE'
+        hwyproj_id_field, 'ACTION_CODE', 'NEW_DIRECTIONS', 'NEW_TYPE1', 
+        'NEW_TYPE2', 'NEW_AMPM1', 'NEW_AMPM2', 'NEW_POSTEDSPEED1',
+        'NEW_POSTEDSPEED2', 'NEW_THRULANES1', 'NEW_THRULANES2', 
+        'NEW_THRULANEWIDTH1', 'NEW_THRULANEWIDTH2', 'ADD_PARKLANES1',
+        'ADD_PARKLANES2', 'ADD_SIGIC', 'ADD_CLTL', 'ADD_RRGRADECROSS', 
+        'NEW_TOLLDOLLARS', 'NEW_MODES', 'TOD', 'ABB', 'REP_ANODE', 'REP_BNODE'
     ]
-    hwy_transact_query = ''' "{}" IN ('{}') '''.format(hwyproj_id_field, "','".join((hwyproj_id for hwyproj_id, comp_year in hwy_projects)))
-    hwy_transact_view = MHN.make_skinny_table_view(MHN.route_systems[MHN.hwyproj][0], 'hwy_transact_view', hwy_transact_attr, hwy_transact_query)
-    MHN.write_attribute_csv(hwy_transact_view, hwy_transact_csv, hwy_transact_attr)
+    hwy_transact_query = ''' "{}" IN ('{}') '''.format(
+        hwyproj_id_field, 
+        "','".join((hwyproj_id for hwyproj_id, comp_year in hwy_projects))
+        )
+    hwy_transact_view = MHN.make_skinny_table_view(
+        MHN.route_systems[MHN.hwyproj][0], 'hwy_transact_view', 
+        hwy_transact_attr, hwy_transact_query)
+    MHN.write_attribute_csv(
+        hwy_transact_view, hwy_transact_csv, 
+        hwy_transact_attr)
     hwy_abb = [r[0] for r in arcpy.da.SearchCursor(hwy_transact_view, ['ABB'])]
     arcpy.Delete_management(hwy_transact_view)
 
     # Export arc & node attributes of all baselinks and skeletons used in
     # projects completed by scenario year.
     hwy_network_attr = [
-        'ANODE', 'BNODE', 'ABB', 'DIRECTIONS', 'TYPE1', 'TYPE2', 'AMPM1', 'AMPM2', 'POSTEDSPEED1', 'POSTEDSPEED2',
-        'THRULANES1', 'THRULANES2', 'THRULANEWIDTH1', 'THRULANEWIDTH2', 'PARKLANES1', 'PARKLANES2', 'PARKRES1', 'PARKRES2',
-        'SIGIC', 'CLTL', 'RRGRADECROSS', 'TOLLDOLLARS', 'MODES', 'CHIBLVD', 'TRUCKRES', 'VCLEARANCE', 'MILES'
+        'ANODE', 'BNODE', 'ABB', 'DIRECTIONS', 'TYPE1', 'TYPE2', 'AMPM1', 
+        'AMPM2', 'POSTEDSPEED1', 'POSTEDSPEED2', 'THRULANES1', 'THRULANES2', 
+        'THRULANEWIDTH1', 'THRULANEWIDTH2', 'PARKLANES1', 'PARKLANES2', 
+        'PARKRES1', 'PARKRES2', 'SIGIC', 'CLTL', 'RRGRADECROSS', 'TOLLDOLLARS', 
+        'MODES', 'CHIBLVD', 'TRUCKRES', 'VCLEARANCE', 'MILES'
         ]
-    hwy_network_query = ''' "BASELINK" = '1' OR "ABB" IN ('{}') '''.format("','".join((abb for abb in hwy_abb if abb[-1] != '1')))
-    hwy_network_lyr = MHN.make_skinny_feature_layer(MHN.arc, 'hwy_network_lyr', hwy_network_attr, hwy_network_query)
-    MHN.write_attribute_csv(hwy_network_lyr, hwy_network_csv, hwy_network_attr)
+    abb_lst = (abb for abb in hwy_abb if abb[-1] != '1')
+    hwy_network_query = f'''"BASELINK" = '1' OR "ABB" IN ('{"','".join(abb_lst)}')'''
+    hwy_network_lyr = MHN.make_skinny_feature_layer(
+        MHN.arc, 'hwy_network_lyr', 
+        hwy_network_attr, hwy_network_query)
+    MHN.write_attribute_csv(hwy_network_lyr, hwy_network_csv, 
+                            hwy_network_attr)
     hwy_abb_2 = [r[0] for r in arcpy.da.SearchCursor(hwy_network_lyr, ['ABB'])]
 
     hwy_anodes = [abb.split('-')[0] for abb in hwy_abb_2]
     hwy_bnodes = [abb.split('-')[1] for abb in hwy_abb_2]
     hwy_nodes_list = list(set(hwy_anodes).union(set(hwy_bnodes)))
-    hwy_nodes_attr = ['NODE', 'POINT_X', 'POINT_Y', MHN.zone_attr, MHN.capzone_attr, MHN.imarea_attr]
-    hwy_nodes_query = '"NODE" IN ({})'.format(','.join(hwy_nodes_list))
-    hwy_nodes_view = MHN.make_skinny_table_view(MHN.node, 'hwy_nodes_view', hwy_nodes_attr, hwy_nodes_query)
+    hwy_nodes_attr = ['NODE', 'POINT_X', 'POINT_Y', MHN.zone_attr, 
+                      MHN.capzone_attr, MHN.imarea_attr]
+    hwy_nodes_query = f'"NODE" IN ({','.join(hwy_nodes_list)})'
+    hwy_nodes_view = MHN.make_skinny_table_view(
+        MHN.node, 'hwy_nodes_view', 
+        hwy_nodes_attr, hwy_nodes_query)
     MHN.write_attribute_csv(hwy_nodes_view, hwy_nodes_csv, hwy_nodes_attr)
     arcpy.Delete_management(hwy_nodes_view)
 
     # Process attribute tables with generate_highway_files_2.sas.
-    sas2_sas = os.path.join(MHN.src_dir, '{}.sas'.format(sas2_name))
-    sas2_args = [hwy_path, scen, MHN.max_poe, MHN.base_year, int(abm_output)]
+    sas2_sas = os.path.join(MHN.src_dir, f'{sas2_name}.sas')
+    sas2_args = [hwy_path, scen, MHN.max_poe, 
+                 MHN.base_year, int(abm_output), 0]
+    if rsp_eval:
+        sas2_args = [hwy_path, scen, MHN.max_poe, MHN.base_year, 
+                     int(abm_output), horiz_scen]
     MHN.submit_sas(sas2_sas, sas2_log, sas2_lst, sas2_args)
     if not os.path.exists(sas2_log):
         MHN.die('{} did not run!'.format(sas2_sas))
     elif 'errorlevel=' in open(sas2_lst).read():
-        MHN.die('Errors during SAS processing. Please see {}.'.format(sas2_log))
+        MHN.die(f'Errors during SAS processing. Please see {sas2_log}.')
     else:
         os.remove(sas2_log)
         # NOTE: Do not delete sas2_lst: leave for reference.
@@ -236,16 +330,21 @@ for scen in scen_list:
         os.remove(hwy_transact_csv)
         os.remove(hwy_network_csv)
         os.remove(hwy_nodes_csv)
-        arcpy.AddMessage('-- Scenario {} l1, l2, n1, n2 files generated successfully.'.format(scen))
+        arcpy.AddMessage(f'-- Scenario {scen} network files generated successfully.')
         if abm_output:
-            arcpy.AddMessage('-- Scenario {} ABM toll file generated successfully.'.format(scen))
+            arcpy.AddMessage(f'-- Scenario {scen} ABM toll file generated successfully.')
 
     results_summary = open(sas2_lst).read()
-    if 'NETWORK LINKS WITHOUT' in results_summary or 'SUSPICIOUS TOLL CHARGES' in results_summary:
-        arcpy.AddWarning('-- Some links may have incorrect coding! Please see {}.'.format(sas2_lst))
+    
+    #look for errors in sas report and warn user if found
+    if ('NETWORK LINKS WITHOUT' in results_summary or
+        'SUSPICIOUS TOLL CHARGES' in results_summary):
+        arcpy.AddWarning(f'-- Some links may have incorrect coding! Please see {sas2_lst}.')
 
     # Calculate scenario mainline links' AM Peak lane-miles.
     scen_ampeak_l1 = os.path.join(scen_path, '{}03.l1'.format(scen))
+    if rsp_eval == True:
+        scen_ampeak_l1 = os.path.join(scen_path, '{}03.l1'.format(horiz_scen))
     mainline_lanemiles = {}
     with open(scen_ampeak_l1, 'r') as l1:
         for r in l1:
@@ -257,7 +356,7 @@ for scen in scen_list:
 
     # Create rsp_stats.txt.
     scen_rsp_tipids = {}
-    scen_rsp_query = ''' "COMPLETION_YEAR" <= {} AND "RSP_ID" IS NOT NULL '''.format(scen_year)
+    scen_rsp_query = f''' "COMPLETION_YEAR" <= {scen_year} AND "RSP_ID" IS NOT NULL '''
     with arcpy.da.SearchCursor(MHN.hwyproj, ['RSP_ID', hwyproj_id_field], scen_rsp_query) as c:
         for rsp_id, tipid in c:
             if rsp_id not in scen_rsp_tipids:
@@ -270,13 +369,15 @@ for scen in scen_list:
         w.write('RSP_ID,RSP_NAME,MAINLINE_LANEMILES\n')
         for rsp_id in sorted(scen_rsp_tipids.keys()):
             rsp_query = ''' "{}" IN ('{}') '''.format(hwyproj_id_field, "','".join(scen_rsp_tipids[rsp_id]))
-            rsp_ab = set((r[0].rsplit('-', 1)[0] for r in arcpy.da.SearchCursor(MHN.route_systems[MHN.hwyproj][0], ['ABB'], rsp_query)))
+            sc = arcpy.da.SearchCursor(MHN.route_systems[MHN.hwyproj][0], 
+                                       ['ABB'], rsp_query)
+            rsp_ab = set((r[0].rsplit('-', 1)[0] for r in sc))
             rsp_lanemiles = sum((mainline_lanemiles[ab] for ab in rsp_ab if ab in mainline_lanemiles))
             w.write('{},{},{}\n'.format(rsp_id, MHN.rsps[rsp_id], rsp_lanemiles))
 
     arcpy.AddMessage('-- Scenario {} rsp_stats.csv generated successfully.'.format(scen))
 
-    # Create linkshape.in.
+    # Create linkshape.in.  
     def generate_linkshape(arcs, output_dir):
         linkshape = os.path.join(output_dir, 'highway.linkshape')
         w = open(linkshape, 'w')

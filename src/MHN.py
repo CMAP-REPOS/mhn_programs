@@ -277,6 +277,12 @@ class MasterHighwayNetwork(object):
         9903: "(A3) I-55 Reconstruction & IL 126 Interchange Reconfiguration",
         9904: "(A4) I-55/IL 59 Interchange",
     }
+    
+    #2026 LRTP - Regional Capital Project list
+    rcps = {
+        44100: "North McHenry Fox River Crossing",
+        44101: "Ackman Road Extension",
+    }
 
 
     def __init__(self, mhn_gdb_path, zone_gdb_path=None):

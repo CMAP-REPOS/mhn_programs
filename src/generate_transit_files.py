@@ -34,6 +34,13 @@ MHN = MasterHighwayNetwork(mhn_gdb_path)
 scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
 root_path = arcpy.GetParameterAsText(2)             # String, no default
 
+## parameters for RSP evaluation --
+rsp_eval = arcpy.GetParameter(3)                    # Boolean, default False
+nobuild_year = arcpy.GetParameterAsText(4)             # String, not required unless rsp_eval is True
+rsp_id = arcpy.GetParameterAsText(5)                # String, contains rsp id if project is bus, not required unless rsp_eval is True
+committed_tipids = arcpy.GetParameterAsText(6)      # String, filepath to TIP IDs that should be removed from no-build, not required unless rsp_eval is True
+horizon_year = arcpy.GetParameterAsText(7)          # string
+
 out_tod_periods = sorted(MHN.tod_periods['transit'].keys())
 
 if not os.path.exists(root_path):
@@ -49,7 +56,42 @@ sas1_name = 'gtfs_reformat_feed'
 sas2_name = 'generate_transit_files_2'
 sas3_name = 'generate_transit_files_3'
 
+#for RSP eval:
+#   - ignore scenario years
+#   - only export scenario year associated with nobuild_year
 
+
+if rsp_eval:
+    arcpy.AddMessage(f'RSP Evaluation: \n - network year: {nobuild_year} \n - for RSP ID: {rsp_id}')
+    #create list of excluded tip ids, if they exist
+    #these will be filtered out of network export
+    excl_transit = []
+    if committed_tipids:
+        with open(committed_tipids, 'r') as f:
+            for line in f:
+                excl_transit.append(line.strip())
+    arcpy.AddMessage(f'TIP IDs to be excluded from export: {", ".join(id for id in excl_transit)}')
+                
+    # find the closest lesser scen year to nobuild_year. will export networks at that scen year
+    scens = sorted(MHN.scenario_years.keys()) #sort scenario years smallest to largest
+    for scen in scens:
+        if int(nobuild_year) >= MHN.scenario_years[scen]:
+            rsp_scen = scen
+        else:
+            break #stop looking when scen year is larger than nobuild_year
+    if not rsp_scen:
+        MHN.die('Chosen no-build year is not valid! Choose a number between 2019 and 2050 (inclusive).')
+    scen_list = [rsp_scen] #ignore "scenario years" parameter if RSP eval; only export rsp_scen
+    
+    for scen in scens:
+        if int(horizon_year) >= MHN.scenario_years[scen]:
+            horiz_scen = scen
+        else:
+            break #stop looking when scen year is larger than horizon_year
+    if not horiz_scen:
+        MHN.die('Chosen horizon year is not valid! Choose a number between 2019 and 2050 (inclusive).')
+    
+    arcpy.AddMessage(f'RSP network scen: {rsp_scen}. RSP horizon scen: {horiz_scen}')
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
@@ -199,6 +241,7 @@ if any(MHN.scenario_years[scen] > MHN.base_year for scen in scen_list):
 # -----------------------------------------------------------------------------
 #  Iterate through scenarios, if more than one requested.
 # -----------------------------------------------------------------------------
+
 for scen in scen_list:
     # Set scenario-specific parameters.
     scen_year = MHN.scenario_years[scen]
@@ -208,14 +251,16 @@ for scen in scen_list:
     else:
         bus_fc = MHN.bus_current
         which_bus = 'current'
-
+        
     scen_hwy_path = os.path.join(hwy_path, scen)
+    scen_tran_path = os.path.join(tran_path, scen)
+    if rsp_eval == True: 
+        scen_hwy_path = os.path.join(hwy_path, horiz_scen)
+        scen_tran_path = os.path.join(tran_path, horiz_scen)
     if not os.path.exists(scen_hwy_path):
         MHN.die('{} contains no {} folder! Please run the Generate Highway Files tool for this scenario first.'.format(hwy_path, scen))
-    scen_tran_path = os.path.join(tran_path, scen)
     if not os.path.exists(scen_tran_path):
         MHN.die("{} contains no {} folder! Please run the Master Rail Network's Create Emme Scenario Files tool for this scenario first.".format(tran_path, scen))
-
     # -------------------------------------------------------------------------
     # Iterate through scenario's TOD periods and write transit batchin files.
     # -------------------------------------------------------------------------
@@ -318,7 +363,15 @@ for scen in scen_list:
             arcpy.MakeFeatureLayer_management(MHN.bus_future, bus_future_lyr)
             bus_future_id_field = MHN.route_systems[MHN.bus_future][1]
             bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
-            bus_future_query = ''' "SCENARIO" LIKE '%{}%' '''.format(scen[0])  # SCENARIO field contains first character of applicable scenario codes
+            
+            #base query -- 'scenario' field of bus_future contains first character of applicable scen code (e.g., '4', as in '400')
+            bus_future_query = f''' "SCENARIO" LIKE '%{scen[0]}%' ''' 
+            #if rsp run, add other elements to query:
+            if 'RSP' in rsp_id: #if RSP## was selected, add to query
+                bus_future_query = f''' ("SCENARIO" LIKE '%{scen[0]}%' OR "NOTES" LIKE '%{rsp_id}%') '''
+            if len(excl_transit)>0: #if csv had tipids in it to remove, add to query
+                bus_future_query += f''' AND NOT ("NOTES" LIKE {' OR "NOTES" LIKE '.join(f"'%{tipid}%'" for tipid in excl_transit)}) '''
+            
             bus_future_view = MHN.make_skinny_table_view(bus_future_lyr, 'bus_future_view', bus_future_attr, bus_future_query)
             bus_future_csv = os.path.join(scen_tran_path, 'bus_future.csv')
             MHN.write_attribute_csv(bus_future_view, bus_future_csv, bus_future_attr, include_headers=False)  # Skip headers for easier appending
