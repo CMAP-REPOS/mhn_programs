@@ -13,6 +13,8 @@
 import os
 import arcpy
 from operator import itemgetter
+import numpy as np
+import pandas as pd
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
 # -----------------------------------------------------------------------------
@@ -100,7 +102,6 @@ overlap_transact_csv = os.path.join(MHN.temp_dir, 'overlap_transact.csv')
 overlap_network_csv = os.path.join(MHN.temp_dir, 'overlap_network.csv')
 sas1_log = os.path.join(MHN.temp_dir, '{}.log'.format(sas1_name))
 sas1_lst = os.path.join(MHN.temp_dir, '{}.lst'.format(sas1_name))
-# sas2_log & sas2_lst are scenario-dependent, defined below
 
 
 # -----------------------------------------------------------------------------
@@ -436,3 +437,66 @@ for scen in scen_list:
     scen_linkshape = generate_linkshape(hwy_network_lyr, scen_path)
     arcpy.Delete_management(hwy_network_lyr)
     arcpy.AddMessage('-- Scenario {} highway.linkshape generated successfully.\n'.format(scen))
+    
+
+#write out select link transaction file
+if rsp_eval:
+    if not 'NONE' in rsp_number:
+        arcpy.AddMessage(f'  - Writing select link file for {rsp_number}')
+        sl_dir = os.path.join(root_path, f'RCP_{rsp_number}.txt')
+
+        proj_id_field = MHN.route_systems[MHN.hwyproj][1] #TIPID
+        tipid_yr = arcpy.da.TableToNumPyArray(
+            in_table = MHN.hwyproj,
+            field_names=[proj_id_field,'COMPLETION_YEAR'],
+            where_clause=f'"{rsp_column}" = {rsp_number}'
+        )
+
+        tipid_yr.sort(order='COMPLETION_YEAR')
+        tipid = list(tipid_yr[proj_id_field])
+
+        arcpy.AddMessage(f"TIPID(s) found for RSP {rsp_number}: \n{', '.join(t for t in tipid)}")
+
+        tipid_q = f''' TIPID IN ('{"','".join(t for t in tipid)}') '''
+        print(tipid_q)
+        action_q = "ACTION_CODE IN ('1','2','4')"
+        lks = arcpy.da.TableToNumPyArray(
+            in_table = MHN.route_systems[MHN.hwyproj][0],
+            field_names=['ABB', 'REP_ANODE', 'REP_BNODE', 'TIPID', 'ACTION_CODE'],
+            where_clause= f'{tipid_q} AND {action_q}'''
+            )
+
+        lks = pd.DataFrame(lks)
+        lks = pd.merge(lks, pd.DataFrame(tipid_yr), on='TIPID')
+
+        print(f'all project coding: {len(lks)}')
+
+        deletes_df = lks.loc[lks['ACTION_CODE'].astype(int)==3]
+        print(f'{len(deletes_df)} delete links')
+        delete_list = deletes_df['ABB'].unique().tolist()
+
+        lks.drop(index=lks.loc[lks['ABB'].isin(delete_list)].index, inplace=True)
+
+        replaces_df = lks.loc[lks['ACTION_CODE'].astype(int)==2].copy()
+        print(f'{len(replaces_df)} replace links')
+        replaces_df['AB'] = replaces_df['REP_ANODE'].astype(str) + '-' + replaces_df['REP_BNODE'].astype(str)
+        replace_list = replaces_df['AB'].unique().tolist()
+
+        ab_regex = '|'.join(replace_list)
+        lks.drop(index=lks.loc[lks['ABB'].str.contains(ab_regex, regex=True)].index, inplace=True)
+
+        lks.drop_duplicates(subset='ABB', inplace=True)
+
+        def abb_to_transact(abb):
+            a = abb.split('-')[0].strip()
+            b = abb.split('-')[1].strip()
+            return f'{a},{b}'
+
+        lks['for_transactionfile'] = lks['ABB'].apply(abb_to_transact)
+        transact_links = lks['for_transactionfile'].tolist()
+
+        with open(sl_dir, 'w') as file:
+            comment = f'~# select link: links for RCP_{rsp_number} for RCP evaluation\n'
+            file.write(comment)
+            for lk in transact_links:
+                file.write(f'l={lk}\n')
