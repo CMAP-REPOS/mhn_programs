@@ -93,11 +93,13 @@ def get_nodes_from_batchin(batchin):
 def get_scen_nodes(bus_or_rail):
     ''' Read each of the time-of-day bus & rail network files to identify every
         node present in all scenarios. '''
+    if rsp_eval==True:
+        scen_list=[horiz_scen]
     nodes = set()
     for scen in scen_list:
         scen_tran_path = os.path.join(tran_path, scen)
         for tod in out_tod_periods:
-            batchin = os.path.join(scen_tran_path, '{0}.network_{1}'.format(bus_or_rail, tod))
+            batchin = os.path.join(scen_tran_path, f'{bus_or_rail}.network_{tod}')
             nodes.update(get_nodes_from_batchin(batchin))
     return nodes
 

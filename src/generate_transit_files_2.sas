@@ -30,6 +30,7 @@ options noxwait;
 %let mode4lk = %scan(&sysparm, 19, $);
 %let mode4nd = %scan(&sysparm, 20, $);
 %let outtxt = %scan(&sysparm, 21, $);
+%let horiz_scen = %scan(&sysparm, 22, $);
 %let shrtpath = %sysfunc(tranwrd(&shrt, /, \));
 %let pypath = %sysfunc(tranwrd(&srcdir./pypath.txt, /, \));
 %let newln = 0;
@@ -43,6 +44,9 @@ options noxwait;
 %let patherr = 0;
 %let badnode = 0;
 
+%if &horiz_scen = 0 %then %do;
+    %let horiz_scen = &scen;
+%end;
 
 %macro time;
     %global tp;   ** Set Value for Highway Network Input File **;
@@ -67,9 +71,9 @@ run;
 *** INPUT FILES ***;
 filename in1 "&lines";
 filename in2 "&itins";
-filename innd "&hwypath.\&scen.0&tp..n1";
-filename innd2 "&hwypath.\&scen.0&tp..n2";
-filename inlk "&hwypath.\&scen.0&tp..l1";
+filename innd "&hwypath.\&horiz_scen.0&tp..n1";
+filename innd2 "&hwypath.\&horiz_scen.0&tp..n2";
+filename inlk "&hwypath.\&horiz_scen.0&tp..l1";
 filename pnrnd "&pnrcsv";
 filename bwylk "&mode4lk";
 filename bwynd "&mode4nd";
@@ -374,7 +378,7 @@ proc freq; tables linename / noprint out=check;
 data check; set check;
     if count > 2;
     proc print; var linename count;
-    title "NETWORK &scen Too Many Layovers Coded";
+    title "NETWORK &horiz_scen Too Many Layovers Coded";
 * - - - - - - - - - - - - - - - - - *;
 
 data verify; set itins;
@@ -742,7 +746,7 @@ data _null_; set hold nobs=totobs;
             label b='Original Route Length'
                   a='Route Length After Shortest Path';
          proc print label; var linename b a change; format change percent6.2;
-            title "SCENARIO &scen TOD &tod BUS ROUTE LENGTH DISCREPANCIES";
+            title "SCENARIO &horiz_scen TOD &tod BUS ROUTE LENGTH DISCREPANCIES";
 
     %end;
 %mend itinfix;
@@ -827,7 +831,7 @@ data out1; set segout; by linename;
 data out1; set out1;
     file out1;
     if _n_ = 1 then do;
-        put "c BUS TRANSIT BATCHIN FILE FOR SCENARIO &scen TOD &tod" /
+        put "c BUS TRANSIT BATCHIN FILE FOR SCENARIO &horiz_scen TOD &tod" /
             "c &sysdate" /
             "c us1 holds segment travel time, us2 holds zone fare" /
             "t lines";
@@ -891,7 +895,7 @@ data allnd; merge allnd parking; by itina;
 data print2; set allnd;
     file out2;
     if _n_ = 1 then do;
-        put "c BUS NETWORK BATCHIN FILE FOR TRANSIT SCENARIO NETWORK &scen TOD &tod" /
+        put "c BUS NETWORK BATCHIN FILE FOR TRANSIT SCENARIO NETWORK &horiz_scen TOD &tod" /
             "c  &sysdate" /  'c a  node  x  y' / 't nodes';
     end;
     put flag +2 itina +2 x_a +2 y_a;
@@ -910,19 +914,19 @@ data check; set keeplnk;
         output out=junk;
 data junk; set junk;
     if _freq_ > 1;
-proc print; var itina itinb _freq_; title "NETWORK &scen - SAME LINK USED WITH DIFFERENT ATTRIBUTES";
+proc print; var itina itinb _freq_; title "NETWORK &horiz_scen - SAME LINK USED WITH DIFFERENT ATTRIBUTES";
 
 ** VERIFY THAT EACH LINK HAS A TYPE **;
 data check; set keeplnk(where=(vdf = 0));
-    proc print; var itina itinb vdf; title "NETWORK &scen LINKS WITHOUT A CODED TYPE";
+    proc print; var itina itinb vdf; title "NETWORK &horiz_scen LINKS WITHOUT A CODED TYPE";
 
 ** VERIFY THAT EACH LINK HAS LANES **;
 data check; set keeplnk(where=(thruln = 0));
-proc print; var itina itinb thruln; title "NETWORK &scen LINKS WITHOUT CODED LANES";
+proc print; var itina itinb thruln; title "NETWORK &horiz_scen LINKS WITHOUT CODED LANES";
 
 ** VERIFY THAT EACH LINK HAS A LENGTH **;
 data check; set keeplnk(where=(miles = 0));
-proc print; var itina itinb miles; title "NETWORK &scen LINKS WITHOUT A CODED LENGTH";
+proc print; var itina itinb miles; title "NETWORK &horiz_scen LINKS WITHOUT A CODED LENGTH";
 * - - - - - - - - - - - - - - - - - - - - - - - - - - *;
 
 *--------------------------------------------;
@@ -931,7 +935,7 @@ proc print; var itina itinb miles; title "NETWORK &scen LINKS WITHOUT A CODED LE
 data print3; set allnd;
     file nod;
     if _n_ = 1 then do;
-        put "c BASE NETWORK NODE EXTRA ATTRIBUTE FILE FOR TRANSIT SCENARIO NETWORK &scen TOD &tod" /
+        put "c BASE NETWORK NODE EXTRA ATTRIBUTE FILE FOR TRANSIT SCENARIO NETWORK &horiz_scen TOD &tod" /
             "c  &sysdate" /  'c node  @atype @zone @pspac @pcost' /
             'c ***  @atype=area type for on-street parking  ***' ;
     end;
@@ -1069,7 +1073,7 @@ data last; merge nd lnk bvmt;
           busvmt='Bus VMT';
     proc print label noobs; var nodes links miles lnmi seg busvmt;
         format nodes links seg comma6. miles lnmi busvmt comma9.2; title " ";
-        title2 "SCENARIO &scen TOD &tod BUS TRANSIT NETWORK EMME SUMMARY for MODES BEPLQb";
+        title2 "SCENARIO &horiz_scen TOD &tod BUS TRANSIT NETWORK EMME SUMMARY for MODES BEPLQb";
 
 proc printto;  *** return output to original location;
 run;

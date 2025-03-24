@@ -50,49 +50,49 @@ if rsp_eval == True:
         with open(excl_roadway_csv, 'r') as f:
             for line in f:
                 excl_roadway.append(line.strip())          
-        
-        # for nobuild_year and horizon_year, find the closest 
-        # lesser scen year, and export networks as that scen year.
-        # (e.g., if nobuild_year=2034, networks will be 2034, 
-        # 'scenyear' export folder will be '300' (2030))
-        
-        mhn_yrmin = min(MHN.scenario_years.values())
-        mhn_yrmax = max(MHN.scenario_years.values())
-        
-        scens = sorted(MHN.scenario_years.keys())
-        for scen in scens: #for nobuild year
-            if int(nobuild_year) >= MHN.scenario_years[scen]:
-                rsp_scen = scen
-            else:
-                break #stop looking when scen year is larger than nobuild_year
-        
+    
+    # for nobuild_year and horizon_year, find the closest 
+    # lesser scen year, and export networks as that scen year.
+    # (e.g., if nobuild_year=2034, networks will be 2034, 
+    # 'scenyear' export folder will be '300' (2030))
+    
+    mhn_yrmin = min(MHN.scenario_years.values())
+    mhn_yrmax = max(MHN.scenario_years.values())
+    
+    scens = sorted(MHN.scenario_years.keys())
+    for s in scens: #for nobuild year
+        if int(nobuild_year) >= MHN.scenario_years[s]:
+            nobuild_scen = s
+        else:
+            break #stop looking when scen year is larger than nobuild_year
+    
 
-        if int(nobuild_year) < mhn_yrmin or int(nobuild_year) > mhn_yrmax:
-            MHN.die('Chosen no-build year is not valid! '
-                    + f'Choose a number between {mhn_yrmin} and {mhn_yrmax}, inclusive.')
+    if int(nobuild_year) < mhn_yrmin or int(nobuild_year) > mhn_yrmax:
+        MHN.die('Chosen no-build year is not valid! '
+                + f'Choose a number between {mhn_yrmin} and {mhn_yrmax}, inclusive.')
+    
+    for scen in scens: #for horizon year
+        if int(horizon_year) >= MHN.scenario_years[scen]:
+            horizon_scen = scen
+        else:
+            break #stop looking when scen year is larger than horizon_year
+    
+    if int(horizon_year) < mhn_yrmin or int(horizon_year) > mhn_yrmax:
+        MHN.die('Chosen horizon year is not valid!'
+                + f'Choose a number between {mhn_yrmin} and {mhn_yrmax}, inclusive.'
+                )
         
-        for scen in scens: #for horizon year
-            if int(horizon_year) >= MHN.scenario_years[scen]:
-                horiz_scen = scen
-            else:
-                break #stop looking when scen year is larger than horizon_year
-        
-        if int(horizon_year) < mhn_yrmin or int(horizon_year) > mhn_yrmax:
-            MHN.die('Chosen horizon year is not valid!'
-                    + f'Choose a number between {mhn_yrmin} and {mhn_yrmax}, inclusive.'
-                    )
-            
     rsp_info_message = f'''
     RSP evaluation:
         - RSP ID: {rsp_number}
-        - Network "no-build" year: {nobuild_year} (scen. {rsp_scen})
+        - Network "no-build" year: {nobuild_year} (scen. {nobuild_scen})
         - Horizon year: {horizon_year} (scen. {scen})
-    
+
     Project IDs to be excluded from export:
     {", ".join(id for id in excl_roadway)}
     '''
     arcpy.AddMessage(rsp_info_message)
-    scen_list = [rsp_scen] #ignore "scenario years" parameter if RSP eval; only export rsp_scen
+    scen_list = [nobuild_scen] #ignore "scenario years" parameter if RSP eval; only export nobuild_scen
 
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
@@ -222,13 +222,15 @@ for scen in scen_list:
     if rsp_eval == True:
         #for rsp eval, the queries are nobuild-based, and output location is horizon-based
         scen_year = nobuild_year #for queries
-        scen_path = MHN.ensure_dir(os.path.join(hwy_path, horiz_scen)) #for output location
+        scen_path = MHN.ensure_dir(os.path.join(hwy_path, horizon_scen)) #for output location
+        sas2_log = os.path.join(hwy_path, f'{sas2_name}_{horizon_scen}.log')
+        sas2_lst = os.path.join(hwy_path, f'{sas2_name}_{horizon_scen}.lst')
     else:
         scen_year = MHN.scenario_years[scen]
         scen_path = MHN.ensure_dir(os.path.join(hwy_path, scen))
+        sas2_log = os.path.join(hwy_path, f'{sas2_name}_{scen}.log')
+        sas2_lst = os.path.join(hwy_path, f'{sas2_name}_{scen}.lst')
         
-    sas2_log = os.path.join(hwy_path, '{}_{}.log'.format(sas2_name, scen))
-    sas2_lst = os.path.join(hwy_path, '{}_{}.lst'.format(sas2_name, scen))
     hwy_year_csv = os.path.join(scen_path, 'year.csv')
     hwy_transact_csv = os.path.join(scen_path, 'transact.csv')
     hwy_network_csv = os.path.join(scen_path, 'network.csv')
@@ -305,7 +307,7 @@ for scen in scen_list:
     hwy_nodes_list = list(set(hwy_anodes).union(set(hwy_bnodes)))
     hwy_nodes_attr = ['NODE', 'POINT_X', 'POINT_Y', MHN.zone_attr, 
                       MHN.capzone_attr, MHN.imarea_attr]
-    hwy_nodes_query = f'"NODE" IN ({','.join(hwy_nodes_list)})'
+    hwy_nodes_query = f'"NODE" IN ({",".join(hwy_nodes_list)})'
     hwy_nodes_view = MHN.make_skinny_table_view(
         MHN.node, 'hwy_nodes_view', 
         hwy_nodes_attr, hwy_nodes_query)
@@ -318,7 +320,7 @@ for scen in scen_list:
                  MHN.base_year, int(abm_output), 0]
     if rsp_eval:
         sas2_args = [hwy_path, scen, MHN.max_poe, MHN.base_year, 
-                     int(abm_output), horiz_scen]
+                     int(abm_output), horizon_scen]
     MHN.submit_sas(sas2_sas, sas2_log, sas2_lst, sas2_args)
     if not os.path.exists(sas2_log):
         MHN.die('{} did not run!'.format(sas2_sas))
@@ -345,7 +347,7 @@ for scen in scen_list:
     # Calculate scenario mainline links' AM Peak lane-miles.
     scen_ampeak_l1 = os.path.join(scen_path, '{}03.l1'.format(scen))
     if rsp_eval == True:
-        scen_ampeak_l1 = os.path.join(scen_path, '{}03.l1'.format(horiz_scen))
+        scen_ampeak_l1 = os.path.join(scen_path, '{}03.l1'.format(horizon_scen))
     mainline_lanemiles = {}
     with open(scen_ampeak_l1, 'r') as l1:
         for r in l1:

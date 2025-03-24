@@ -74,18 +74,19 @@ if rsp_eval:
                 
     # find the closest lesser scen year to nobuild_year. will export networks at that scen year
     scens = sorted(MHN.scenario_years.keys()) #sort scenario years smallest to largest
-    for scen in scens:
-        if int(nobuild_year) >= MHN.scenario_years[scen]:
-            rsp_scen = scen
+    for s in scens:
+        if int(nobuild_year) >= MHN.scenario_years[s]:
+            rsp_scen = s
         else:
             break #stop looking when scen year is larger than nobuild_year
     if not rsp_scen:
         MHN.die('Chosen no-build year is not valid! Choose a number between 2019 and 2050 (inclusive).')
+        
     scen_list = [rsp_scen] #ignore "scenario years" parameter if RSP eval; only export rsp_scen
     
-    for scen in scens:
-        if int(horizon_year) >= MHN.scenario_years[scen]:
-            horiz_scen = scen
+    for s in scens:
+        if int(horizon_year) >= MHN.scenario_years[s]:
+            horiz_scen = s
         else:
             break #stop looking when scen year is larger than horizon_year
     if not horiz_scen:
@@ -251,20 +252,24 @@ for scen in scen_list:
     else:
         bus_fc = MHN.bus_current
         which_bus = 'current'
+    
+    if rsp_eval == True:
+        scen_label = horiz_scen
+        scenyr_label = horizon_year
+    else:
+        scen_label = scen
+        scenyr_label = scen_year
         
-    scen_hwy_path = os.path.join(hwy_path, scen)
-    scen_tran_path = os.path.join(tran_path, scen)
-    if rsp_eval == True: 
-        scen_hwy_path = os.path.join(hwy_path, horiz_scen)
-        scen_tran_path = os.path.join(tran_path, horiz_scen)
+    scen_hwy_path = os.path.join(hwy_path, scen_label)
+    scen_tran_path = os.path.join(tran_path, scen_label)
     if not os.path.exists(scen_hwy_path):
-        MHN.die('{} contains no {} folder! Please run the Generate Highway Files tool for this scenario first.'.format(hwy_path, scen))
+        MHN.die('{} contains no {} folder! Please run the Generate Highway Files tool for this scenario first.'.format(hwy_path, scen_label))
     if not os.path.exists(scen_tran_path):
-        MHN.die("{} contains no {} folder! Please run the Master Rail Network's Create Emme Scenario Files tool for this scenario first.".format(tran_path, scen))
+        MHN.die("{} contains no {} folder! Please run the Master Rail Network's Create Emme Scenario Files tool for this scenario first.".format(tran_path, scen_label))
     # -------------------------------------------------------------------------
     # Iterate through scenario's TOD periods and write transit batchin files.
     # -------------------------------------------------------------------------
-    arcpy.AddMessage('\nGenerating Scenario {} ({}) transit files...'.format(scen, str(scen_year)))
+    arcpy.AddMessage(f'\nGenerating Scenario {scen_label} ({scenyr_label}) transit files...')
 
     for tod in out_tod_periods:
         arcpy.AddMessage('-- TOD {}...'.format(tod.upper()))
@@ -294,23 +299,24 @@ for scen in scen_list:
         #    hwy_l1 = os.path.join(scen_hwy_path, '{}0{}.l1'.format(scen, tod))
         #    hwy_n1 = os.path.join(scen_hwy_path, '{}0{}.n1'.format(scen, tod))
         #    hwy_n2 = os.path.join(scen_hwy_path, '{}0{}.n2'.format(scen, tod))
-        
+
         if tod == 2:  # Use TOD 3 highways for AM transit
-            hwy_l1 = os.path.join(scen_hwy_path, '{}03.l1'.format(scen))
-            hwy_n1 = os.path.join(scen_hwy_path, '{}03.n1'.format(scen))
-            hwy_n2 = os.path.join(scen_hwy_path, '{}03.n2'.format(scen))
+            hwy_l1 = os.path.join(scen_hwy_path, f'{scen_label}03.l1')
+            hwy_n1 = os.path.join(scen_hwy_path, f'{scen_label}03.n1')
+            hwy_n2 = os.path.join(scen_hwy_path, f'{scen_label}03.n2')
         elif tod == 3:  # Use TOD 5 highways for midday transit
-            hwy_l1 = os.path.join(scen_hwy_path, '{}05.l1'.format(scen))
-            hwy_n1 = os.path.join(scen_hwy_path, '{}05.n1'.format(scen))
-            hwy_n2 = os.path.join(scen_hwy_path, '{}05.n2'.format(scen))
+            hwy_l1 = os.path.join(scen_hwy_path, f'{scen_label}05.l1')
+            hwy_n1 = os.path.join(scen_hwy_path, f'{scen_label}05.n1')
+            hwy_n2 = os.path.join(scen_hwy_path, f'{scen_label}05.n2')
         elif tod == 4:  # Use TOD 7 highways for PM transit
-            hwy_l1 = os.path.join(scen_hwy_path, '{}07.l1'.format(scen))
-            hwy_n1 = os.path.join(scen_hwy_path, '{}07.n1'.format(scen))
-            hwy_n2 = os.path.join(scen_hwy_path, '{}07.n2'.format(scen))
+            hwy_l1 = os.path.join(scen_hwy_path, f'{scen_label}07.l1')
+            hwy_n1 = os.path.join(scen_hwy_path, f'{scen_label}07.n1')
+            hwy_n2 = os.path.join(scen_hwy_path, f'{scen_label}07.n2')
         else:
-            hwy_l1 = os.path.join(scen_hwy_path, '{}0{}.l1'.format(scen, tod))
-            hwy_n1 = os.path.join(scen_hwy_path, '{}0{}.n1'.format(scen, tod))
-            hwy_n2 = os.path.join(scen_hwy_path, '{}0{}.n2'.format(scen, tod))
+            hwy_l1 = os.path.join(scen_hwy_path, f'{scen_label}0{tod}.l1')
+            hwy_n1 = os.path.join(scen_hwy_path, f'{scen_label}0{tod}.n1')
+            hwy_n2 = os.path.join(scen_hwy_path, f'{scen_label}0{tod}.n2')
+        
 
         if not (os.path.exists(rail_itin) and os.path.exists(rail_net) and os.path.exists(rail_node)):
             MHN.die("{} doesn't contain all required rail batchin files! Please run the Master Rail Network's Create Emme Scenario Files tool for this scenario first.".format(scen_tran_path))
@@ -697,12 +703,16 @@ for scen in scen_list:
 
         # Call generate_transit_files_2.sas -- creates bus batchin files.
         sas2_sas = os.path.join(MHN.src_dir, '{}.sas'.format(sas2_name))
-        sas2_output = os.path.join(tran_path, '{}_{}.txt'.format(sas2_name, scen))
+        sas2_output = os.path.join(tran_path, '{}_{}.txt'.format(sas2_name, scen_label))
+        if rsp_eval:
+            sas2_output = os.path.join(tran_path, f'{sas2_name}_{horiz_scen}.txt')
         sas2_args = (scen_tran_path, scen_hwy_path, rep_runs_csv, rep_runs_itin_csv, replace_csv, reroute_csv, pnr_csv,
                      scen, tod, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])),
                      str(MHN.max_poe), process_future, MHN.src_dir, missing_links_csv,
                      link_dict_txt, short_path_txt, path_errors_txt, busway_links_csv, busway_nodes_csv,
-                     sas2_output)
+                     sas2_output, 0)
+        if rsp_eval:
+            sas2_args = sas2_args[:-1] + (scen_label,)
         if tod == out_tod_periods[0] and os.path.exists(sas2_output):
             os.remove(sas2_output)  # Delete this before first iteration, or else old version will be appended to.
         MHN.submit_sas(sas2_sas, sas2_log, sas2_lst, sas2_args)
@@ -960,7 +970,9 @@ for scen in scen_list:
         # Call generate_transit_files_3.sas -- writes access.network file.
         sas3_sas = os.path.join(MHN.src_dir, '{}.sas'.format(sas3_name))
         sas3_output = os.path.join(scen_tran_path, 'access.network_{}'.format(tod))
-        sas3_args = [scen_tran_path, scen, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])), tod]
+        sas3_args = [scen_tran_path, scen, str(min(MHN.centroid_ranges['CBD'])), str(max(MHN.centroid_ranges['CBD'])), tod, 0]
+        if rsp_eval:
+            sas3_args = sas3_args[:-1] + [scen_label]
         MHN.submit_sas(sas3_sas, sas3_log, sas3_lst, sas3_args)
         if not os.path.exists(sas3_log):
             MHN.die('{} did not run!'.format(sas3_sas))
@@ -990,15 +1002,15 @@ for scen in scen_list:
     # -------------------------------------------------------------------------
     # Merge scenario highway and rail linkshape files into linkshape_X00.in.
     # -------------------------------------------------------------------------
-    arcpy.AddMessage('\nMerging Scenario {} ({}) highway & rail linkshape files...'.format(scen, str(scen_year)))
+    arcpy.AddMessage(f'\nMerging Scenario {scen_label} ({scenyr_label}) highway & rail linkshape files...')
 
     linkshape_hwy = os.path.join(scen_hwy_path, 'highway.linkshape')
     linkshape_rail = os.path.join(scen_tran_path, 'rail.linkshape')
     linkshape_dir = MHN.ensure_dir(os.path.join(root_path, 'linkshape'))
-    linkshape_in = os.path.join(linkshape_dir, 'linkshape_{}.in'.format(scen))
+    linkshape_in = os.path.join(linkshape_dir, 'linkshape_{}.in'.format(scen_label))
 
     w = open(linkshape_in, 'w')
-    w.write('c HIGHWAY & RAIL LINK SHAPE FILE FOR SCENARIO {}\n'.format(scen))
+    w.write('c HIGHWAY & RAIL LINK SHAPE FILE FOR SCENARIO {}\n'.format(scen_label))
     w.write('c {}\n'.format(MHN.timestamp('%d%b%y').upper()))
     w.write('t linkvertices\n')
 
@@ -1020,6 +1032,7 @@ for scen in scen_list:
 # -------------------------------------------------------------------------
 # Create additional ABM inputs, if desired.
 # -------------------------------------------------------------------------
+
 def get_line_ids_from_itin(itin):
     ''' Parse an itinerary batchin file to obtain line IDs. '''
     line_ids = set()
@@ -1032,10 +1045,12 @@ def get_line_ids_from_itin(itin):
                 line_ids.add(line_id)
     return line_ids
 
-def get_scen_line_ids():
+def get_scen_line_ids(rsp=False):
     ''' Read each of the time-of-day itinerary files to identify each
         line modeled in all scenarios. '''
     line_ids = set()
+    if rsp_eval == True:
+        scen_list = [horiz_scen]
     for scen in scen_list:
         scen_tran_path = os.path.join(tran_path, scen)
         for tod in out_tod_periods:
@@ -1052,7 +1067,7 @@ easeb_csv = os.path.join(tran_path, 'boarding_ease_by_line_id.csv')
 prof_csv = os.path.join(tran_path, 'productivity_bonus_by_line_id.csv')
 relim_csv = os.path.join(tran_path, 'relim_by_line_id.csv')
 
-scen_line_ids = get_scen_line_ids()
+scen_line_ids = get_scen_line_ids(rsp=rsp_eval)
 
 # Ease of boarding CSV
 with open(easeb_csv, 'wt') as w:
