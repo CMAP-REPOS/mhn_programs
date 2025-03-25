@@ -41,15 +41,14 @@ sas1_name = 'coding_overlap'
 sas2_name = 'generate_highway_files_2'
 
 # -----------------------------------------------------------------------------
-# if for rsp evaluation, set up parameters
+# set up parameters for RSP evaluation
 # -----------------------------------------------------------------------------
-if rsp_eval == True: 
-    
-    excl_roadway = []
-    if excl_roadway_csv: #grab excluded hwy projects, if any
-        with open(excl_roadway_csv, 'r') as f:
-            for line in f:
-                excl_roadway.append(line.strip())          
+excl_roadway = []
+if excl_roadway_csv and rsp_eval == True: #grab excluded hwy projects, if any
+    with open(excl_roadway_csv, 'r') as f:
+        for line in f:
+            excl_roadway.append(line.strip())    
+if rsp_eval == True:     
     
     # for nobuild_year and horizon_year, find the closest 
     # lesser scen year, and export networks as that scen year.

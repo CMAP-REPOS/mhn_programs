@@ -60,12 +60,11 @@ sas3_name = 'generate_transit_files_3'
 #   - ignore scenario years
 #   - only export scenario year associated with nobuild_year
 
-
+excl_transit = []
 if rsp_eval:
     arcpy.AddMessage(f'RSP Evaluation: \n - network year: {nobuild_year} \n - for RSP ID: {rsp_id}')
     #create list of excluded tip ids, if they exist
     #these will be filtered out of network export
-    excl_transit = []
     if committed_tipids:
         with open(committed_tipids, 'r') as f:
             for line in f:
@@ -1045,13 +1044,15 @@ def get_line_ids_from_itin(itin):
                 line_ids.add(line_id)
     return line_ids
 
-def get_scen_line_ids(rsp=False):
+def get_scen_line_ids(rsp):
     ''' Read each of the time-of-day itinerary files to identify each
         line modeled in all scenarios. '''
     line_ids = set()
-    if rsp_eval == True:
-        scen_list = [horiz_scen]
-    for scen in scen_list:
+    if rsp == True:
+        scen_labels = [horiz_scen]
+    else:
+        scen_labels = scen_list
+    for scen in scen_labels:
         scen_tran_path = os.path.join(tran_path, scen)
         for tod in out_tod_periods:
             bus = os.path.join(scen_tran_path, 'bus.itinerary_{}'.format(tod))
