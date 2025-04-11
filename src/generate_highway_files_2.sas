@@ -16,16 +16,13 @@ options pagesize=50 linesize=125;
 %let maxz = %scan(&sysparm, 3, $);
 %let baseyr = %scan(&sysparm, 4, $);
 %let abm = %scan(&sysparm, 5, $);
-%let horiz_scen = %scan(&sysparm, 6, $);
-/* if rsp_eval, horiz_scen is horizon year scenario; if not, it's just scen */
-%if &horiz_scen = 0 %then %do; %let horiz_scen = &scen; %end;
 
 /* ------------------------------------------------------------------------------ */
 *** INPUT FILES ***;
-filename in1 "&dir.\&horiz_scen.\network.csv";
-filename in2 "&dir.\&horiz_scen.\transact.csv";
-filename in3 "&dir.\&horiz_scen.\year.csv";
-filename in4 "&dir.\&horiz_scen.\nodes.csv";
+filename in1 "&dir.\&scen.\network.csv";
+filename in2 "&dir.\&scen.\transact.csv";
+filename in3 "&dir.\&scen.\year.csv";
+filename in4 "&dir.\&scen.\nodes.csv";
 
 *** OUTPUT FILES ***;
 *** [output files defined in macro %output] ***;
@@ -353,10 +350,10 @@ data coord; infile in4 dlm=',' dsd firstobs=2;
     %let tot = 0;
 
     *** OUTPUT FILES cont. ***;
-    filename out2 "&dir.\&horiz_scen.\&horiz_scen.0&tod..l1";
-    filename out3 "&dir.\&horiz_scen.\&horiz_scen.0&tod..l2";
-    filename out4 "&dir.\&horiz_scen.\&horiz_scen.0&tod..n1";
-    filename out5 "&dir.\&horiz_scen.\&horiz_scen.0&tod..n2";
+    filename out2 "&dir.\&scen.\&scen.0&tod..l1";
+    filename out3 "&dir.\&scen.\&scen.0&tod..l2";
+    filename out4 "&dir.\&scen.\&scen.0&tod..n1";
+    filename out5 "&dir.\&scen.\&scen.0&tod..n2";
 
     ** IDENTIFY ANY TOD-SPECIFIC ATTRIBUTE CHANGES **;
     %if &tod = 0 %then %do;

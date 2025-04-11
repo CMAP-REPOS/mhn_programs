@@ -182,7 +182,8 @@ arcpy.AddMessage('\nSaving changes to disk...')
 
 # Replace hwyproj feature class:
 arcpy.AddMessage('-- ' + MHN.hwyproj + '...')
-arcpy.TruncateTable_management(MHN.hwyproj)
+# arcpy.TruncateTable_management(MHN.hwyproj)
+arcpy.management.DeleteRows(MHN.hwyproj)
 arcpy.Delete_management(MHN.hwyproj)
 arcpy.CopyFeatures_management(updated_projects_fc, MHN.hwyproj)
 arcpy.Delete_management(updated_projects_fc)
@@ -190,7 +191,8 @@ arcpy.Delete_management(updated_projects_fc)
 # Replace hwyproj_coding table:
 coding_table = MHN.route_systems[MHN.hwyproj][0]
 arcpy.AddMessage('-- ' + coding_table + '...')
-arcpy.TruncateTable_management(coding_table)
+# arcpy.TruncateTable_management(coding_table)
+arcpy.management.DeleteRows(coding_table)
 arcpy.Delete_management(coding_table)
 coding_table_path = MHN.break_path(coding_table)
 arcpy.CreateTable_management(coding_table_path['dir'], coding_table_path['name'], updated_coding_table)

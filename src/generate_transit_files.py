@@ -36,10 +36,9 @@ root_path = arcpy.GetParameterAsText(2)             # String, no default
 
 ## parameters for RSP evaluation --
 rsp_eval = arcpy.GetParameter(3)                    # Boolean, default False
-nobuild_year = arcpy.GetParameterAsText(4)             # String, not required unless rsp_eval is True
-rsp_id = arcpy.GetParameterAsText(5)                # String, contains rsp id if project is bus, not required unless rsp_eval is True
-committed_tipids = arcpy.GetParameterAsText(6)      # String, filepath to TIP IDs that should be removed from no-build, not required unless rsp_eval is True
-horizon_year = arcpy.GetParameterAsText(7)          # string
+rsp_id = arcpy.GetParameterAsText(4)                # String, contains rsp id if project is bus, not required unless rsp_eval is True
+nobuild_tipid_csv = arcpy.GetParameterAsText(5)     # String, filepath to TIP IDs that should be removed from no-build, not required unless rsp_eval is True
+horizon_year = arcpy.GetParameterAsText(6)          # string
 
 out_tod_periods = sorted(MHN.tod_periods['transit'].keys())
 
@@ -65,8 +64,8 @@ if rsp_eval:
     arcpy.AddMessage(f'RSP Evaluation: \n - network year: {nobuild_year} \n - for RSP ID: {rsp_id}')
     #create list of excluded tip ids, if they exist
     #these will be filtered out of network export
-    if committed_tipids:
-        with open(committed_tipids, 'r') as f:
+    if nobuild_tipid_csv:
+        with open(nobuild_tipid_csv, 'r') as f:
             for line in f:
                 excl_transit.append(line.strip())
     arcpy.AddMessage(f'TIP IDs to be excluded from export: {", ".join(id for id in excl_transit)}')

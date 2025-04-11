@@ -12,7 +12,7 @@
 '''
 import os
 import arcpy
-from operator import itemgetter
+# from operator import itemgetter
 import numpy as np
 import pandas as pd
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
@@ -20,18 +20,23 @@ from MHN import MasterHighwayNetwork  # Custom class for MHN processing function
 # -----------------------------------------------------------------------------
 #  Set parameters.
 # -----------------------------------------------------------------------------
+#parameters for typical conformity
 mhn_gdb_path = arcpy.GetParameterAsText(0)          # MHN geodatabase
 MHN = MasterHighwayNetwork(mhn_gdb_path)
 scen_list = arcpy.GetParameterAsText(1).split(';')  # Semicolon-delimited string, e.g. '100;200'
 root_path = arcpy.GetParameterAsText(2)             # String, no default
 create_tollsys_flag = arcpy.GetParameter(3)         # Boolean, default = True
 abm_output = arcpy.GetParameter(4)                  # Boolean, default = False
+
+#parameters for rsp evaluation -- 
+#  - if checked, script disregards scen_list and focuses
+#    solely on the RSP number selected and TIP ID's listed
+#    in the nobuild_tipids csv file.
 rsp_eval = arcpy.GetParameter(5)                    # Boolean, default = False
 rsp_column = arcpy.GetParameterAsText(6)            # String, default = None
 rsp_number = arcpy.GetParameterAsText(7)            # String, default = None
-excl_roadway_csv = arcpy.GetParameterAsText(8)      # String, default = None
-nobuild_year = arcpy.GetParameterAsText(9)          # String, default = None
-horizon_year = arcpy.GetParameterAsText(10)
+nobuild_tipid_csv = arcpy.GetParameterAsText(8)        # String, default = None
+horizon_year = arcpy.GetParameterAsText(9)         # String, default = None
 
 if os.path.exists(root_path):
     hwy_path = MHN.ensure_dir(os.path.join(root_path, 'highway'))
@@ -43,32 +48,22 @@ sas2_name = 'generate_highway_files_2'
 # -----------------------------------------------------------------------------
 # set up parameters for RSP evaluation
 # -----------------------------------------------------------------------------
-excl_roadway = []
-if excl_roadway_csv and rsp_eval == True: #grab excluded hwy projects, if any
-    with open(excl_roadway_csv, 'r') as f:
+nobuild_tipids = []
+if nobuild_tipid_csv and rsp_eval == True:
+    with open(nobuild_tipid_csv, 'r') as f:
         for line in f:
-            excl_roadway.append(line.strip())    
-if rsp_eval == True:     
-    
-    # for nobuild_year and horizon_year, find the closest 
-    # lesser scen year, and export networks as that scen year.
-    # (e.g., if nobuild_year=2034, networks will be 2034, 
+            nobuild_tipids.append(line.strip())   
+ 
+if rsp_eval == True:
+    # for horizon_year, find the closest lesser scen year, 
+    # and export networks as that scen year. (e.g., if 
+    # nobuild_year=2034, networks will be 2034, 
     # 'scenyear' export folder will be '300' (2030))
     
     mhn_yrmin = min(MHN.scenario_years.values())
     mhn_yrmax = max(MHN.scenario_years.values())
     
     scens = sorted(MHN.scenario_years.keys())
-    for s in scens: #for nobuild year
-        if int(nobuild_year) >= MHN.scenario_years[s]:
-            nobuild_scen = s
-        else:
-            break #stop looking when scen year is larger than nobuild_year
-    
-
-    if int(nobuild_year) < mhn_yrmin or int(nobuild_year) > mhn_yrmax:
-        MHN.die('Chosen no-build year is not valid! '
-                + f'Choose a number between {mhn_yrmin} and {mhn_yrmax}, inclusive.')
     
     for scen in scens: #for horizon year
         if int(horizon_year) >= MHN.scenario_years[scen]:
@@ -80,18 +75,18 @@ if rsp_eval == True:
         MHN.die('Chosen horizon year is not valid!'
                 + f'Choose a number between {mhn_yrmin} and {mhn_yrmax}, inclusive.'
                 )
-        
+    
+    scen_list = [horizon_scen]
+    
     rsp_info_message = f'''
     RSP evaluation:
         - RSP ID: {rsp_number}
-        - Network "no-build" year: {nobuild_year} (scen. {nobuild_scen})
-        - Horizon year: {horizon_year} (scen. {scen})
+        - Horizon year: {horizon_year} (scen. {horizon_scen})
 
-    Project IDs to be excluded from export:
-    {", ".join(id for id in excl_roadway)}
+    No-Build Network Project IDs:
+    {", ".join(id for id in nobuild_tipids)}
     '''
     arcpy.AddMessage(rsp_info_message)
-    scen_list = [nobuild_scen] #ignore "scenario years" parameter if RSP eval; only export nobuild_scen
 
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
@@ -102,7 +97,6 @@ overlap_network_csv = os.path.join(MHN.temp_dir, 'overlap_network.csv')
 sas1_log = os.path.join(MHN.temp_dir, '{}.log'.format(sas1_name))
 sas1_lst = os.path.join(MHN.temp_dir, '{}.lst'.format(sas1_name))
 
-
 # -----------------------------------------------------------------------------
 #  Clean up old temp files, if necessary.
 # -----------------------------------------------------------------------------
@@ -111,7 +105,6 @@ MHN.delete_if_exists(overlap_transact_csv)
 MHN.delete_if_exists(overlap_network_csv)
 MHN.delete_if_exists(sas1_log)
 MHN.delete_if_exists(sas1_lst)
-
 
 # -----------------------------------------------------------------------------
 #  Write tollsys.flag file, if desired.
@@ -219,16 +212,22 @@ else:
 for scen in scen_list:
     # Set scenario-specific parameters.
     if rsp_eval == True:
-        #for rsp eval, the queries are nobuild-based, and output location is horizon-based
-        scen_year = nobuild_year #for queries
-        scen_path = MHN.ensure_dir(os.path.join(hwy_path, horizon_scen)) #for output location
-        sas2_log = os.path.join(hwy_path, f'{sas2_name}_{horizon_scen}.log')
-        sas2_lst = os.path.join(hwy_path, f'{sas2_name}_{horizon_scen}.lst')
+        scen_year = horizon_year #for queries
+        scen_path = MHN.ensure_dir(os.path.join(hwy_path, scen)) #for output location
+        sas2_log = os.path.join(hwy_path, f'{sas2_name}_{scen}.log')
+        sas2_lst = os.path.join(hwy_path, f'{sas2_name}_{scen}.lst')
+        projects_query = f'''TIPID IN ('{"','".join(tipid for tipid in nobuild_tipids)}')'''
+        if rsp_number.isnumeric():
+            projects_query += f'OR "{rsp_column}" = {rsp_number}'
+        scen_message = 'Generating highway files...'
+        
     else:
         scen_year = MHN.scenario_years[scen]
         scen_path = MHN.ensure_dir(os.path.join(hwy_path, scen))
         sas2_log = os.path.join(hwy_path, f'{sas2_name}_{scen}.log')
         sas2_lst = os.path.join(hwy_path, f'{sas2_name}_{scen}.lst')
+        projects_query = f'"COMPLETION_YEAR" <= {scen_year}'
+        scen_message = 'Generating Scenario {} ({}) highway files...'.format(scen, scen_year)
         
     hwy_year_csv = os.path.join(scen_path, 'year.csv')
     hwy_transact_csv = os.path.join(scen_path, 'transact.csv')
@@ -242,22 +241,11 @@ for scen in scen_list:
     MHN.delete_if_exists(hwy_network_csv)
     MHN.delete_if_exists(hwy_nodes_csv)
     
-    arcpy.AddMessage('Generating Scenario {} ({}) highway files...'.format(scen, scen_year))
-    if rsp_eval == True:
-        arcpy.AddMessage(f'RSP RUN: \n - development year: {nobuild_year} \n - RSP number: {rsp_number}')    
+    arcpy.AddMessage(scen_message)  
     
     # Export coding for highway projects completed by scenario year.
     hwy_year_attr = [hwyproj_id_field, 'COMPLETION_YEAR']
-    yr_q = f'"COMPLETION_YEAR" <= {scen_year}'
-    rsp_q = f'"{rsp_column}" = {rsp_number}'
-    excl_q = f'''"{hwyproj_id_field}" NOT IN ('{"','".join(id for id in excl_roadway)}')'''
-    hwy_year_query = yr_q
-    if rsp_eval == True:
-        if rsp_number.isnumeric(): #if selected an rsp number, include in query
-            hwy_year_query = f''' ({yr_q} OR {rsp_q}) AND {excl_q}'''
-        else: #if selection was "none, or no build," don't include in query
-            hwy_year_query = f'''{yr_q} AND {excl_q}'''
-    hwy_year_view = MHN.make_skinny_table_view(MHN.hwyproj, 'hwy_year_view', hwy_year_attr, hwy_year_query)
+    hwy_year_view = MHN.make_skinny_table_view(MHN.hwyproj, 'hwy_year_view', hwy_year_attr, projects_query)
     MHN.write_attribute_csv(hwy_year_view, hwy_year_csv, hwy_year_attr)
     hwy_projects = [r for r in arcpy.da.SearchCursor(hwy_year_view, [hwyproj_id_field, 'COMPLETION_YEAR'])]
     arcpy.Delete_management(hwy_year_view)
@@ -316,10 +304,7 @@ for scen in scen_list:
     # Process attribute tables with generate_highway_files_2.sas.
     sas2_sas = os.path.join(MHN.src_dir, f'{sas2_name}.sas')
     sas2_args = [hwy_path, scen, MHN.max_poe, 
-                 MHN.base_year, int(abm_output), 0]
-    if rsp_eval:
-        sas2_args = [hwy_path, scen, MHN.max_poe, MHN.base_year, 
-                     int(abm_output), horizon_scen]
+                 MHN.base_year, int(abm_output)]
     MHN.submit_sas(sas2_sas, sas2_log, sas2_lst, sas2_args)
     if not os.path.exists(sas2_log):
         MHN.die('{} did not run!'.format(sas2_sas))
@@ -345,8 +330,6 @@ for scen in scen_list:
 
     # Calculate scenario mainline links' AM Peak lane-miles.
     scen_ampeak_l1 = os.path.join(scen_path, '{}03.l1'.format(scen))
-    if rsp_eval == True:
-        scen_ampeak_l1 = os.path.join(scen_path, '{}03.l1'.format(horizon_scen))
     mainline_lanemiles = {}
     with open(scen_ampeak_l1, 'r') as l1:
         for r in l1:
@@ -358,8 +341,8 @@ for scen in scen_list:
 
     # Create rsp_stats.txt.
     scen_rsp_tipids = {}
-    scen_rsp_query = f''' "COMPLETION_YEAR" <= {scen_year} AND "RSP_ID" IS NOT NULL '''
-    with arcpy.da.SearchCursor(MHN.hwyproj, ['RSP_ID', hwyproj_id_field], scen_rsp_query) as c:
+    scen_rsp_query = f''' "COMPLETION_YEAR" <= {scen_year} AND "{rsp_column}" IS NOT NULL '''
+    with arcpy.da.SearchCursor(MHN.hwyproj, [rsp_column, hwyproj_id_field], scen_rsp_query) as c:
         for rsp_id, tipid in c:
             if rsp_id not in scen_rsp_tipids:
                 scen_rsp_tipids[rsp_id] = set([tipid])
@@ -368,7 +351,7 @@ for scen in scen_list:
 
     rsp_stats = os.path.join(scen_path, 'rsp_stats.csv')
     with open(rsp_stats, 'w') as w:
-        w.write('RSP_ID,RSP_NAME,MAINLINE_LANEMILES\n')
+        w.write(f'{rsp_column},RSP_NAME,MAINLINE_LANEMILES\n')
         for rsp_id in sorted(scen_rsp_tipids.keys()):
             rsp_query = ''' "{}" IN ('{}') '''.format(hwyproj_id_field, "','".join(scen_rsp_tipids[rsp_id]))
             sc = arcpy.da.SearchCursor(MHN.route_systems[MHN.hwyproj][0], 
@@ -442,7 +425,7 @@ for scen in scen_list:
 
 #write out select link transaction file
 if rsp_eval:
-    if not 'NONE' in rsp_number:
+    if rsp_number.isnumeric():
         arcpy.AddMessage(f'  - Writing select link file for {rsp_number}')
         sl_dir = os.path.join(root_path, f'RCP_{rsp_number}.txt')
 
@@ -497,7 +480,7 @@ if rsp_eval:
         transact_links = lks['for_transactionfile'].tolist()
 
         with open(sl_dir, 'w') as file:
-            comment = f'~# select link: links for RCP_{rsp_number} for RCP evaluation\n'
+            comment = f'~# select link: links for RSP {rsp_number} for RSP evaluation\n'
             file.write(comment)
             for lk in transact_links:
                 file.write(f'l={lk}\n')
