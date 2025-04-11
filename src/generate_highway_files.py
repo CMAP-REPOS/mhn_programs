@@ -28,12 +28,13 @@ root_path = arcpy.GetParameterAsText(2)             # String, no default
 create_tollsys_flag = arcpy.GetParameter(3)         # Boolean, default = True
 abm_output = arcpy.GetParameter(4)                  # Boolean, default = False
 
+rsp_column = arcpy.GetParameter(5)                  # String, default = None
+
 #parameters for rsp evaluation -- 
 #  - if checked, script disregards scen_list and focuses
 #    solely on the RSP number selected and TIP ID's listed
 #    in the nobuild_tipids csv file.
-rsp_eval = arcpy.GetParameter(5)                    # Boolean, default = False
-rsp_column = arcpy.GetParameterAsText(6)            # String, default = None
+rsp_eval = arcpy.GetParameter(6)                    # Boolean, default = False
 rsp_number = arcpy.GetParameterAsText(7)            # String, default = None
 nobuild_tipid_csv = arcpy.GetParameterAsText(8)        # String, default = None
 horizon_year = arcpy.GetParameterAsText(9)         # String, default = None
@@ -340,9 +341,13 @@ for scen in scen_list:
                 mainline_lanemiles[ab] = lanemiles
 
     # Create rsp_stats.txt.
+    
+    ## HERE WE WILL IMPLEMENT GITHUB ISSUE #150 -- DESC FIELD WILL BE USED INSTEAD OF MHN.RSPS
+    #SEE COMMENTED SECTION BELOW FOR CODE BEGINNINGS
+    
     scen_rsp_tipids = {}
-    scen_rsp_query = f''' "COMPLETION_YEAR" <= {scen_year} AND "{rsp_column}" IS NOT NULL '''
-    with arcpy.da.SearchCursor(MHN.hwyproj, [rsp_column, hwyproj_id_field], scen_rsp_query) as c:
+    scen_rsp_query = f''' "COMPLETION_YEAR" <= {scen_year} AND "RSP_ID" IS NOT NULL '''
+    with arcpy.da.SearchCursor(MHN.hwyproj, ['RSP_ID', hwyproj_id_field], scen_rsp_query) as c:
         for rsp_id, tipid in c:
             if rsp_id not in scen_rsp_tipids:
                 scen_rsp_tipids[rsp_id] = set([tipid])
@@ -351,7 +356,7 @@ for scen in scen_list:
 
     rsp_stats = os.path.join(scen_path, 'rsp_stats.csv')
     with open(rsp_stats, 'w') as w:
-        w.write(f'{rsp_column},RSP_NAME,MAINLINE_LANEMILES\n')
+        w.write(f'RSP_ID,RSP_NAME,MAINLINE_LANEMILES\n')
         for rsp_id in sorted(scen_rsp_tipids.keys()):
             rsp_query = ''' "{}" IN ('{}') '''.format(hwyproj_id_field, "','".join(scen_rsp_tipids[rsp_id]))
             sc = arcpy.da.SearchCursor(MHN.route_systems[MHN.hwyproj][0], 
@@ -361,6 +366,35 @@ for scen in scen_list:
             w.write('{},{},{}\n'.format(rsp_id, MHN.rsps[rsp_id], rsp_lanemiles))
 
     arcpy.AddMessage('-- Scenario {} rsp_stats.csv generated successfully.'.format(scen))
+    
+    ## save this for another day -- see github issue #150
+    # def rsp_stats():
+    #     if rsp_column == 'NONE':
+    #         arcpy.AddMessage('RSP column not specified. rsp_stats.txt skipped.')
+    #         return 
+    #     else:
+    #         arcpy.AddMessage(f'RSP column: {rsp_column}. Generating rsp_stats.txt...')
+    
+    #         scen_rsp_tipids = {}
+    #         scen_rsp_query = f''' "COMPLETION_YEAR" <= {scen_year} AND "{rsp_column}" IS NOT NULL '''
+    #         with arcpy.da.SearchCursor(MHN.hwyproj, [rsp_column, hwyproj_id_field], scen_rsp_query) as c:
+    #             for rsp_id, tipid in c:
+    #                 if rsp_id not in scen_rsp_tipids:
+    #                     scen_rsp_tipids[rsp_id] = set([tipid])
+    #                 else:
+    #                     scen_rsp_tipids[rsp_id].add(tipid)
+    #         rsp_stats = os.path.join(scen_path, 'rsp_stats.csv')
+            # with open(rsp_stats, 'w') as w:
+            #     w.write(f'{rsp_column},RSP_NAME,MAINLINE_LANEMILES\n')
+            #     for rsp_id in sorted(scen_rsp_tipids.keys()):
+            #         rsp_query = ''' "{}" IN ('{}') '''.format(hwyproj_id_field, "','".join(scen_rsp_tipids[rsp_id]))
+            #         sc = arcpy.da.SearchCursor(MHN.route_systems[MHN.hwyproj][0], 
+            #                                 ['ABB'], rsp_query)
+            #         rsp_ab = set((r[0].rsplit('-', 1)[0] for r in sc))
+            #         rsp_lanemiles = sum((mainline_lanemiles[ab] for ab in rsp_ab if ab in mainline_lanemiles))
+            #         w.write('{},{},{}\n'.format(rsp_id, MHN.rsps[rsp_column], rsp_lanemiles))
+            # arcpy.AddMessage('-- Scenario {} rsp_stats.csv generated successfully.'.format(scen))
+    # rsp_stats()
 
     # Create linkshape.in.  
     def generate_linkshape(arcs, output_dir):
