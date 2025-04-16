@@ -36,9 +36,13 @@ root_path = arcpy.GetParameterAsText(2)             # String, no default
 
 ## parameters for RSP evaluation --
 rsp_eval = arcpy.GetParameter(3)                    # Boolean, default False
-rsp_id = arcpy.GetParameterAsText(4)                # String, contains rsp id if project is bus, not required unless rsp_eval is True
-nobuild_tipid_csv = arcpy.GetParameterAsText(5)     # String, filepath to TIP IDs that should be removed from no-build, not required unless rsp_eval is True
-horizon_year = arcpy.GetParameterAsText(6)          # string
+rsp_number = arcpy.GetParameterAsText(4)            # String, contains rsp id if project is bus
+nobuild_tipid_csv = arcpy.GetParameterAsText(5)     # String, filepath to TIP IDs that make up the no-build network
+horizon_year = arcpy.GetParameterAsText(6)          # String, replacement for scen_list if rsp_eval is True
+
+## --
+
+
 
 out_tod_periods = sorted(MHN.tod_periods['transit'].keys())
 
@@ -59,38 +63,29 @@ sas3_name = 'generate_transit_files_3'
 #   - ignore scenario years
 #   - only export scenario year associated with nobuild_year
 
-excl_transit = []
+nb_transit = []
 if rsp_eval:
-    arcpy.AddMessage(f'RSP Evaluation: \n - network year: {nobuild_year} \n - for RSP ID: {rsp_id}')
+    arcpy.AddMessage(f'RSP Evaluation: \n - horizon year: {horizon_year} \n - for RSP ID: {rsp_number}')
     #create list of excluded tip ids, if they exist
     #these will be filtered out of network export
     if nobuild_tipid_csv:
         with open(nobuild_tipid_csv, 'r') as f:
             for line in f:
-                excl_transit.append(line.strip())
-    arcpy.AddMessage(f'TIP IDs to be excluded from export: {", ".join(id for id in excl_transit)}')
+                nb_transit.append(line.strip())
+    arcpy.AddMessage(f'TIP IDs included in no-build: {", ".join(id for id in nb_transit)}')
                 
-    # find the closest lesser scen year to nobuild_year. will export networks at that scen year
+    # find the closest lesser scen year to horizon year. will export networks at that scen year
     scens = sorted(MHN.scenario_years.keys()) #sort scenario years smallest to largest
-    for s in scens:
-        if int(nobuild_year) >= MHN.scenario_years[s]:
-            rsp_scen = s
-        else:
-            break #stop looking when scen year is larger than nobuild_year
-    if not rsp_scen:
-        MHN.die('Chosen no-build year is not valid! Choose a number between 2019 and 2050 (inclusive).')
-        
-    scen_list = [rsp_scen] #ignore "scenario years" parameter if RSP eval; only export rsp_scen
-    
     for s in scens:
         if int(horizon_year) >= MHN.scenario_years[s]:
             horiz_scen = s
         else:
-            break #stop looking when scen year is larger than horizon_year
+            break #stop looking when scen year is larger than nobuild_year
     if not horiz_scen:
-        MHN.die('Chosen horizon year is not valid! Choose a number between 2019 and 2050 (inclusive).')
-    
-    arcpy.AddMessage(f'RSP network scen: {rsp_scen}. RSP horizon scen: {horiz_scen}')
+        MHN.die('Chosen no-build year is not valid! Choose a number between 2019 and 2050 (inclusive).')
+        
+    scen_list = [horiz_scen] #ignore "scenario years" parameter if RSP eval; only export horiz_scen
+
 # -----------------------------------------------------------------------------
 #  Set diagnostic output locations.
 # -----------------------------------------------------------------------------
@@ -371,10 +366,10 @@ for scen in scen_list:
             #base query -- 'scenario' field of bus_future contains first character of applicable scen code (e.g., '4', as in '400')
             bus_future_query = f''' "SCENARIO" LIKE '%{scen[0]}%' ''' 
             #if rsp run, add other elements to query:
-            if 'RSP' in rsp_id: #if RSP## was selected, add to query
-                bus_future_query = f''' ("SCENARIO" LIKE '%{scen[0]}%' OR "NOTES" LIKE '%{rsp_id}%') '''
-            if len(excl_transit)>0: #if csv had tipids in it to remove, add to query
-                bus_future_query += f''' AND NOT ("NOTES" LIKE {' OR "NOTES" LIKE '.join(f"'%{tipid}%'" for tipid in excl_transit)}) '''
+            if rsp_eval == True:
+                bus_future_query = f''' "NOTES" LIKE {' OR "NOTES" LIKE '.join(f"'%{tipid}%'" for tipid in nb_transit)} '''
+            if 'RSP' in rsp_number: #if RSP## was selected, add to query
+                bus_future_query += f''' OR "NOTES" LIKE {rsp_number} ''' 
             
             bus_future_view = MHN.make_skinny_table_view(bus_future_lyr, 'bus_future_view', bus_future_attr, bus_future_query)
             bus_future_csv = os.path.join(scen_tran_path, 'bus_future.csv')
@@ -577,7 +572,7 @@ for scen in scen_list:
             hwy_year_view = MHN.make_skinny_table_view(MHN.hwyproj, 'hwy_year_view', hwy_year_attr, hwy_year_query)
             hwyproj_years = {r[0]: r[1] for r in arcpy.da.SearchCursor(hwy_year_view, hwy_year_attr)}
             arcpy.Delete_management(hwy_year_view)
-
+            
             busway_coding_attr = [
                 hwyproj_id_field, 'ABB', 'NEW_MODES', 'NEW_DIRECTIONS',
                 'NEW_THRULANES1', 'NEW_THRULANES2', 'NEW_TYPE1', 'NEW_TYPE2',
