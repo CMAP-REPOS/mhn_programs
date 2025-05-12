@@ -23,7 +23,7 @@ class MasterHighwayNetwork(object):
 
     bus_years = {
         'base':    2015,  # Year that bus_base feature class represents
-        'current': 2016   # Year that bus_current feature class represents
+        'current': 2024   # Year that bus_current feature class represents
     }
 
     centroid_ranges = {
@@ -315,13 +315,13 @@ class MasterHighwayNetwork(object):
         self.node = os.path.join(self.hwynet, self.node_name)
         self.hwyproj = os.path.join(self.hwynet, 'hwyproj')
         self.bus_base = os.path.join(self.hwynet, 'bus_base')
-        self.bus_current = os.path.join(self.hwynet, 'bus_current')
-        self.bus_future = os.path.join(self.hwynet, 'bus_future')
+        self.bus_current = os.path.join(self.hwynet, 'bus_current_2024')
+        self.bus_future = os.path.join(self.hwynet, 'bus_future_2024')
         self.route_systems = {
             self.hwyproj: (os.path.join(self.gdb, 'hwyproj_coding'), 'TIPID', None, None),
             self.bus_base: (os.path.join(self.gdb, 'bus_base_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 0),
-            self.bus_current: (os.path.join(self.gdb, 'bus_current_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
-            self.bus_future: (os.path.join(self.gdb, 'bus_future_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
+            self.bus_current: (os.path.join(self.gdb, 'bus_current_itin_2024'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
+            self.bus_future: (os.path.join(self.gdb, 'bus_future_itin_2024'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
         }
         self.pnr_name = 'parknride'
         self.pnr = os.path.join(self.gdb, self.pnr_name)
