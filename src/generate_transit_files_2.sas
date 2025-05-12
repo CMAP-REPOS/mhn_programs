@@ -967,7 +967,7 @@ data stops; merge stops (in=hit) bnode; by itinb;
 
 data bustop; set stops end=eof;
     file out3 dsd;
-    put itinb x_b y_b;
+        put itinb x_b y_b;
     if eof = 1 then do;
         put 'END';
     end;
@@ -981,7 +981,7 @@ data ctabus; merge ctabus (in=hit) bnode; by itinb;
 
 data ctabus; set ctabus end=eof;
     file out4 dsd;
-    put itinb x_b y_b;
+        put itinb x_b y_b;
     if eof = 1 then do;
         put 'END';
     end;
@@ -995,7 +995,7 @@ data pacebus; merge pacebus (in=hit) bnode; by itinb;
 
 data pacebus; set pacebus end=eof;
     file out5 dsd;
-    put itinb x_b y_b;
+        put itinb x_b y_b;
     if eof = 1 then do;
         put 'END';
     end;

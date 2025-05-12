@@ -23,7 +23,7 @@ class MasterHighwayNetwork(object):
 
     bus_years = {
         'base':    2015,  # Year that bus_base feature class represents
-        'current': 2016   # Year that bus_current feature class represents
+        'current': 2024   # Year that bus_current feature class represents
     }
 
     centroid_ranges = {
