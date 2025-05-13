@@ -20,6 +20,7 @@
 
 '''
 import os
+import re
 import operator
 import arcpy
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
@@ -72,6 +73,10 @@ if rsp_eval:
         with open(nobuild_tipid_csv, 'r') as f:
             for line in f:
                 nb_transit.append(line.strip())
+                #add formatted tip id as well
+                formatted_nb_transit = line.strip().zfill(8)
+                formatted_nb_transit = re.sub(r"(\d{2})(\d{2})(\d{4})", r"\1-\2-\3", formatted_nb_transit)
+                nb_transit.append(formatted_nb_transit)
     arcpy.AddMessage(f'TIP IDs included in no-build: {", ".join(id for id in nb_transit)}')
                 
     # find the closest lesser scen year to horizon year. will export networks at that scen year
@@ -818,7 +823,7 @@ for scen in scen_list:
 
         generate_rail_pnt_files(rail_itin, rail_net, cta_stop, metra_stop, rail_access)
 
-
+        arcpy.AddMessage('    - aux links')
         # ---------------------------------------------------------------------
         # Create transit network links with modes c, m, u, v, w, x, y and z.
         # ---------------------------------------------------------------------
@@ -834,7 +839,7 @@ for scen in scen_list:
                 with open(pnt_file, 'r') as in_pts:
                     for row in in_pts:
                         row_list = row.strip().split(',')
-                        if len(row_list) == 3:
+                        if len(row_list) == 3 and not any([len(str(r))==0 for r in row_list]): # ignore blank lines
                             id_num = row_list[0]
                             x_coord = float(row_list[1])
                             y_coord = float(row_list[2])

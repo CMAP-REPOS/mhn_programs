@@ -139,7 +139,8 @@ class MasterHighwayNetwork(object):
             '1': ('1', '2', '3', '4', '5', '6', '7', '8'),  # All periods
             '2': ('2', '3', '4', '5'),                      # AM periods
             '3': ('1', '6', '7', '8'),                      # PM periods
-            '4': ('1', '5')                                 # Off-peak periods
+            '4': ('1', '5'),                                # Off-peak periods
+            '5': ('2','3','4','6','7','8')                  # AM/PM Peaks + Shoulders
         },
         'transit': {
             '1': ('1', '2', '3', '4'),  # All periods
