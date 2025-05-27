@@ -597,18 +597,18 @@ data coord; infile in4 dlm=',' dsd firstobs=2;
 
 *============================================================================*;
  ** CREATE BATCHIN FILES FOR SCENARIO OVERNIGHT. LINKS WITH AMPM1 OF 2 (AM **;
- ** ONLY) ARE DELETED FROM TEMPLATE.                                       **;
+ ** ONLY) ARE DELETED FROM TEMPLATE. -- or AMPM=5 (AM/PM Peak/Shoulder)     **;
 *============================================================================*;
 
 *---------------------------------------;
   ** SELECT LINKS FOR EMME LINK FILE **;
 *---------------------------------------;
-data emme2; set network(where=(ampm1 not in (2)));
+data emme2; set network(where=(ampm1 not in (2,5)));
 
 *--------------------------------------------------;
   ** FORMAT LINKS FOR EMME EXTRA ATTRIBUTE FILE **;
 *--------------------------------------------------;
-data links; set network2(where=(ampm1 not in (2)));
+data links; set network2(where=(ampm1 not in (2,5)));
 
 *----------------------------------------------------------------;
   ** FOLLOWING LINES WRITE OUT OVERNIGHT (1) FILES AND CREATE **;
@@ -632,7 +632,7 @@ data emme2; set network(where=(ampm1 not in (3,4)));
 *--------------------------------------------------;
   ** FORMAT LINKS FOR EMME EXTRA ATTRIBUTE FILE **;
 *--------------------------------------------------;
-data links; set network2(where=(ampm1 not in (3,4)));
+data links; set network2(where=((ampm1 not in (3,4))));
 
 *----------------------------------------------------------------;
   ** FOLLOWING LINES WRITE OUT AM PEAK (3) AND SHOULDER (2&4) **;
@@ -648,18 +648,18 @@ data links; set network2(where=(ampm1 not in (3,4)));
 
 *===========================================================================*;
  ** CREATE BATCHIN FILES FOR SCENARIO MIDDAY (10AM-2PM). LINKS WITH AMPM1 **;
- ** OF 3 (PM ONLY) ARE DELETED FROM TEMPLATE.                             **;
+ ** OF 3 (PM ONLY) ARE DELETED FROM TEMPLATE -- or AMPM=5 (AM/PM Peak/Shoulder)**;
 *===========================================================================*;
 
 *---------------------------------------;
   ** SELECT LINKS FOR EMME LINK FILE **;
 *---------------------------------------;
-data emme2; set network(where=(ampm1 not in (3)));
+data emme2; set network(where=(ampm1 not in (3,5)));
 
 *--------------------------------------------------;
   ** FORMAT LINKS FOR EMME EXTRA ATTRIBUTE FILE **;
 *--------------------------------------------------;
-data links; set network2(where=(ampm1 not in (3)));
+data links; set network2(where=(ampm1 not in (3,5)));
 
 *-------------------------------------------------------------;
   ** FOLLOWING LINES WRITE OUT MIDDAY (5) FILES AND CREATE **;

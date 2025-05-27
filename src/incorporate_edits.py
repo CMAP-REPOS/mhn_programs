@@ -18,6 +18,7 @@
 '''
 import os
 import arcpy
+import numpy as np
 from MHN import MasterHighwayNetwork  # Custom class for MHN processing functionality
 
 # -----------------------------------------------------------------------------
@@ -45,6 +46,115 @@ MHN.delete_if_exists(bad_truckres_shp)
 MHN.delete_if_exists(duplicate_nodes_shp)
 MHN.delete_if_exists(overlapping_nodes_shp)
 MHN.delete_if_exists(ab_duplicates_shp)
+
+# -----------------------------------------------------------------------------
+# Functions replacing Advanced license tools:
+# -----------------------------------------------------------------------------
+
+#arcpy.management.FeatureVerticesToPoints()
+#  - borrowed from xbakker on esri community forums and lightly edited for this script:
+#  - https://community.esri.com/t5/python-questions/want-featureverticestopoints-management/td-p/135709
+
+def FeatureVerticesToPoints(fc_in, fc_out, method):
+    """
+    Converts the vertices of features in a feature class to points.
+    The method parameter determines which vertices are extracted.
+    """
+    # check if input is a feature class
+    if not arcpy.Exists(fc_in):
+        raise ValueError("Input feature class does not exist: {}".format(fc_in))
+
+    # check if output feature class already exists
+    if arcpy.Exists(fc_out):
+        raise ValueError("Output feature class already exists: {}".format(fc_out))
+    
+    # check if method is valid
+    valid_methods = ['ALL', 'MID', 'START', 'END', 'BOTH_ENDS']
+    if method not in valid_methods:
+        raise ValueError("Invalid method specified: {}. Choose from 'ALL', 'MID', 'START', 'END', 'BOTH_ENDS'.".format(method))
+    
+    # fld para poder hacer el join con la entrada
+    fld_oid_in = "ORIG_FID"
+    
+    #non-shape and non-oid fields from input fc
+    fc_in_fields = [f for f in arcpy.ListFields(fc_in) if not any(x in f.type for x in ['Geometry', 'OID', 'GlobalID'])]
+
+    # geometria de salida
+    geomtype = "POINT"
+    sr = arcpy.Describe(fc_in).spatialReference
+
+    # recreate fc_out based on fc_lines (in)
+    ws_name, fc_name = os.path.split(fc_out)
+    arcpy.management.CreateFeatureclass(
+        out_path=ws_name,
+        out_name=fc_name,
+        geometry_type=geomtype,
+        spatial_reference=sr,
+    )
+
+    # add "ORIG_FID" field, and other fields from input feature class
+    arcpy.AddField_management(fc_out, fld_oid_in, "LONG")
+    for field in fc_in_fields:
+        # arcpy.AddMessage("Adding field: {}".format(field.name))
+        # arcpy.AddMessage("Type: {}, Precision: {}, Scale: {}, Length: {}, Alias: {}, Nullable: {}, Required: {}, Domain: {}".format(field.type, field.precision, field.scale, field.length, field.aliasName, field.isNullable, field.required, field.domain))
+        arcpy.management.AddField(
+            in_table=fc_out,
+            field_name=field.name,
+            field_type=field.type,
+            field_precision=field.precision,
+            field_scale=field.scale,
+            field_length=field.length,
+            field_alias=field.aliasName,
+            field_is_nullable=field.isNullable,
+            field_is_required=field.required,
+            field_domain=field.domain
+        )
+
+    # cursors:
+    # output cursor fields
+    c_out_fields = [f.name for f in fc_in_fields]
+    flds_out = ("SHAPE@", fld_oid_in,) + tuple(c_out_fields)
+    flds_in = ("SHAPE@", "OID@",) + tuple(c_out_fields)
+        
+    with arcpy.da.InsertCursor(fc_out, flds_out) as curs_out:
+        # flds_in =("SHAPE@", "OID@")
+        with arcpy.da.SearchCursor(fc_in, flds_in) as curs:
+            for row in curs:
+                feat = row[0]
+                oid = row[1]
+                carryover_fields = row[2:] if len(row)>2 else []
+                
+                # get vertices from feature
+                if feat.type == "polygon":
+                    polyline = feat.boundary()
+                else:
+                    polyline = feat
+
+                lst_vertices = []
+                
+                if method == "ALL":
+                    for part in polyline:
+                        for pnt in part:
+                            lst_vertices.append(pnt)
+
+                elif method == "MID":
+                    pnt = polyline.positionAlongLine(0.5, True)
+                    lst_vertices.append(pnt)
+
+                elif method == "START":
+                    lst_vertices.append(polyline.firstPoint)
+
+                elif method == "END":
+                    lst_vertices.append(polyline.lastPoint)
+
+                elif method == "BOTH_ENDS":
+                    lst_vertices.append(polyline.firstPoint)
+                    lst_vertices.append(polyline.lastPoint)
+
+                # store vertices
+                for vertex in lst_vertices:
+                    out_data = (vertex, oid,) + tuple(carryover_fields)
+                    curs_out.insertRow(out_data)
 
 
 # -----------------------------------------------------------------------------
@@ -122,17 +232,23 @@ else:
 # Generate ANODES, including a copy with no BNODE field.
 anodes = os.path.join(MHN.mem, 'anodes')
 anodes_copy = os.path.join(MHN.mem, 'anodes_copy')
-arcpy.FeatureVerticesToPoints_management(temp_arcs, anodes, 'START')
+# arcpy.FeatureVerticesToPoints_management(temp_arcs, anodes, 'START')
+FeatureVerticesToPoints(temp_arcs, anodes, 'START')
 arcpy.CopyFeatures_management(anodes, anodes_copy)
 arcpy.DeleteField_management(anodes_copy, ['BNODE'])
 
 # Generate BNODES, including a copy with no ANODE field.
 bnodes = os.path.join(MHN.mem, 'bnodes')
 bnodes_copy = os.path.join(MHN.mem, 'bnodes_copy')
-arcpy.FeatureVerticesToPoints_management(temp_arcs, bnodes, 'END')
+# arcpy.FeatureVerticesToPoints_management(temp_arcs, bnodes, 'END')
+FeatureVerticesToPoints(temp_arcs, bnodes, 'END')
 arcpy.CopyFeatures_management(bnodes, bnodes_copy)
 arcpy.DeleteField_management(bnodes_copy, ['ANODE'])
 
+anodes_test = os.path.join(MHN.gdb, 'anodes_test')
+bnodes_test = os.path.join(MHN.gdb, 'bnodes_test')
+# arcpy.management.CopyFeatures(anodes_copy, anodes_test)
+# arcpy.management.CopyFeatures(bnodes_copy, bnodes_test)
 
 # -----------------------------------------------------------------------------
 #  Merge ANODES and BNODES, dissolving to create two sets of points: one with
@@ -352,20 +468,30 @@ else:
 #  Update node/arc attributes.
 # -----------------------------------------------------------------------------
 # Calculate node SUBZONE, ZONE and CAPACITY ZONE using Identity tool
+union_new_nodes_CZ = os.path.join(MHN.mem, 'union_new_nodes_CZ')
 new_nodes_CZ = os.path.join(MHN.mem, 'new_nodes_CZ')
 subzone_lyr = MHN.make_skinny_feature_layer(MHN.subzone, 'subzone_lyr', [MHN.zone_attr, MHN.subzone_attr, MHN.capzone_attr])
-arcpy.Identity_analysis(new_nodes, subzone_lyr, new_nodes_CZ, 'NO_FID')
+
+# arcpy.Identity_analysis(new_nodes, subzone_lyr, new_nodes_CZ, 'NO_FID')
+# arcpy.analysis.Intersect([new_nodes, subzone_lyr], new_nodes_CZ, join_attributes='NO_FID')
+arcpy.analysis.SpatialJoin(new_nodes, subzone_lyr, new_nodes_CZ, match_option='INTERSECT', join_operation='JOIN_ONE_TO_MANY')
 
 # Calculate node IM AREA using Identity tool
 new_nodes_CZI = os.path.join(MHN.mem, 'new_nodes_CZI')
 imarea_lyr = MHN.make_skinny_feature_layer(MHN.imarea, 'imarea_lyr', [MHN.imarea_attr])
-arcpy.Identity_analysis(new_nodes_CZ, imarea_lyr, new_nodes_CZI, 'NO_FID')
+# arcpy.Identity_analysis(new_nodes_CZ, imarea_lyr, new_nodes_CZI, 'NO_FID')
+# arcpy.analysis.Intersect([new_nodes_CZ, imarea_lyr], new_nodes_CZI, join_attributes='NO_FID')
+arcpy.analysis.SpatialJoin(new_nodes_CZ, imarea_lyr, new_nodes_CZI, match_option='INTERSECT', join_operation='JOIN_ONE_TO_MANY')
 
 # Delete (arbitrarily) duplicates created from nodes lying exactly on border of 2+ subzone/zone/capzone/imarea polys
 arcpy.DeleteIdentical_management(new_nodes_CZI, ['Shape', 'NODE'])
 with arcpy.da.UpdateCursor(new_nodes_CZI, ['NODE', MHN.zone_attr, MHN.subzone_attr, MHN.capzone_attr, MHN.imarea_attr]) as zoned_nodes_cursor:
     for zoned_node in zoned_nodes_cursor:
         node = zoned_node[0]
+        if any(v is None for v in zoned_node[1:5]):
+            for x in range(1,5):
+                if zoned_node[x] is None:
+                    zoned_node[x] = 0
         zone = zoned_node[1]
         subzone = zoned_node[2]
         capzone = zoned_node[3]
@@ -392,10 +518,15 @@ arcpy.AddMessage('-- Node {}, {}, {} & {} fields recalculated'.format(MHN.zone_a
 # Calculate arc ANODE and BNODE values.
 anodes_id = os.path.join(MHN.mem, 'anodes_id')
 bnodes_id = os.path.join(MHN.mem, 'bnodes_id')
-arcpy.Identity_analysis(anodes, new_nodes, anodes_id)
-arcpy.Identity_analysis(bnodes, new_nodes, bnodes_id)
+# identity ( in_features, identity_features, out_feature_class)
+# arcpy.Identity_analysis(anodes, new_nodes, anodes_id)
+# arcpy.Identity_analysis(bnodes, new_nodes, bnodes_id)
+arcpy.analysis.SpatialJoin(anodes, new_nodes, anodes_id, match_option='INTERSECT')
+arcpy.analysis.SpatialJoin(bnodes, new_nodes, bnodes_id, match_option='INTERSECT')
+
 anodes_id_dict = MHN.make_attribute_dict(anodes_id, 'ORIG_FID', ['NODE'])
 bnodes_id_dict = MHN.make_attribute_dict(bnodes_id, 'ORIG_FID', ['NODE'])
+
 with arcpy.da.UpdateCursor(temp_arcs, ['OID@', 'ANODE', 'BNODE']) as arcs_cursor:
     for arc in arcs_cursor:
         OID = arc[0]
@@ -645,7 +776,7 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
                         F_MEAS = split_itin_dict[max_itin_OID]['F_MEAS']
                         T_MEAS = split_itin_dict[max_itin_OID]['T_MEAS']
                         meas_diff = T_MEAS - F_MEAS
-                        if header_name == 'bus_future':
+                        if header_name == MHN.break_path(MHN.bus_future)['name']:
                             future = True
                         else:
                             future = False
@@ -683,10 +814,19 @@ def update_route_system(header, itin, vertices_comprising, split_dict_ABB, new_A
     # Sort records into a second table in memory.
     itin_updated = os.path.join(MHN.mem, '{}_itin_updated'.format(header_name))
     if order_field:
-        arcpy.Sort_management(itin_copy, itin_updated, [[common_id_field,'ASCENDING'], [order_field,'ASCENDING']])
+        # arcpy.Sort_management(itin_copy, itin_updated, [[common_id_field,'ASCENDING'], [order_field,'ASCENDING']])
+        itin_updated_np = arcpy.da.TableToNumPyArray(itin_copy, '*')
+        order_me = [common_id_field, order_field] if order_field else [common_id_field]
+        itin_updated_np = np.sort(itin_updated_np, order=order_me)
+        arcpy.da.NumPyArrayToTable(itin_updated_np, itin_updated)
     else:
-        arcpy.Sort_management(itin_copy, itin_updated, [[common_id_field,'ASCENDING']])
+        # arcpy.Sort_management(itin_copy, itin_updated, [[common_id_field,'ASCENDING']])
+        itin_updated_np = arcpy.da.TableToNumPyArray(itin_copy, '*')
+        order_me = [common_id_field, order_field] if order_field else [common_id_field]
+        utin_updated_np = np.sort(itin_updated_np, order=order_me)
+        arcpy.da.NumPyArrayToTable(itin_updated_np, itin_updated)
     arcpy.Delete_management(itin_copy)
+    del itin_updated_np
 
     # Re-build line features.
     header_updated_path = MHN.mem

@@ -28,13 +28,13 @@ root_path = arcpy.GetParameterAsText(2)             # String, no default
 create_tollsys_flag = arcpy.GetParameter(3)         # Boolean, default = True
 abm_output = arcpy.GetParameter(4)                  # Boolean, default = False
 
-rsp_column = arcpy.GetParameter(5)                  # String, default = None
 
 #parameters for rsp evaluation -- 
 #  - if checked, script disregards scen_list and focuses
 #    solely on the RSP number selected and TIP ID's listed
 #    in the nobuild_tipids csv file.
-rsp_eval = arcpy.GetParameter(6)                    # Boolean, default = False
+rsp_eval = arcpy.GetParameter(5)                    # Boolean, default = False
+rsp_column = arcpy.GetParameter(6)                  # String, default = None
 rsp_number = arcpy.GetParameterAsText(7)            # String, default = None
 nobuild_tipid_csv = arcpy.GetParameterAsText(8)        # String, default = None
 horizon_year = arcpy.GetParameterAsText(9)         # String, default = None
@@ -83,9 +83,6 @@ if rsp_eval == True:
     RSP evaluation:
         - RSP ID: {rsp_number}
         - Horizon year: {horizon_year} (scen. {horizon_scen})
-
-    No-Build Network Project IDs:
-    {", ".join(id for id in nobuild_tipids)}
     '''
     arcpy.AddMessage(rsp_info_message)
 
@@ -367,35 +364,41 @@ for scen in scen_list:
 
     arcpy.AddMessage('-- Scenario {} rsp_stats.csv generated successfully.'.format(scen))
     
-    ## save this for another day -- see github issue #150
+    # github issue #150
+    # consider adding a desc field to hwyproj table, so that this can be pulled from dataset instead of MHN module
     # def rsp_stats():
-    #     if rsp_column == 'NONE':
-    #         arcpy.AddMessage('RSP column not specified. rsp_stats.txt skipped.')
-    #         return 
+    #     if rsp_eval != True:
+    #         rsp_col = 'RSP_ID' # This is the default column for the tool
+    #         arcpy.AddMessage('-- Generating rsp_stats.txt (using "RSP_ID" column)...)')
+    #         all_rsp_nums = MHN.rsps.keys()
     #     else:
-    #         arcpy.AddMessage(f'RSP column: {rsp_column}. Generating rsp_stats.txt...')
-    
-    #         scen_rsp_tipids = {}
-    #         scen_rsp_query = f''' "COMPLETION_YEAR" <= {scen_year} AND "{rsp_column}" IS NOT NULL '''
-    #         with arcpy.da.SearchCursor(MHN.hwyproj, [rsp_column, hwyproj_id_field], scen_rsp_query) as c:
-    #             for rsp_id, tipid in c:
-    #                 if rsp_id not in scen_rsp_tipids:
-    #                     scen_rsp_tipids[rsp_id] = set([tipid])
-    #                 else:
-    #                     scen_rsp_tipids[rsp_id].add(tipid)
-    #         rsp_stats = os.path.join(scen_path, 'rsp_stats.csv')
-            # with open(rsp_stats, 'w') as w:
-            #     w.write(f'{rsp_column},RSP_NAME,MAINLINE_LANEMILES\n')
-            #     for rsp_id in sorted(scen_rsp_tipids.keys()):
-            #         rsp_query = ''' "{}" IN ('{}') '''.format(hwyproj_id_field, "','".join(scen_rsp_tipids[rsp_id]))
-            #         sc = arcpy.da.SearchCursor(MHN.route_systems[MHN.hwyproj][0], 
-            #                                 ['ABB'], rsp_query)
-            #         rsp_ab = set((r[0].rsplit('-', 1)[0] for r in sc))
-            #         rsp_lanemiles = sum((mainline_lanemiles[ab] for ab in rsp_ab if ab in mainline_lanemiles))
-            #         w.write('{},{},{}\n'.format(rsp_id, MHN.rsps[rsp_column], rsp_lanemiles))
-            # arcpy.AddMessage('-- Scenario {} rsp_stats.csv generated successfully.'.format(scen))
+    #         arcpy.AddMessage(f'-- RSP column: {rsp_column}. Generating rsp_stats.txt...')
+    #         rsp_col = rsp_column
+    #         all_rsp_nums = MHN.rcps.keys()
+        
+    #     scen_rsp_tipids = {}
+        
+    #     scen_rsp_query = f''' "COMPLETION_YEAR" <= {scen_year} AND "{rsp_col}" IS NOT NULL '''
+    #     with arcpy.da.SearchCursor(MHN.hwyproj, [rsp_col, hwyproj_id_field], scen_rsp_query) as c:
+    #         for rsp_id, tipid in c:
+    #             if rsp_id not in scen_rsp_tipids:
+    #                 scen_rsp_tipids[rsp_id] = set([tipid])
+    #             else:
+    #                 scen_rsp_tipids[rsp_id].add(tipid)
+    #     rsp_stats = os.path.join(scen_path, 'rsp_stats.csv')
+    #     with open(rsp_stats, 'w') as w:
+    #         w.write(f'{rsp_col},NAME,MAINLINE_LANEMILES\n')
+    #         for rsp_id in sorted(scen_rsp_tipids.keys()):
+    #             rsp_query = ''' "{}" IN ('{}') '''.format(hwyproj_id_field, "','".join(scen_rsp_tipids[rsp_id]))
+    #             sc = arcpy.da.SearchCursor(MHN.route_systems[MHN.hwyproj][0], 
+    #                                     ['ABB'], rsp_query)
+    #             rsp_ab = set((r[0].rsplit('-', 1)[0] for r in sc))
+    #             rsp_lanemiles = sum((mainline_lanemiles[ab] for ab in rsp_ab if ab in mainline_lanemiles))
+    #             w.write('{},{},{}\n'.format(rsp_id, MHN.rsps[rsp_column], rsp_lanemiles))
+    #     arcpy.AddMessage('-- Scenario {} rsp_stats.csv generated successfully.'.format(scen))
     # rsp_stats()
 
+    arcpy.AddMessage(f'Generating highway.linkshape files...')
     # Create linkshape.in.  
     def generate_linkshape(arcs, output_dir):
         linkshape = os.path.join(output_dir, 'highway.linkshape')
@@ -405,36 +408,30 @@ for scen in scen_list:
         w.write('t linkvertices\n')
 
         def write_vertices(fc, writer, reversed=False):
-            with arcpy.da.SearchCursor(fc, ['SHAPE@', 'ANODE', 'BNODE']) as cursor:
-                for row in cursor:
-                    arc = row[0]
-                    if not reversed:
-                        fnode = str(row[1])
-                        tnode = str(row[2])
-                    else:
-                        fnode = str(row[2])  # ANODE now references to-node
-                        tnode = str(row[1])  # BNODE now references from-node
-                    writer.write(' '.join(['r', fnode, tnode]) + '\n')
-                    n = 0  # Before for-loop, will not be reset if an arc is multi-part for some reason
-                    for part in arc:
-                        try:
-                            vertex = part.next()
-                        except:
-                            # Must be using ArcGIS Pro...
-                            vertex = next(part)
-                        while vertex:
-                            n += 1
-                            writer.write(' '.join(['a', fnode, tnode, str(n), str(vertex.X), str(vertex.Y)]) + '\n')
-                            try:
-                                vertex = part.next()
-                            except:
-                                vertex = next(part)
-                            if not vertex:
-                                try:
-                                    vertex = part.next()
-                                except:
-                                    vertex = next(part)
-            return None
+            fc_np_points = arcpy.da.FeatureClassToNumPyArray(
+                fc,
+                ['ANODE', 'BNODE', 'SHAPE@X', 'SHAPE@Y'],
+                explode_to_points=True
+                )
+            fc_df_points = pd.DataFrame(fc_np_points)
+            if reversed: #flip a and b nodes if reversed
+                fc_df_points.rename(columns={'ANODE': 'BNODE', 'BNODE': 'ANODE'}, inplace=True)
+            unique_links = fc_df_points[['ANODE','BNODE']].drop_duplicates()
+            for i, row in unique_links.iterrows():
+                link_points = fc_df_points.loc[
+                    (fc_df_points['ANODE'] == row['ANODE']) & 
+                    (fc_df_points['BNODE'] == row['BNODE'])
+                ].copy()
+                if reversed: #flip point order if reversed
+                    link_points.reset_index(drop=True, inplace=True)
+                    link_points.sort_index(ascending=False, inplace=True)
+                fnode = str(row['ANODE'])
+                tnode = str(row['BNODE'])                
+                writer.write(' '.join(['r', fnode, tnode]) + '\n')
+                n = 0 # Before for-loop, will not be reset if an arc is multi-part for some reason
+                for i, row in link_points.iterrows():
+                    n += 1
+                    writer.write(' '.join(['a', fnode, tnode, str(n), str(row['SHAPE@X']), str(row['SHAPE@Y'])]) + '\n')
 
         arcs_mem = os.path.join(MHN.mem, 'arcs')
         arcpy.CopyFeatures_management(arcs, arcs_mem)
@@ -444,7 +441,6 @@ for scen in scen_list:
         arcs_2dir_lyr = 'arcs_2dir'
         arcpy.MakeFeatureLayer_management(arcs_mem, arcs_2dir_lyr, ''' "DIRECTIONS" <> '1' ''')
         arcpy.CopyFeatures_management(arcs_2dir_lyr, arcs_mem_flipped)
-        arcpy.FlipLine_edit(arcs_mem_flipped)
         write_vertices(arcs_mem_flipped, w, reversed=True)
 
         w.close()
@@ -460,8 +456,11 @@ for scen in scen_list:
 #write out select link transaction file
 if rsp_eval:
     if rsp_number.isnumeric():
-        arcpy.AddMessage(f'  - Writing select link file for {rsp_number}')
+        arcpy.AddMessage(f'-- Writing select link file for {rsp_number}')
         sl_dir = os.path.join(root_path, f'RCP_{rsp_number}.txt')
+
+        if os.path.exists(sl_dir):
+            os.remove(sl_dir)
 
         proj_id_field = MHN.route_systems[MHN.hwyproj][1] #TIPID
         tipid_yr = arcpy.da.TableToNumPyArray(
@@ -473,35 +472,78 @@ if rsp_eval:
         tipid_yr.sort(order='COMPLETION_YEAR')
         tipid = list(tipid_yr[proj_id_field])
 
-        arcpy.AddMessage(f"TIPID(s) found for RSP {rsp_number}: \n{', '.join(t for t in tipid)}")
+        arcpy.AddMessage(f"  - TIPID(s) for RSP {rsp_number}: \n{', '.join(t for t in tipid)}")
+
 
         tipid_q = f''' TIPID IN ('{"','".join(t for t in tipid)}') '''
-        print(tipid_q)
         action_q = "ACTION_CODE IN ('1','2','4')"
-        lks = arcpy.da.TableToNumPyArray(
+        proj_coding = arcpy.da.TableToNumPyArray(
             in_table = MHN.route_systems[MHN.hwyproj][0],
-            field_names=['ABB', 'REP_ANODE', 'REP_BNODE', 'TIPID', 'ACTION_CODE'],
+            field_names=['ABB', 'REP_ANODE', 'REP_BNODE', 'TIPID', 'ACTION_CODE', 'NEW_DIRECTIONS'],
             where_clause= f'{tipid_q} AND {action_q}'''
             )
+        
+        proj_coding = pd.DataFrame(proj_coding)
+        
+        #get directions info on baselinks that were modified/added, join to coding
+        proj_coding_add_modify = proj_coding.loc[proj_coding['ACTION_CODE'].astype(int).isin([1,4])]
+        add_mod_lks = proj_coding_add_modify['ABB'].unique().tolist()
+        add_mod_lks = arcpy.da.TableToNumPyArray(
+            in_table = MHN.arc,
+            field_names=['ABB', 'DIRECTIONS'],
+            where_clause=f''' ABB IN ('{"','".join(add_mod_lks)}')'''
+        )
+        add_mod_lks = pd.DataFrame(add_mod_lks)
+        proj_coding_add_modify = pd.merge(proj_coding_add_modify, add_mod_lks, on='ABB', how='left')
+        proj_coding_add_modify['DIRECTIONS'] = np.where(
+            proj_coding_add_modify['NEW_DIRECTIONS'].astype(str).str.strip() == '0',
+            proj_coding_add_modify['DIRECTIONS'],
+            proj_coding_add_modify['NEW_DIRECTIONS']
+        )
+        proj_coding_add_modify = proj_coding_add_modify[['ABB', 'DIRECTIONS']]
+        add_1 = proj_coding_add_modify.loc[proj_coding_add_modify['DIRECTIONS'].astype(str).str.strip()=='1']
+        add_1 = add_1['ABB'].unique().tolist()
+        add_2 = proj_coding_add_modify.loc[proj_coding_add_modify['DIRECTIONS'].astype(str).str.strip() != '1']
+        add_2 = add_2['ABB'].unique().tolist()
+        arcpy.AddMessage(f'{len(add_1)} one-directional add/modify links: {add_1}')
+        arcpy.AddMessage(f'{len(add_2)} two-directional add/modify links: {add_2}')
+        
+        #get directions info on replaced links
+        proj_coding_replace = proj_coding.loc[proj_coding['ACTION_CODE'].astype(int)==2].copy()
+        proj_coding_replace['ABB_REP'] = proj_coding_replace['REP_ANODE'].astype(str) + '-' + proj_coding_replace['REP_BNODE'].astype(str) + '-1' #make abb for replaced
+        arcpy.AddMessage(f'links that are replaced: {proj_coding_replace["ABB_REP"].unique().tolist()}')
+        lks_replace = proj_coding_replace['ABB_REP'].unique().tolist()
+        lks_replace = arcpy.da.TableToNumPyArray(
+            in_table = MHN.arc,
+            field_names=['ABB', 'DIRECTIONS'],
+            where_clause=f'''ABB IN ('{"','".join(lks_replace)}')'''
+        )
+        lks_replace = pd.DataFrame(lks_replace)
+        lks_replace.rename(columns={'ABB': 'ABB_REP'}, inplace=True)
+        proj_coding_replace = pd.merge(proj_coding_replace, lks_replace, on='ABB_REP', how='left')
+        proj_coding_replace = proj_coding_replace[['ABB', 'DIRECTIONS']]
+        add_1 = proj_coding_replace.loc[proj_coding_replace['DIRECTIONS'].astype(str).str.strip()=='1']
+        add_1 = add_1['ABB'].unique().tolist()
+        add_2 = proj_coding_replace.loc[proj_coding_replace['DIRECTIONS'].astype(str).str.strip() != '1']
+        add_2 = add_2['ABB'].unique().tolist()
+        arcpy.AddMessage(f'{len(add_1)} one-directional replace links: {add_1}')
+        arcpy.AddMessage(f'{len(add_2)} two-directional replace links: {add_2}')
+        
+        lks = pd.concat([proj_coding_add_modify, proj_coding_replace], ignore_index=True)
 
-        lks = pd.DataFrame(lks)
-        lks = pd.merge(lks, pd.DataFrame(tipid_yr), on='TIPID')
-
-        print(f'all project coding: {len(lks)}')
-
-        deletes_df = lks.loc[lks['ACTION_CODE'].astype(int)==3]
-        print(f'{len(deletes_df)} delete links')
-        delete_list = deletes_df['ABB'].unique().tolist()
-
-        lks.drop(index=lks.loc[lks['ABB'].isin(delete_list)].index, inplace=True)
-
-        replaces_df = lks.loc[lks['ACTION_CODE'].astype(int)==2].copy()
-        print(f'{len(replaces_df)} replace links')
-        replaces_df['AB'] = replaces_df['REP_ANODE'].astype(str) + '-' + replaces_df['REP_BNODE'].astype(str)
-        replace_list = replaces_df['AB'].unique().tolist()
-
-        ab_regex = '|'.join(replace_list)
-        lks.drop(index=lks.loc[lks['ABB'].str.contains(ab_regex, regex=True)].index, inplace=True)
+        # lks['DIRECTIONS'].fillna(0, inplace=True)
+        # lks['DIRECTIONS'] = np.where(lks['NEW_DIRECTIONS'].astype(int)==0, lks['DIRECTIONS'], lks['NEW_DIRECTIONS'])
+        if len(lks[lks['DIRECTIONS'].astype(int) == 0]) > 0:
+            arcpy.AddWarning(f"links with no directions in coding. -- {lks.loc[lks['DIRECTIONS']==0, 'ABB'].tolist()}")
+        #for bidirectional links, create reverse links
+        lks_reverse = lks.loc[lks['DIRECTIONS'].astype(str).str.strip() != '1'].copy()
+        lks_reverse['OLD_A'] = lks_reverse['ABB'].apply(lambda x: x.split('-')[0].strip())
+        lks_reverse['OLD_B'] = lks_reverse['ABB'].apply(lambda x: x.split('-')[1].strip())
+        lks_reverse['BASE'] = lks_reverse['ABB'].apply(lambda x: x.split('-')[2].strip())
+        #{reverse link abb} = "{old b-node}-{old a-node}-{baselink flag}"
+        lks_reverse['ABB'] = lks_reverse['OLD_B'] + '-' + lks_reverse['OLD_A'] + '-' + lks_reverse['BASE']
+        lks_reverse.drop(columns=['OLD_A', 'OLD_B', 'BASE'], inplace=True)
+        lks = pd.concat([lks, lks_reverse], ignore_index=True)
 
         lks.drop_duplicates(subset='ABB', inplace=True)
 
@@ -512,9 +554,13 @@ if rsp_eval:
 
         lks['for_transactionfile'] = lks['ABB'].apply(abb_to_transact)
         transact_links = lks['for_transactionfile'].tolist()
+        
+        arcpy.AddMessage(transact_links)
 
         with open(sl_dir, 'w') as file:
             comment = f'~# select link: links for RSP {rsp_number} for RSP evaluation\n'
             file.write(comment)
             for lk in transact_links:
                 file.write(f'l={lk}\n')
+        
+arcpy.AddMessage(f'All done!')

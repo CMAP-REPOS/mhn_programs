@@ -24,6 +24,7 @@ class MasterHighwayNetwork(object):
     bus_years = {
         'base':    2015,  # Year that bus_base feature class represents
         'current': 2024   # Year that bus_current feature class represents
+        #"current" yr will change if different year specified in MHN object init
     }
 
     centroid_ranges = {
@@ -320,17 +321,17 @@ class MasterHighwayNetwork(object):
         14141: 'IL 120 from Wilson Rd to US 41 IL 53/120 Tollway (IL 120 Bypass)',
         14142: 'US 12 Richmond West Bypass from Wisconsin State Line to IL 31 Tryon Grove Rd',
         14161: 'I-57 Interchange Improvements',
-        32151: 'Metra BNSF Line Improvements',
-        33147: 'Metra Electric Line Improvements',
-        33148: 'Metra Rock Island Improvements',
-        33149: 'Metra SWS Line Improvements',
-        33150: 'Metra HC Line Improvements',
-        33152: 'Metra UPW Line Improvements',
-        33153: 'Metra MDW Line Improvements',
-        33154: 'Metra UPNW Line Improvements & Extension',
-        33155: 'Metra MDN Line Improvements',
-        33156: "Metra O'Hare Express & NCS Line Improvements",
-        33157: 'Metra UPN Line Improvements',
+        # 32151: 'Metra BNSF Line Improvements',
+        # 33147: 'Metra Electric Line Improvements',
+        # 33148: 'Metra Rock Island Improvements',
+        # 33149: 'Metra SWS Line Improvements',
+        # 33150: 'Metra HC Line Improvements',
+        # 33152: 'Metra UPW Line Improvements',
+        # 33153: 'Metra MDW Line Improvements',
+        # 33154: 'Metra UPNW Line Improvements & Extension',
+        # 33155: 'Metra MDN Line Improvements',
+        # 33156: "Metra O'Hare Express & NCS Line Improvements",
+        # 33157: 'Metra UPN Line Improvements',
         33158: 'A2 Crossing Modernization',
         44101: 'North McHenry Fox River Crossing',
         44102: 'Northern Algonquin Bypass',
@@ -339,19 +340,20 @@ class MasterHighwayNetwork(object):
         62143: 'South Lakefront Busway',
         62159: 'Elston-Armitage Intersection Improvements',
         62160: 'Devon-Caldwell Intersection Improvements',
-        63144: 'AOK Station',
-        63145: 'Pink Line Madison Station',
-        63146: 'Divison Station'
+        # 63144: 'AOK Station',
+        # 63145: 'Pink Line Madison Station',
+        # 63146: 'Divison Station'
     }
 
 
-    def __init__(self, mhn_gdb_path, zone_gdb_path=None):
+    def __init__(self, mhn_gdb_path, zone_gdb_path=None, bus_vintage_year=None):
         arcpy.env.overwriteOutput = True
 
         # -----------------------------------------------------------------------------
         #  SET GDB-SPECIFIC VARIABLES
         # -----------------------------------------------------------------------------
         self.gdb = mhn_gdb_path
+        arcpy.env.workspace = self.gdb
 
         # Directories
         self.root_dir = os.path.dirname(self.gdb)
@@ -366,6 +368,44 @@ class MasterHighwayNetwork(object):
         self.in_dir = os.path.realpath(os.path.join(self.src_dir, '../input'))
         self.mem = 'in_memory'
 
+        #auto-detect bus vintage year, unless specified
+        if not bus_vintage_year:
+            #look for vintages in suffix of itin tables
+            for fl in ['bus_current', 'bus_future']:
+                yr_check = []
+                all_itin = arcpy.ListTables(f'{fl}_itin*')
+                if len(all_itin) == 0:
+                    arcpy.AddError(f'Could not find any {fl}_itin tables in {self.gdb}!')
+                #if there's only one, use it
+                elif len(all_itin) == 1:
+                    yr = all_itin[0].split('_')[-1]
+                    yr_check.append(yr if yr.isdigit() else '')
+                #if more than one vintage, choose one with highest year
+                elif len(all_itin) > 1:
+                    yrs_tot = [y.split('_')[-1] for y in all_itin]
+                    yrs_num = [int(y) for y in yrs_tot if y.isdigit()]
+                    if len(yrs_num) != 0:
+                        yr_check.append(max(yrs_num))
+                    else:
+                        #if all non-numeric, need to specify in init of MHN object
+                        arcpy.AddError('All non-numerical bus datasets, cannot auto-pick. Specify a bus vintage year when creating the MHN object.')
+            #ensure current and future vintages match, else error
+            if len(set(yr_check)) == 1:
+                bus_vintage_year = yr_check[0]
+            else:
+                arcpy.AddError(f'bus_current latest vintage is {yr_check[0]}, and future is {yr_check[1]}. Cannot be different years.')
+
+        bus_vintage_year = str(bus_vintage_year)
+        self.bus_vintage_year = bus_vintage_year
+
+        for fl in ['bus_current', 'bus_future']:
+            ln_fl = os.path.join(self.gdb, f'{fl}_{bus_vintage_year}')
+            itin_fl = os.path.join(self.gdb, f'{fl}_itin_{bus_vintage_year}')
+        if not arcpy.Exists(ln_fl) and arcpy.Exists(itin_fl):
+            arcpy.AddError(f'Bus vintage year {bus_vintage_year} does not exist in MHN!')
+        
+        self.bus_years['current'] = int(bus_vintage_year)  # Set current bus year to the one specified in MHN object init
+        
         # MHN geodatabase structure, projection
         self.hwynet_name = 'hwynet'
         self.hwynet = os.path.join(self.gdb, self.hwynet_name)
@@ -375,13 +415,13 @@ class MasterHighwayNetwork(object):
         self.node = os.path.join(self.hwynet, self.node_name)
         self.hwyproj = os.path.join(self.hwynet, 'hwyproj')
         self.bus_base = os.path.join(self.hwynet, 'bus_base')
-        self.bus_current = os.path.join(self.hwynet, 'bus_current_2024')
-        self.bus_future = os.path.join(self.hwynet, 'bus_future_2024')
+        self.bus_current = os.path.join(self.hwynet, '_'.join(['bus_current', bus_vintage_year]))
+        self.bus_future = os.path.join(self.hwynet, '_'.join(['bus_future', bus_vintage_year]))
         self.route_systems = {
             self.hwyproj: (os.path.join(self.gdb, 'hwyproj_coding'), 'TIPID', None, None),
             self.bus_base: (os.path.join(self.gdb, 'bus_base_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 0),
-            self.bus_current: (os.path.join(self.gdb, 'bus_current_itin_2024'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
-            self.bus_future: (os.path.join(self.gdb, 'bus_future_itin_2024'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
+            self.bus_current: (os.path.join(self.gdb, '_'.join(['bus_current_itin', bus_vintage_year])), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
+            self.bus_future: (os.path.join(self.gdb, '_'.join(['bus_future_itin', bus_vintage_year])), 'TRANSIT_LINE', 'ITIN_ORDER', 99000),
         }
         self.pnr_name = 'parknride'
         self.pnr = os.path.join(self.gdb, self.pnr_name)

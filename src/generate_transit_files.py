@@ -37,7 +37,7 @@ root_path = arcpy.GetParameterAsText(2)             # String, no default
 
 ## parameters for RSP evaluation --
 rsp_eval = arcpy.GetParameter(3)                    # Boolean, default False
-rsp_number = arcpy.GetParameterAsText(4)            # String, contains rsp id if project is bus
+rsp_number = arcpy.GetParameterAsText(4)            # String, contains rsp id if project is bus, else 'NONE, OR NO-BUILD'
 nobuild_tipid_csv = arcpy.GetParameterAsText(5)     # String, filepath to TIP IDs that make up the no-build network
 horizon_year = arcpy.GetParameterAsText(6)          # String, replacement for scen_list if rsp_eval is True
 
@@ -77,7 +77,7 @@ if rsp_eval:
                 formatted_nb_transit = line.strip().zfill(8)
                 formatted_nb_transit = re.sub(r"(\d{2})(\d{2})(\d{4})", r"\1-\2-\3", formatted_nb_transit)
                 nb_transit.append(formatted_nb_transit)
-    arcpy.AddMessage(f'TIP IDs included in no-build: {", ".join(id for id in nb_transit)}')
+    # arcpy.AddMessage(f'TIP IDs included in no-build: {", ".join(id for id in nb_transit)}')
                 
     # find the closest lesser scen year to horizon year. will export networks at that scen year
     scens = sorted(MHN.scenario_years.keys()) #sort scenario years smallest to largest
@@ -341,7 +341,7 @@ for scen in scen_list:
         arcpy.Delete_management(bus_lyr)
 
         # Export header info of representative bus runs in current TOD.
-        rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'GROUP_HEADWAY']
+        rep_runs_attr = [bus_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'GROUP_HEADWAY', 'ROUTE_ID']
         rep_runs_query = MHN.tod_periods['transit'][tod][1]
         rep_runs_view = MHN.make_skinny_table_view(rep_runs_table, 'rep_runs_view', rep_runs_attr, rep_runs_query)
         rep_runs_csv = os.path.join(scen_tran_path, 'rep_runs.csv')
@@ -373,8 +373,9 @@ for scen in scen_list:
             #if rsp run, add other elements to query:
             if rsp_eval == True:
                 bus_future_query = f''' "NOTES" LIKE {' OR "NOTES" LIKE '.join(f"'%{tipid}%'" for tipid in nb_transit)} '''
-            if 'RSP' in rsp_number: #if RSP## was selected, add to query
-                bus_future_query += f''' OR "NOTES" LIKE {rsp_number} ''' 
+            if 'NONE' not in rsp_number: #if an RSP was selected, add to query
+                bus_future_query += f''' OR "NOTES" LIKE '%{rsp_number}%' ''' 
+            # arcpy.AddMessage(f'bus_future_query = {bus_future_query}')
             
             bus_future_view = MHN.make_skinny_table_view(bus_future_lyr, 'bus_future_view', bus_future_attr, bus_future_query)
             bus_future_csv = os.path.join(scen_tran_path, 'bus_future.csv')
@@ -1126,4 +1127,24 @@ for bus_fc in bus_fc_dict:
     for tod in out_tod_periods:
         MHN.delete_if_exists(rep_runs_dict[which_bus][tod])
 arcpy.Delete_management(MHN.mem)
+
+cta_brts = {
+    'RCP22202': [],
+    'RCP22203': [], 
+    'RCP22204': [],
+    'RCP22205': [],
+    'RCP22206': []
+}
+
+if rsp_number in cta_brts.keys():
+    arcpy.AddMessage(f'\n\t - {rsp_number} requires changing itin files to ttf=2')
+    
+    for tod in out_tod_periods:
+        # read in bus itin file
+        bus_itin = os.path.join(tran_path, scen, 'bus.itinerary_{}'.format(tod))
+        with open(bus_itin, 'a') as bus_itin_file:
+            lines = bus_itin_file.readlines()
+            
+    
+
 arcpy.AddMessage('\nAll done!\n')
