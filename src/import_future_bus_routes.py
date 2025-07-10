@@ -227,7 +227,7 @@ arcpy.AddMessage('\nSaving changes to disk...')
 
 # Replace header feature class.
 arcpy.AddMessage('-- ' + MHN.bus_future + '...')
-arcpy.TruncateTable_management(MHN.bus_future)
+# arcpy.TruncateTable_management(MHN.bus_future)
 arcpy.Delete_management(MHN.bus_future)
 arcpy.CopyFeatures_management(updated_routes_fc, MHN.bus_future)
 arcpy.Delete_management(updated_routes_fc)
@@ -235,7 +235,7 @@ arcpy.Delete_management(updated_routes_fc)
 # Replace itinerary table.
 itin_table = MHN.route_systems[MHN.bus_future][0]
 arcpy.AddMessage('-- ' + itin_table + '...')
-arcpy.TruncateTable_management(itin_table)
+# arcpy.TruncateTable_management(itin_table)
 arcpy.Delete_management(itin_table)
 itin_path = MHN.break_path(itin_table)
 arcpy.CreateTable_management(itin_path['dir'], itin_path['name'], updated_itin_table)

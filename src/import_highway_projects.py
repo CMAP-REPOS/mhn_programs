@@ -113,13 +113,15 @@ for project_id in project_arcs.keys():
     completion_year = 9999  # default 9999 (i.e. not conformed)
     mcp_id = None           # default NULL (i.e. not an MCP)
     rsp_id = None           # default NULL (i.e. not an RSP)
+    rcp_id = None           # default NULL (i.e. not an RCP)
     existing_project_query = ''' "{0}" = '{1}' '''.format(common_id_field, project_id)
-    existing_project_lyr = MHN.make_skinny_table_view(MHN.hwyproj, 'existing_project_lyr', ['COMPLETION_YEAR', 'MCP_ID', 'RSP_ID'], existing_project_query)
+    existing_project_lyr = MHN.make_skinny_table_view(MHN.hwyproj, 'existing_project_lyr', ['COMPLETION_YEAR', 'MCP_ID', 'RSP_ID', 'RCP_ID'], existing_project_query)
     existing_project_count = int(arcpy.GetCount_management(existing_project_lyr).getOutput(0))
     if existing_project_count > 0:
         completion_year = [attr[0] for attr in arcpy.da.SearchCursor(existing_project_lyr, ['COMPLETION_YEAR'])][0]
         mcp_id = [attr[0] for attr in arcpy.da.SearchCursor(existing_project_lyr, ['MCP_ID'])][0]
         rsp_id = [attr[0] for attr in arcpy.da.SearchCursor(existing_project_lyr, ['RSP_ID'])][0]
+        rcp_id = [attr[0] for attr in arcpy.da.SearchCursor(existing_project_lyr, ['RCP_ID'])][0]
 
     # Dissolve project arcs into a single project feature, and append to temp FC.
     project_arc_ids = project_arcs[project_id]
@@ -132,7 +134,8 @@ for project_id in project_arcs.keys():
     arcpy.AddField_management(project_dissolved, 'COMPLETION_YEAR', 'SHORT')  # Make types/lengths dynamic?
     arcpy.AddField_management(project_dissolved, 'MCP_ID', 'TEXT', field_length=6)
     arcpy.AddField_management(project_dissolved, 'RSP_ID', 'LONG')
-    with arcpy.da.UpdateCursor(project_dissolved, [common_id_field, 'COMPLETION_YEAR', 'MCP_ID', 'RSP_ID']) as cursor:
+    arcpy.AddField_management(project_dissolved, 'RCP_ID', 'LONG')
+    with arcpy.da.UpdateCursor(project_dissolved, [common_id_field, 'COMPLETION_YEAR', 'MCP_ID', 'RSP_ID', 'RCP_ID']) as cursor:
         for row in cursor:
             row[0] = project_id
             if completion_year:
@@ -141,6 +144,8 @@ for project_id in project_arcs.keys():
                 row[2] = mcp_id
             if rsp_id:
                 row[3] = rsp_id
+            if rcp_id:
+                row[4] = rcp_id
             cursor.updateRow(row)
     arcpy.Append_management(project_dissolved, temp_projects_fc, 'NO_TEST')
 
@@ -177,7 +182,8 @@ arcpy.AddMessage('\nSaving changes to disk...')
 
 # Replace hwyproj feature class:
 arcpy.AddMessage('-- ' + MHN.hwyproj + '...')
-arcpy.TruncateTable_management(MHN.hwyproj)
+# arcpy.TruncateTable_management(MHN.hwyproj)
+arcpy.management.DeleteRows(MHN.hwyproj)
 arcpy.Delete_management(MHN.hwyproj)
 arcpy.CopyFeatures_management(updated_projects_fc, MHN.hwyproj)
 arcpy.Delete_management(updated_projects_fc)
@@ -185,7 +191,8 @@ arcpy.Delete_management(updated_projects_fc)
 # Replace hwyproj_coding table:
 coding_table = MHN.route_systems[MHN.hwyproj][0]
 arcpy.AddMessage('-- ' + coding_table + '...')
-arcpy.TruncateTable_management(coding_table)
+# arcpy.TruncateTable_management(coding_table)
+arcpy.management.DeleteRows(coding_table)
 arcpy.Delete_management(coding_table)
 coding_table_path = MHN.break_path(coding_table)
 arcpy.CreateTable_management(coding_table_path['dir'], coding_table_path['name'], updated_coding_table)
