@@ -415,14 +415,24 @@ class MasterHighwayNetwork(object):
         self.node = os.path.join(self.hwynet, self.node_name)
         self.hwyproj = os.path.join(self.hwynet, 'hwyproj')
         self.bus_base = os.path.join(self.hwynet, 'bus_base')
-        self.bus_current = os.path.join(self.hwynet, '_'.join(['bus_current', bus_vintage_year]))
-        self.bus_future = os.path.join(self.hwynet, '_'.join(['bus_future', bus_vintage_year]))
+        if bus_vintage_year == '':  # if no bus vintage year, use yearless name
+            self.bus_current = os.path.join(self.hwynet, 'bus_current')
+            self.bus_future = os.path.join(self.hwynet, 'bus_future')
+        else:
+            self.bus_current = os.path.join(self.hwynet, '_'.join(['bus_current', bus_vintage_year]))
+            self.bus_future = os.path.join(self.hwynet, '_'.join(['bus_future', bus_vintage_year]))
+
         self.route_systems = {
             self.hwyproj: (os.path.join(self.gdb, 'hwyproj_coding'), 'TIPID', None, None),
-            self.bus_base: (os.path.join(self.gdb, 'bus_base_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 0),
-            self.bus_current: (os.path.join(self.gdb, '_'.join(['bus_current_itin', bus_vintage_year])), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
-            self.bus_future: (os.path.join(self.gdb, '_'.join(['bus_future_itin', bus_vintage_year])), 'TRANSIT_LINE', 'ITIN_ORDER', 99000),
+            self.bus_base: (os.path.join(self.gdb, 'bus_base_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 0)
         }
+        if bus_vintage_year == '': #if no bus vintage year, use yearless name
+            self.route_systems[self.bus_current] = (os.path.join(self.gdb, 'bus_current_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000)
+            self.route_systems[self.bus_future] = (os.path.join(self.gdb, 'bus_future_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
+        else:
+            self.route_systems[self.bus_current] = (os.path.join(self.gdb, '_'.join(['bus_current_itin', bus_vintage_year])), 'TRANSIT_LINE', 'ITIN_ORDER', 50000)
+            self.route_systems[self.bus_future] = (os.path.join(self.gdb, '_'.join(['bus_future_itin', bus_vintage_year])), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
+
         self.pnr_name = 'parknride'
         self.pnr = os.path.join(self.gdb, self.pnr_name)
         self.projection = arcpy.Describe(self.arc).spatialReference
