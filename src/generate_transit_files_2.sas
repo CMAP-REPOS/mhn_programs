@@ -143,7 +143,7 @@ data routes; infile in1 dsd missover firstobs=2;
                 if hit;
                 proc sort; by replace;
             data routes(drop=pos); merge routes rep1; by replace;
-                if substr(linename, 2, 2) = '99' then del = .;  *** reset value for future bus so not included in existing headway calculation;
+                if substr(linename, 2, 2) in ('99', '88') then del = .;  *** reset value for future bus so not included in existing headway calculation;
                 proc sort; by linename;
 
             data rte1; set routes(where=(del is null and keeptod is null and new is null));  *** current coding moving through to final file;
