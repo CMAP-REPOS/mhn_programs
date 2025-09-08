@@ -357,7 +357,7 @@ class MasterHighwayNetwork(object):
 
         # Directories
         self.root_dir = os.path.dirname(self.gdb)
-        self.script_dir = sys.path[0]  # Directory containing this module
+        self.script_dir = os.path.dirname(os.path.abspath(__file__))  # Directory containing this module
         if os.path.basename(self.script_dir) == 'utilities':
             self.src_dir = os.path.dirname(self.script_dir)
             self.util_dir = self.script_dir
@@ -378,6 +378,7 @@ class MasterHighwayNetwork(object):
                     arcpy.AddError(f'Could not find any {fl}_itin tables in {self.gdb}!')
                 #if there's only one, use it
                 elif len(all_itin) == 1:
+                    yr = all_itin[0] if type(all_itin) is list else all_itin
                     yr = all_itin[0].split('_')[-1]
                     yr_check.append(yr if yr.isdigit() else '')
                 #if more than one vintage, choose one with highest year
@@ -403,8 +404,6 @@ class MasterHighwayNetwork(object):
             itin_fl = os.path.join(self.gdb, f'{fl}_itin_{bus_vintage_year}')
         if not arcpy.Exists(ln_fl) and arcpy.Exists(itin_fl):
             arcpy.AddError(f'Bus vintage year {bus_vintage_year} does not exist in MHN!')
-        
-        self.bus_years['current'] = int(bus_vintage_year)  # Set current bus year to the one specified in MHN object init
         
         # MHN geodatabase structure, projection
         self.hwynet_name = 'hwynet'
