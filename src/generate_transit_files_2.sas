@@ -170,8 +170,7 @@ data routes; infile in1 dsd missover firstobs=2;
                 if hit;  *** attach average time period headway for mode;
 
                 ** ## Final Time Period Headway Calculation ## **;
-                if headway > 0 then headway = headway * &hdwymult;  *** -- apply TOD headway multiplier to coded headway;
-                else headway = -1;  *** -- coded value of zero means use existing headways;
+                if headway <= 0 then headway = -1; *** -- coded value of zero means use existing headways;
 
                 if headway > 0 then do;               *** -- Priority 1: use coded headway (or existing headway, if shorter);
                     if exhdw > 0 then hfin = min(headway, exhdw);

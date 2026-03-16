@@ -369,13 +369,14 @@ for scen in scen_list:
             bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
             
             #base query -- 'scenario' field of bus_future contains first character of applicable scen code (e.g., '4', as in '400')
-            bus_future_query = f''' "SCENARIO" LIKE '%{scen[0]}%' ''' 
+            # bus_future_query = f''' "SCENARIO" LIKE '%{scen[0]}%' ''' 
+            bus_future_query = f' "COMPLETION_YEAR" <= {scen_year}'
             #if rsp run, add other elements to query:
             if rsp_eval == True:
                 bus_future_query = f''' "NOTES" LIKE {' OR "NOTES" LIKE '.join(f"'%{tipid}%'" for tipid in nb_transit)} '''
-            if 'NONE' not in rsp_number: #if an RSP was selected, add to query
-                bus_future_query += f''' OR "NOTES" LIKE '%{rsp_number}%' ''' 
-            # arcpy.AddMessage(f'bus_future_query = {bus_future_query}')
+                if 'NONE' not in rsp_number: #if an RSP was selected, add to query
+                    bus_future_query += f''' OR "NOTES" LIKE '%{rsp_number}%' ''' 
+                # arcpy.AddMessage(f'bus_future_query = {bus_future_query}')
             
             bus_future_view = MHN.make_skinny_table_view(bus_future_lyr, 'bus_future_view', bus_future_attr, bus_future_query)
             bus_future_csv = os.path.join(scen_tran_path, 'bus_future.csv')

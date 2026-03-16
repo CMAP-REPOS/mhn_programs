@@ -70,7 +70,7 @@ class MasterHighwayNetwork(object):
     scenario_years = {
         ### Current scenario codes (C22Q2 and later)
         '100': 2019,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
-        '200': 2025,
+        '200': 2026,
         '300': 2030,
         '400': 2035,
         '500': 2040,
@@ -346,7 +346,7 @@ class MasterHighwayNetwork(object):
     }
 
 
-    def __init__(self, mhn_gdb_path, zone_gdb_path=None, bus_vintage_year=None):
+    def __init__(self, mhn_gdb_path, zone_gdb_path=None):
         arcpy.env.overwriteOutput = True
 
         # -----------------------------------------------------------------------------
@@ -367,43 +367,6 @@ class MasterHighwayNetwork(object):
         self.temp_dir = self.ensure_dir(os.path.realpath(os.path.join(self.src_dir, '../temp')))
         self.in_dir = os.path.realpath(os.path.join(self.src_dir, '../input'))
         self.mem = 'in_memory'
-
-        #auto-detect bus vintage year, unless specified
-        if not bus_vintage_year:
-            #look for vintages in suffix of itin tables
-            for fl in ['bus_current', 'bus_future']:
-                yr_check = []
-                all_itin = arcpy.ListTables(f'{fl}_itin*')
-                if len(all_itin) == 0:
-                    arcpy.AddError(f'Could not find any {fl}_itin tables in {self.gdb}!')
-                #if there's only one, use it
-                elif len(all_itin) == 1:
-                    yr = all_itin[0] if type(all_itin) is list else all_itin
-                    yr = all_itin[0].split('_')[-1]
-                    yr_check.append(yr if yr.isdigit() else '')
-                #if more than one vintage, choose one with highest year
-                elif len(all_itin) > 1:
-                    yrs_tot = [y.split('_')[-1] for y in all_itin]
-                    yrs_num = [int(y) for y in yrs_tot if y.isdigit()]
-                    if len(yrs_num) != 0:
-                        yr_check.append(max(yrs_num))
-                    else:
-                        #if all non-numeric, need to specify in init of MHN object
-                        arcpy.AddError('All non-numerical bus datasets, cannot auto-pick. Specify a bus vintage year when creating the MHN object.')
-            #ensure current and future vintages match, else error
-            if len(set(yr_check)) == 1:
-                bus_vintage_year = yr_check[0]
-            else:
-                arcpy.AddError(f'bus_current latest vintage is {yr_check[0]}, and future is {yr_check[1]}. Cannot be different years.')
-
-        bus_vintage_year = str(bus_vintage_year)
-        self.bus_vintage_year = bus_vintage_year
-
-        for fl in ['bus_current', 'bus_future']:
-            ln_fl = os.path.join(self.gdb, f'{fl}_{bus_vintage_year}')
-            itin_fl = os.path.join(self.gdb, f'{fl}_itin_{bus_vintage_year}')
-        if not arcpy.Exists(ln_fl) and arcpy.Exists(itin_fl):
-            arcpy.AddError(f'Bus vintage year {bus_vintage_year} does not exist in MHN!')
         
         # MHN geodatabase structure, projection
         self.hwynet_name = 'hwynet'
@@ -414,24 +377,16 @@ class MasterHighwayNetwork(object):
         self.node = os.path.join(self.hwynet, self.node_name)
         self.hwyproj = os.path.join(self.hwynet, 'hwyproj')
         self.bus_base = os.path.join(self.hwynet, 'bus_base')
-        if bus_vintage_year == '':  # if no bus vintage year, use yearless name
-            self.bus_current = os.path.join(self.hwynet, 'bus_current')
-            self.bus_future = os.path.join(self.hwynet, 'bus_future')
-        else:
-            self.bus_current = os.path.join(self.hwynet, '_'.join(['bus_current', bus_vintage_year]))
-            self.bus_future = os.path.join(self.hwynet, '_'.join(['bus_future', bus_vintage_year]))
-
+        self.bus_current = os.path.join(self.hwynet, 'bus_current_2024')
+        self.bus_future = os.path.join(self.hwynet, 'bus_future_2024_2')
+        
         self.route_systems = {
             self.hwyproj: (os.path.join(self.gdb, 'hwyproj_coding'), 'TIPID', None, None),
-            self.bus_base: (os.path.join(self.gdb, 'bus_base_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 0)
+            self.bus_base: (os.path.join(self.gdb, 'bus_base_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 0),
+            self.bus_current: (os.path.join(self.gdb, 'bus_current_itin_2024'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
+            self.bus_future: (os.path.join(self.gdb, 'bus_future_itin_2024_2'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
         }
-        if bus_vintage_year == '': #if no bus vintage year, use yearless name
-            self.route_systems[self.bus_current] = (os.path.join(self.gdb, 'bus_current_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000)
-            self.route_systems[self.bus_future] = (os.path.join(self.gdb, 'bus_future_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
-        else:
-            self.route_systems[self.bus_current] = (os.path.join(self.gdb, '_'.join(['bus_current_itin', bus_vintage_year])), 'TRANSIT_LINE', 'ITIN_ORDER', 50000)
-            self.route_systems[self.bus_future] = (os.path.join(self.gdb, '_'.join(['bus_future_itin', bus_vintage_year])), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
-
+        
         self.pnr_name = 'parknride'
         self.pnr = os.path.join(self.gdb, self.pnr_name)
         self.projection = arcpy.Describe(self.arc).spatialReference
