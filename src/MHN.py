@@ -45,20 +45,6 @@ class MasterHighwayNetwork(object):
             'Grundy_Part': range(2949, 2950),
             'DeKalb_Part': range(2977, 2978)
         }
-
-        # ## zones09 (C18Q3 and earlier)
-        # 'CBD':     range(   1,   48),  # NB. range(i,j) includes i & *excludes* j
-        # 'Chicago': range(   1,  310),
-        # 'Cook':    range(   1,  855),
-        # 'McHenry': range( 855,  959),
-        # 'Lake':    range( 959, 1134),
-        # 'Kane':    range(1134, 1279),
-        # 'DuPage':  range(1279, 1503),
-        # 'Will':    range(1503, 1691),
-        # 'Kendall': range(1691, 1712),
-        # 'CMAP':    range(   1, 1712),
-        # 'MHN':     range(   1, 1962),
-        # 'POE':     range(1945, 1962)
     }
 
     min_node_id =  5001  # 1-5000 reserved for zone centroids/POEs
@@ -68,31 +54,15 @@ class MasterHighwayNetwork(object):
     max_poe = max(centroid_ranges['POE'])
 
     scenario_years = {
-        ### Current scenario codes (C22Q2 and later)
+        ### Current scenario codes (C26Q2 and later)
         '100': 2019,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
         '200': 2026,
         '300': 2030,
-        '400': 2035,
-        '500': 2040,
-        '600': 2045,  # UrbanSim only
-        '700': 2050
-
-        ### Old scenario codes (C17Q2-C21Q4)
-        # '100': 2015,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
-        # '200': 2020,
-        # '300': 2025,
-        # '400': 2030,
-        # '500': 2035,  # Not currently used
-        # '600': 2040,
-        # '700': 2050
-
-        ### Older scenario codes (C17Q1 and earlier):
-        # '100': 2010,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
-        # '200': 2015,
-        # '300': 2020,
-        # '400': 2025,
-        # '500': 2030,
-        # '600': 2040
+        '400': 2032,
+        '500': 2035,
+        '600': 2040,
+        '700': 2045,  # UrbanSim only
+        '800': 2050
     }
 
     min_year = min(scenario_years.values())
