@@ -114,12 +114,12 @@ title 'FIX MISSING VALUES FOR THESE DIRECTIONS=3 LINKS';
 
 ** Verify Coding for Action=4 Links **;
 data check; set coding(where=(action=4));
-if modes in (1:5) & lanes1>0 & feet1>0 & ampm1 in (1:4) then do;
+if modes in (1:5) & lanes1>0 & feet1>0 & ampm1 in (1:5) then do;
   if directions in (1,2) then do;
     if type1=7 then delete;
     if type1 in (1:6,8) & speed1>0 then delete;
     end;
-  if directions=3 & lanes2>0 & feet2>0 & ampm2 in (1:4) then do;
+  if directions=3 & lanes2>0 & feet2>0 & ampm2 in (1:5) then do;
     if type1=7 & type2=7 then delete;
     if type1 in (1:6,8) & type2 in (1:6,8) & speed1>0 & speed2>0 then delete;
     if type1=7 & type2 in (1:6,8) & speed2>0 then delete;

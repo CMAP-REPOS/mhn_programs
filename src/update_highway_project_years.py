@@ -38,19 +38,10 @@ tipid_exempt_csv = arcpy.GetParameterAsText(3)       # CSV of coded exempt proje
 tipid_uncodable_csv = arcpy.GetParameterAsText(4)    # CSV of uncodable projects
 
 #arcpy.AddWarning('\nCurrently updating {0}.'.format(MHN.gdb))
-
-if not arcpy.Exists(mrn_gdb_path):
-    MHN.die("{0} doesn't exist!".format(mrn_gdb_path))
-if not arcpy.Exists(mrn_future_fc):
-    MHN.die("{0} doesn't exist!".format(mrn_future_fc))
-if not arcpy.Exists(people_mover_table):
-    MHN.die("{0} doesn't exist!".format(people_mover_table))
-if not os.path.exists(tipid_conformed_csv):
-    MHN.die("{0} doesn't exist!".format(tipid_conformed_csv))
-if not os.path.exists(tipid_exempt_csv):
-    MHN.die("{0} doesn't exist!".format(tipid_exempt_csv))
-if not os.path.exists(tipid_uncodable_csv):
-    MHN.die("{0} doesn't exist!".format(tipid_uncodable_csv))
+for file in [mrn_gdb_path, mrn_future_fc, people_mover_table, 
+             tipid_conformed_csv, tipid_exempt_csv, tipid_uncodable_csv]:
+    if not arcpy.Exists(file):
+        MHN.die(f"{file} doesn't exist!")
 
 
 # -----------------------------------------------------------------------------

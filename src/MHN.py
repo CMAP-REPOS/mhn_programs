@@ -23,7 +23,8 @@ class MasterHighwayNetwork(object):
 
     bus_years = {
         'base':    2015,  # Year that bus_base feature class represents
-        'current': 2016   # Year that bus_current feature class represents
+        'current': 2024   # Year that bus_current feature class represents
+        #"current" yr will change if different year specified in MHN object init
     }
 
     centroid_ranges = {
@@ -44,20 +45,6 @@ class MasterHighwayNetwork(object):
             'Grundy_Part': range(2949, 2950),
             'DeKalb_Part': range(2977, 2978)
         }
-
-        # ## zones09 (C18Q3 and earlier)
-        # 'CBD':     range(   1,   48),  # NB. range(i,j) includes i & *excludes* j
-        # 'Chicago': range(   1,  310),
-        # 'Cook':    range(   1,  855),
-        # 'McHenry': range( 855,  959),
-        # 'Lake':    range( 959, 1134),
-        # 'Kane':    range(1134, 1279),
-        # 'DuPage':  range(1279, 1503),
-        # 'Will':    range(1503, 1691),
-        # 'Kendall': range(1691, 1712),
-        # 'CMAP':    range(   1, 1712),
-        # 'MHN':     range(   1, 1962),
-        # 'POE':     range(1945, 1962)
     }
 
     min_node_id =  5001  # 1-5000 reserved for zone centroids/POEs
@@ -67,31 +54,15 @@ class MasterHighwayNetwork(object):
     max_poe = max(centroid_ranges['POE'])
 
     scenario_years = {
-        ### Current scenario codes (C22Q2 and later)
+        ### Current scenario codes (C26Q2 and later)
         '100': 2019,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
-        '200': 2025,
+        '200': 2026,
         '300': 2030,
-        '400': 2035,
-        '500': 2040,
-        '600': 2045,  # UrbanSim only
-        '700': 2050
-
-        ### Old scenario codes (C17Q2-C21Q4)
-        # '100': 2015,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
-        # '200': 2020,
-        # '300': 2025,
-        # '400': 2030,
-        # '500': 2035,  # Not currently used
-        # '600': 2040,
-        # '700': 2050
-
-        ### Older scenario codes (C17Q1 and earlier):
-        # '100': 2010,  # WARNING: commenting-out 100 will adversely affect transit file generation for later scenarios
-        # '200': 2015,
-        # '300': 2020,
-        # '400': 2025,
-        # '500': 2030,
-        # '600': 2040
+        '400': 2032,
+        '500': 2035,
+        '600': 2040,
+        '700': 2045,  # UrbanSim only
+        '800': 2050
     }
 
     min_year = min(scenario_years.values())
@@ -139,7 +110,8 @@ class MasterHighwayNetwork(object):
             '1': ('1', '2', '3', '4', '5', '6', '7', '8'),  # All periods
             '2': ('2', '3', '4', '5'),                      # AM periods
             '3': ('1', '6', '7', '8'),                      # PM periods
-            '4': ('1', '5')                                 # Off-peak periods
+            '4': ('1', '5'),                                # Off-peak periods
+            '5': ('2','3','4','6','7','8')                  # AM/PM Peaks + Shoulders
         },
         'transit': {
             '1': ('1', '2', '3', '4'),  # All periods
@@ -277,6 +249,71 @@ class MasterHighwayNetwork(object):
         9903: "(A3) I-55 Reconstruction & IL 126 Interchange Reconfiguration",
         9904: "(A4) I-55/IL 59 Interchange",
     }
+    
+    #2026 LRTP - Regional Capital Project list
+    rcps = {
+        12121: 'North DuSable LSD Improvements',
+        12129: '75th Street Corridor Improvement Project (CIP)',
+        13104: "I-190 O'Hare Access Improvements",
+        13106: 'I-55 - I-80 to Coal City Road',
+        13107: 'I-55 - IL 129 to Lorenzo Road',
+        13108: 'I-55 Managed Lane I-355 to I-294',
+        13110: 'I-55 - I-80 to US 52',
+        13111: 'I-55 - I-355 to IL 53',
+        13112: 'I-80/I-294 Flex Lanes',
+        13113: 'I-80 - U.S. 30 to I-294 ',
+        13114: 'I-290 - Mannheim Rd to Racine Ave ',
+        13115: 'IL 60 - IL 176 to Townline Rd ',
+        13116: 'IL 173 - IL 59 to US 41 ',
+        13117: 'McHenry Rd - IL 173 to IL 132',
+        13118: 'Algonquin Rd - IL 25 to IL 68',
+        13119: 'Milwaukee Ave from Petite Lake Rd to IL 120',
+        13120: 'IL Route 131 - Russell Rd to Sunset Ave',
+        13122: 'IL 47 - Charles Rd to Reed Road ',
+        13123: 'IL 83 - 31st to 55th, 63rd to Central ',
+        13124: 'US 6 - I-55 to US 52',
+        13125: 'US 30 - IL 47 to Albright Rd',
+        13126: 'IL 7/143rd - Will-Cook Rd to IL7',
+        13127: 'IL 47 -  I-90 to Old Plank Rd ',
+        13128: 'IL 56 from IL 25 to IL 59 ',
+        13130: 'IL 60 from IL 120 to IL 176 ',
+        13131: 'IL 31 Front St - IL 120 to IL 176 ',
+        13132: 'Willow Rd from E of I-294 to E of IL 43, from IL 43 to I-94, and over Middle Fork of N Branch of Chicago River to W of Sunset Ridge Rd',
+        13133: 'Willow Rd from E of Des Plaines River to Waterview Dr./Protection Parkway',
+        13134: 'IL 53 from S of IL 56 Butterfield Rd to Park Blvd',
+        13135: 'IL 22 Lake Zurich Rd from Quentin Rd to W of IL 83',
+        13136: 'US 41 Skokie Hwy from Quassey Avenue to 0.5 Miles S of IL 176',
+        13137: 'IL 137 Buckley Rd from IL 83 to Petersen Rd',
+        13139: 'Ill 120 Belvidere Rd - Ashford Ln to US 45',
+        13140: 'US 45 Lake Ave from Rollins Rd to Washington St and US 45 from Washington St to N of IL 120',
+        14109: 'I-55- Weber Road to US 30',
+        14138: 'IL 83 (Barron Blvd.), IL 120 (Belvidere Rd.) to IL 137 & At Atkinson Rd.',
+        14141: 'IL 120 from Wilson Rd to US 41 IL 53/120 Tollway (IL 120 Bypass)',
+        14142: 'US 12 Richmond West Bypass from Wisconsin State Line to IL 31 Tryon Grove Rd',
+        14161: 'I-57 Interchange Improvements',
+        # 32151: 'Metra BNSF Line Improvements',
+        # 33147: 'Metra Electric Line Improvements',
+        # 33148: 'Metra Rock Island Improvements',
+        # 33149: 'Metra SWS Line Improvements',
+        # 33150: 'Metra HC Line Improvements',
+        # 33152: 'Metra UPW Line Improvements',
+        # 33153: 'Metra MDW Line Improvements',
+        # 33154: 'Metra UPNW Line Improvements & Extension',
+        # 33155: 'Metra MDN Line Improvements',
+        # 33156: "Metra O'Hare Express & NCS Line Improvements",
+        # 33157: 'Metra UPN Line Improvements',
+        33158: 'A2 Crossing Modernization',
+        44101: 'North McHenry Fox River Crossing',
+        44102: 'Northern Algonquin Bypass',
+        54103: 'IL 390 Interchange to County Farm Road',
+        54105: '1-88 York Road Interchange Expansion',
+        62143: 'South Lakefront Busway',
+        62159: 'Elston-Armitage Intersection Improvements',
+        62160: 'Devon-Caldwell Intersection Improvements',
+        # 63144: 'AOK Station',
+        # 63145: 'Pink Line Madison Station',
+        # 63146: 'Divison Station'
+    }
 
 
     def __init__(self, mhn_gdb_path, zone_gdb_path=None):
@@ -286,10 +323,11 @@ class MasterHighwayNetwork(object):
         #  SET GDB-SPECIFIC VARIABLES
         # -----------------------------------------------------------------------------
         self.gdb = mhn_gdb_path
+        arcpy.env.workspace = self.gdb
 
         # Directories
         self.root_dir = os.path.dirname(self.gdb)
-        self.script_dir = sys.path[0]  # Directory containing this module
+        self.script_dir = os.path.dirname(os.path.abspath(__file__))  # Directory containing this module
         if os.path.basename(self.script_dir) == 'utilities':
             self.src_dir = os.path.dirname(self.script_dir)
             self.util_dir = self.script_dir
@@ -299,7 +337,7 @@ class MasterHighwayNetwork(object):
         self.temp_dir = self.ensure_dir(os.path.realpath(os.path.join(self.src_dir, '../temp')))
         self.in_dir = os.path.realpath(os.path.join(self.src_dir, '../input'))
         self.mem = 'in_memory'
-
+        
         # MHN geodatabase structure, projection
         self.hwynet_name = 'hwynet'
         self.hwynet = os.path.join(self.gdb, self.hwynet_name)
@@ -309,14 +347,16 @@ class MasterHighwayNetwork(object):
         self.node = os.path.join(self.hwynet, self.node_name)
         self.hwyproj = os.path.join(self.hwynet, 'hwyproj')
         self.bus_base = os.path.join(self.hwynet, 'bus_base')
-        self.bus_current = os.path.join(self.hwynet, 'bus_current')
-        self.bus_future = os.path.join(self.hwynet, 'bus_future')
+        self.bus_current = os.path.join(self.hwynet, 'bus_current_2024')
+        self.bus_future = os.path.join(self.hwynet, 'bus_future_2024_2')
+        
         self.route_systems = {
             self.hwyproj: (os.path.join(self.gdb, 'hwyproj_coding'), 'TIPID', None, None),
             self.bus_base: (os.path.join(self.gdb, 'bus_base_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 0),
-            self.bus_current: (os.path.join(self.gdb, 'bus_current_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
-            self.bus_future: (os.path.join(self.gdb, 'bus_future_itin'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
+            self.bus_current: (os.path.join(self.gdb, 'bus_current_itin_2024'), 'TRANSIT_LINE', 'ITIN_ORDER', 50000),
+            self.bus_future: (os.path.join(self.gdb, 'bus_future_itin_2024_2'), 'TRANSIT_LINE', 'ITIN_ORDER', 99000)
         }
+        
         self.pnr_name = 'parknride'
         self.pnr = os.path.join(self.gdb, self.pnr_name)
         self.projection = arcpy.Describe(self.arc).spatialReference

@@ -13,6 +13,11 @@ options pagesize=50 linesize=125;
 %let zone1 = %scan(&sysparm, 3, $);  ** Zone09 CBD start zone;
 %let zone2 = %scan(&sysparm, 4, $);  ** Zone09 CBD end zone;
 %let tod = %scan(&sysparm, 5, $);
+%let horiz_scen = %scan(&sysparm, 6, $);
+
+%if &horiz_scen = 0 %then %do;
+    %let horiz_scen = &scen;
+%end;
 
 /* ------------------------------------------------------------------------------ */
 ** INPUT FILES **;
@@ -523,7 +528,7 @@ data all(drop=accmode); merge all (in=hit1) railacc (in=hit2); by anode bnode;
 data print1; set all;
     file out1;
     if _n_ = 1 then do;
-        put "c BASE NETWORK LINK BATCHIN FILE FOR TRANSIT SCENARIO NETWORK &scen TOD &tod" /
+        put "c BASE NETWORK LINK BATCHIN FILE FOR TRANSIT SCENARIO NETWORK &horiz_scen TOD &tod" /
             "c ACCESS LINKS  (modes c,m,u,v,w,x,y,z)" /
             "c  &sysdate" / 'c a,i-node,j-node,length,modes,type,lanes,vdf' / 't links';
     end;
