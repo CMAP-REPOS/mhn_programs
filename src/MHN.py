@@ -24,7 +24,6 @@ class MasterHighwayNetwork(object):
     bus_years = {
         'base':    2015,  # Year that bus_base feature class represents
         'current': 2024   # Year that bus_current feature class represents
-        #"current" yr will change if different year specified in MHN object init
     }
 
     centroid_ranges = {
