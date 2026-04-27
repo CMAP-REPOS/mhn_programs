@@ -143,7 +143,7 @@ data routes; infile in1 dsd missover firstobs=2;
                 if hit;
                 proc sort; by replace;
             data routes(drop=pos); merge routes rep1; by replace;
-                if substr(linename, 2, 2) = '99' then del = .;  *** reset value for future bus so not included in existing headway calculation;
+                if substr(linename, 2, 2) in ('99', '88') then del = .;  *** reset value for future bus so not included in existing headway calculation;
                 proc sort; by linename;
 
             data rte1; set routes(where=(del is null and keeptod is null and new is null));  *** current coding moving through to final file;
@@ -170,8 +170,7 @@ data routes; infile in1 dsd missover firstobs=2;
                 if hit;  *** attach average time period headway for mode;
 
                 ** ## Final Time Period Headway Calculation ## **;
-                if headway > 0 then headway = headway * &hdwymult;  *** -- apply TOD headway multiplier to coded headway;
-                else headway = -1;  *** -- coded value of zero means use existing headways;
+                if headway <= 0 then headway = -1; *** -- coded value of zero means use existing headways;
 
                 if headway > 0 then do;               *** -- Priority 1: use coded headway (or existing headway, if shorter);
                     if exhdw > 0 then hfin = min(headway, exhdw);

@@ -369,13 +369,14 @@ for scen in scen_list:
             bus_future_attr = [bus_future_id_field, 'DESCRIPTION', 'MODE', 'VEHICLE_TYPE', 'SPEED', 'HEADWAY']
             
             #base query -- 'scenario' field of bus_future contains first character of applicable scen code (e.g., '4', as in '400')
-            bus_future_query = f''' "SCENARIO" LIKE '%{scen[0]}%' ''' 
+            # bus_future_query = f''' "SCENARIO" LIKE '%{scen[0]}%' ''' 
+            bus_future_query = f' "COMPLETION_YEAR" <= {scen_year}'
             #if rsp run, add other elements to query:
             if rsp_eval == True:
                 bus_future_query = f''' "NOTES" LIKE {' OR "NOTES" LIKE '.join(f"'%{tipid}%'" for tipid in nb_transit)} '''
-            if 'NONE' not in rsp_number: #if an RSP was selected, add to query
-                bus_future_query += f''' OR "NOTES" LIKE '%{rsp_number}%' ''' 
-            # arcpy.AddMessage(f'bus_future_query = {bus_future_query}')
+                if 'NONE' not in rsp_number: #if an RSP was selected, add to query
+                    bus_future_query += f''' OR "NOTES" LIKE '%{rsp_number}%' ''' 
+                # arcpy.AddMessage(f'bus_future_query = {bus_future_query}')
             
             bus_future_view = MHN.make_skinny_table_view(bus_future_lyr, 'bus_future_view', bus_future_attr, bus_future_query)
             bus_future_csv = os.path.join(scen_tran_path, 'bus_future.csv')
@@ -1120,6 +1121,28 @@ with open(relim_csv, 'wt') as w:
 exec(open(os.path.join(MHN.src_dir, 'transit_node_extra_attributes.py')).read())
 
 # -----------------------------------------------------------------------------
+# Generate transit select line file
+# -----------------------------------------------------------------------------
+if rsp_eval and 'NONE' not in rsp_number:
+    arcpy.AddMessage('\nGenerating transit select line file...')
+    
+    #get transit lines associated with RSP number
+    slines = arcpy.da.TableToNumPyArray(
+        MHN.bus_future,
+        ['TRANSIT_LINE', 'DESCRIPTION', 'NOTES'],
+        '"NOTES" LIKE \'%{}%\''.format(rsp_number)
+    )
+    
+    slines = slines['TRANSIT_LINE'].tolist()
+
+    # Create a select line file for the RSP evaluation
+    select_line_txt = os.path.join(root_path, f'{rsp_number}.txt')
+    with open(select_line_txt, 'w') as w:
+        w.write(f'~# select line: lines for {rsp_number}')
+        for line in slines:
+            w.write(f'\n{line.strip()}')
+        
+# -----------------------------------------------------------------------------
 #  Clean up script-level data.
 # -----------------------------------------------------------------------------
 for bus_fc in bus_fc_dict:
@@ -1127,24 +1150,5 @@ for bus_fc in bus_fc_dict:
     for tod in out_tod_periods:
         MHN.delete_if_exists(rep_runs_dict[which_bus][tod])
 arcpy.Delete_management(MHN.mem)
-
-cta_brts = {
-    'RCP22202': [],
-    'RCP22203': [], 
-    'RCP22204': [],
-    'RCP22205': [],
-    'RCP22206': []
-}
-
-if rsp_number in cta_brts.keys():
-    arcpy.AddMessage(f'\n\t - {rsp_number} requires changing itin files to ttf=2')
-    
-    for tod in out_tod_periods:
-        # read in bus itin file
-        bus_itin = os.path.join(tran_path, scen, 'bus.itinerary_{}'.format(tod))
-        with open(bus_itin, 'a') as bus_itin_file:
-            lines = bus_itin_file.readlines()
-            
-    
 
 arcpy.AddMessage('\nAll done!\n')

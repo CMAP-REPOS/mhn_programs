@@ -474,7 +474,6 @@ if rsp_eval:
 
         arcpy.AddMessage(f"  - TIPID(s) for RSP {rsp_number}: \n{', '.join(t for t in tipid)}")
 
-
         tipid_q = f''' TIPID IN ('{"','".join(t for t in tipid)}') '''
         action_q = "ACTION_CODE IN ('1','2','4')"
         proj_coding = arcpy.da.TableToNumPyArray(
