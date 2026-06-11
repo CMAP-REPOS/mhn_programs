@@ -66,6 +66,8 @@ Information on highway projects is stored in a route feature class (`hwyproj`) a
 | COMPLETION_YEAR | Project completion year from TIP. `9999` = not used. |
 | MCP_ID | Major Capital Project identification number for MCP evaluation (2014). |
 | RSP_ID | Regionally Significant Project identification for RSP evaluation (2017). |
+| RCP_ID | Regional Capital Project identification number for RSP evaluation (2025). |
+| NOTES | Additional information to explain multi-phase and split projects. | 
 
 Actual link attributes associated with individual TIP projects are stored in the `hwyproj_coding` table(Table 4, below). As with the `hwynet_arc` attribute table, variables ending in "1" apply to the "from-to" direction of the link. 
 
