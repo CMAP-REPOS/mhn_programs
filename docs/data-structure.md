@@ -19,7 +19,7 @@ Table 1 lists the highway network link variables contained in the **hwynet_arc**
 | ROADNAME | Name(s) of the road segment. |
 | DIRECTIONS | Link directions flag:<br>1 = one-way<br>2 = two-way, attributes in both directions identical<br>3 = two-way, at least one attribute different in to-from direction |
 | TYPE1 & 2 | Facility Type:<br>1 = Arterial<br>2 = Freeway (controlled-access)<br>3 = Freeway-Arterial Ramp<br>4 = Expressway (limited-access)<br>5 = Freeway-Freeway Ramp<br>6 = Centroid Connector<br>7 = Toll Plaza<br>8 = Metered Ramp |
-| AMPM1 & 2 | Time period restrictions:<br>1 = open all time periods (1-8)<br>2 = open a.m. periods only (2-5)<br>3 = open p.m. periods only (1, 6-8)<br>4 = open off-peak periods only (1, 5) |
+| AMPM1 & 2 | Time period restrictions:<br>1 = open all time periods (1-8)<br>2 = open a.m. periods only (2-5)<br>3 = open p.m. periods only (1, 6-8)<br>4 = open off-peak periods only (1, 5)<br>5 = open peak + shoulder only (2-4, 6-8) |
 | POSTEDSPEED1 & 2 | Posted speed limit (mph). Data was most recently validated in June 2020 against IRIS and Navteq, with discrepancies compared to Google Maps Street View, with photographs ranging in vintage from roughly 2015-2020. |
 | THRULANES1 & 2 | Number of driving lanes. |
 | THRULANEWIDTH1 & 2 | Average driving lane width (feet). |
@@ -35,7 +35,7 @@ Table 1 lists the highway network link variables contained in the **hwynet_arc**
 | SRA | Strategic Regional Arterial system route code. Data as of February 2012. |
 | CHIBLVD | Flag for Chicago boulevard system: 1 = yes; 0 = no. Data as of July 2013. |
 | TRUCKRTE | Truck route code.<br>1 = Class I<br>IL: approved for all load widths of 8'6" or less.<br>IN: all Interstates and US/state highways.<br>WI: designated long truck route.<br>2 = Class II<br>IL: approved for all load widths of 8'6" inches or less and a wheel base no greater than 55'.<br>WI: 75' restricted truck route (53' trailer, 43' king pin to rear axle, no double bottoms).<br>3 = Class III<br>IL: approved for all load widths of 8'0" or less and a wheel base no greater than 55'.<br>WI: 65' restricted truck route (48' trailer, no double bottoms).<br>Data as of March 2011; used for freight model network development; Illinois data include state and local routes. |
-| TRUCKRES | Truck restriction code. (Please see S:\AdminGroups\ResearchAnalysis\nmp\Travel_and_Emissions_Model\MHN\Documentation\Truck_Restriction_Codes.xlsx for a listing of all codes.) |
+| TRUCKRES | Truck restriction code. *(Please see [supplemental-info.md](supplemental-info.md) for a listing of all codes.)* |
 | TRUCKRES_UPDATED | Date of last TRUCKRES update (format: YYMMDD). |
 | VCLEARANCE | Overhead clearance (inches). 0 = no restriction or no information; 999 = clearance above legal height (13'6", or 162"), although many links with clearance above 162" do have actual measurements instead of simply '999'. |
 | MILES | Link length in miles. (This is the real-world length, not the Euclidean distance of the digitized link, and is calculated automatically by the Incorporate Edits tool.) |
