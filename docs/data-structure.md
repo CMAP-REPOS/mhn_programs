@@ -6,44 +6,44 @@ The MHN geodatabase stores all of the feature class data needed to build highway
 ### Figure 1. MHN Data Structure
 ![MHN structure](images/mhn_structure.png)
 
-## Lines (`hwynet_arc`)
-Table 1 lists the highway network link variables contained in the **hwynet_arc** attribute table. Variable names ending in "1" describe attributes in the "from-to" direction of the link. Those ending in "2" represent attributes in the opposite direction. When `DIRECTIONS`==2, the attributes ending in "2" are ignored, except applicable `PARKRES2`. When `DIRECTIONS`==3, all variables are explicitly coded. If `BASELINK`==0, only `ANODE`, `BNODE`, `MILES`, and `DIRECITONS` are coded on highway links (with one exception— if `MODES`==4, then `THRULANES1` and `TYPE1` are also coded). Each link in the feature class is defined by a unique `ABB` string (`ANODE`-`BNODE`-`BASELINK`).
+## Lines feature class: `hwynet_arc`
+Table 1 lists the highway network link variables contained in the `hwynet_arc` attribute table. Variable names ending in "1" describe attributes in the "from-to" direction of the link. Those ending in "2" represent attributes in the opposite direction. When `DIRECTIONS` == 2, the attributes ending in "2" are ignored, except applicable `PARKRES2`. When `DIRECTIONS` == 3, all variables are explicitly coded. If `BASELINK` == 0, only `ANODE`, `BNODE`, `MILES`, and `DIRECITONS` are coded on highway links (with one exception: if `MODES` == 4, then `THRULANES1` and `TYPE1` are also coded). Each link in the feature class is defined by a unique `ABB` string (`ANODE`-`BNODE`-`BASELINK`).
 
 ### Table 1. `hwynet_arc` field names and descriptions
 | Geodatabase Field | Description |
 |---|---|
-| ANODE | Link's "from" node. |
-| BNODE | Link's "to" node. |
-| BASELINK | Link description flag:<br>0 = future project link ("skeleton" link), attributes added via highway project coding<br>1 = existing network link ("base" link), all attributes present |
-| ABB | Unique arc ID, of the form "ANODE-BNODE-BASELINK". Calculated automatically by the Incorporate Edits tool. |
+| ANODE | "From" node of link. |
+| BNODE | "To" node of link. |
+| BASELINK | Link description flag:<br>`0` = future project link ("skeleton" link), attributes added via highway project coding<br>`1` = existing network link ("base" link), all attributes present |
+| ABB 🔑 | Unique arc ID, of the form "`ANODE`-`BNODE`-`BASELINK`". Calculated automatically by the "Incorporate Edits" tool. |
 | ROADNAME | Name(s) of the road segment. |
-| DIRECTIONS | Link directions flag:<br>1 = one-way<br>2 = two-way, attributes in both directions identical<br>3 = two-way, at least one attribute different in to-from direction |
-| TYPE1 & 2 | Facility Type:<br>1 = Arterial<br>2 = Freeway (controlled-access)<br>3 = Freeway-Arterial Ramp<br>4 = Expressway (limited-access)<br>5 = Freeway-Freeway Ramp<br>6 = Centroid Connector<br>7 = Toll Plaza<br>8 = Metered Ramp |
-| AMPM1 & 2 | Time period restrictions:<br>1 = open all time periods (1-8)<br>2 = open a.m. periods only (2-5)<br>3 = open p.m. periods only (1, 6-8)<br>4 = open off-peak periods only (1, 5) |
+| DIRECTIONS | Link directions flag:<br>`1` = one-way<br>`2` = two-way, attributes in both directions identical<br>`3` = two-way, at least one attribute different in to-from direction |
+| TYPE1 & 2 | Facility Type:<br>`1` = Arterial<br>`2` = Freeway (controlled-access)<br>`3` = Freeway-Arterial Ramp<br>`4` = Expressway (limited-access)<br>`5` = Freeway-Freeway Ramp<br>`6` = Centroid Connector<br>`7` = Toll Plaza<br>`8` = Metered Ramp |
+| AMPM1 & 2 | Time period restrictions:<br>`1` = open all time periods (1-8)<br>`2` = open a.m. periods only (2-5)<br>`3` = open p.m. periods only (1, 6-8)<br>`4` = open off-peak periods only (1, 5)<br>`5` = open peak + shoulder only (2-4, 6-8) |
 | POSTEDSPEED1 & 2 | Posted speed limit (mph). Data was most recently validated in June 2020 against IRIS and Navteq, with discrepancies compared to Google Maps Street View, with photographs ranging in vintage from roughly 2015-2020. |
 | THRULANES1 & 2 | Number of driving lanes. |
 | THRULANEWIDTH1 & 2 | Average driving lane width (feet). |
 | PARKLANES1 & 2 | Number of on-street parking lanes. |
 | PARKRES1 & 2 | Peak period parking restrictions, when on-street parking is not available and an extra through lane is available. Coded separately for each direction on all 2-way links. Code is text string of affected time periods (currently only 3 & 7). Default blank value means no peak period parking restrictions. Data last collected in Spring 2011. |
-| SIGIC | Signal interconnect flag: 1 = yes; 0 = no. |
-| CLTL | Bi-directional continuous left turn lane flag: 1 = yes; 0 = no. |
-| RRGRADECROSS | At-grade railroad crossing flag: 1 = yes; 0 = no. |
-| TOLLSYS | Flag for current and future toll system links: 1 = yes; 0 = no. Used for pricing model development. |
-| TOLLDOLLARS | Toll amount in dollars for autos with I-PASS. If link type is 7 (toll plaza), this is applied as a fixed-cost toll; for other link types, it is applied as a per-mile rate. |
-| MODES | Modes permitted on link:<br>1 = all vehicles<br>2 = all vehicles (with truck restrictions from TRUCKRES applied)<br>3 = trucks only<br>4 = transit only (only called for transit networks)<br>5 = HOV only |
-| NHSIC | Flag for National Highway System intermodal connector (Illinois only): 1 = yes; 0 = no. Data as of March 2011; used for freight model network development. |
+| SIGIC | Signal interconnect flag: `1` = yes; `0` = no. |
+| CLTL | Bi-directional continuous left turn lane flag: `1` = yes; `0` = no. |
+| RRGRADECROSS | At-grade railroad crossing flag: `1` = yes; `0` = no. |
+| TOLLSYS | Flag for current and future toll system links: `1` = yes; `0` = no. Used for pricing model development. |
+| TOLLDOLLARS | Toll amount in dollars for autos with I-PASS. If link `TYPE` == 7 (toll plaza), this is applied as a fixed-cost toll; for other link types, it is applied as a per-mile rate. |
+| MODES | Modes permitted on link:<br>`1` = all vehicles<br>`2` = all vehicles (with truck restrictions from TRUCKRES applied)<br>`3` = trucks only<br>`4` = transit only (only called for transit networks)<br>`5` = HOV only |
+| NHSIC | Flag for National Highway System intermodal connector (Illinois only): `1` = yes; `0` = no. Data as of March 2011; used for freight model network development. |
 | SRA | Strategic Regional Arterial system route code. Data as of February 2012. |
-| CHIBLVD | Flag for Chicago boulevard system: 1 = yes; 0 = no. Data as of July 2013. |
-| TRUCKRTE | Truck route code.<br>1 = Class I<br>IL: approved for all load widths of 8'6" or less.<br>IN: all Interstates and US/state highways.<br>WI: designated long truck route.<br>2 = Class II<br>IL: approved for all load widths of 8'6" inches or less and a wheel base no greater than 55'.<br>WI: 75' restricted truck route (53' trailer, 43' king pin to rear axle, no double bottoms).<br>3 = Class III<br>IL: approved for all load widths of 8'0" or less and a wheel base no greater than 55'.<br>WI: 65' restricted truck route (48' trailer, no double bottoms).<br>Data as of March 2011; used for freight model network development; Illinois data include state and local routes. |
-| TRUCKRES | Truck restriction code. (Please see S:\AdminGroups\ResearchAnalysis\nmp\Travel_and_Emissions_Model\MHN\Documentation\Truck_Restriction_Codes.xlsx for a listing of all codes.) |
-| TRUCKRES_UPDATED | Date of last TRUCKRES update (format: YYMMDD). |
-| VCLEARANCE | Overhead clearance (inches). 0 = no restriction or no information; 999 = clearance above legal height (13'6", or 162"), although many links with clearance above 162" do have actual measurements instead of simply '999'. |
-| MILES | Link length in miles. (This is the real-world length, not the Euclidean distance of the digitized link, and is calculated automatically by the Incorporate Edits tool.) |
-| BEARING | Simple bearing of link in from-to direction (N,NE,E,SE,S,SW,W,NW). Calculated automatically by the Incorporate Edits tool. Used for GTFS coding development. |
-| MESO | Meso-freight highway network flag: 1 = included; 0 = excluded. |
-| TOLLTYPE | Type of toll represented by TOLLDOLLARS. Calculated automatically by the Incorporate Edits tool.<br>0 = untolled link<br>1 = fixed-cost toll (toll plaza links only)<br>2 = distance-based toll (multiplied by MILES) |
+| CHIBLVD | Flag for Chicago boulevard system: `1` = yes; `0` = no. Data as of July 2013. |
+| TRUCKRTE | Truck route code.<br>`1` = Class I<br> &emsp; IL: approved for all load widths of 8'6" or less.<br> &emsp; IN: all Interstates and US/state highways.<br> &emsp; WI: designated long truck route.<br>`2` = Class II<br> &emsp; IL: approved for all load widths of 8'6" inches or less and a wheel base no greater than 55'.<br> &emsp; WI: 75' restricted truck route (53' trailer, 43' king pin to rear axle, no double bottoms).<br>`3` = Class III<br> &emsp; IL: approved for all load widths of 8'0" or less and a wheel base no greater than 55'.<br> &emsp; WI: 65' restricted truck route (48' trailer, no double bottoms).<br>Data as of March 2011; used for freight model network development; Illinois data include state and local routes. |
+| TRUCKRES | Truck restriction code. *(Please see [supplemental-info.md](supplemental-info.md) for a listing of all codes.)* |
+| TRUCKRES_UPDATED | Date of last `TRUCKRES` update (format: "YYMMDD"). |
+| VCLEARANCE | Overhead clearance (inches). `0` = no restriction or no information; `999` = clearance above legal height (13'6", or 162"), although many links with clearance above 162" do have actual measurements instead of simply '999'. |
+| MILES | Link length in miles. (This is the real-world length, not the Euclidean distance of the digitized link, and is calculated automatically by the "Incorporate Edits" tool.) |
+| BEARING | Simple bearing of link in from-to direction (N, NE, E, SE, S, SW, W, NW). Calculated automatically by the "Incorporate Edits" tool. Used for GTFS coding development. |
+| MESO | Meso-freight highway network flag: `1` = included; `0` = excluded. (Links with a value of `1` are included in CMAP's freight model.) |
+| TOLLTYPE | Type of toll represented by `TOLLDOLLARS`. Calculated automatically by the "Incorporate Edits" tool.<br>`0` = untolled link<br>`1` = fixed-cost toll (`TYPE` == 7,  toll plaza links only)<br>`2` = distance-based toll (multiplied by `MILES`) |
 
-## Nodes `hwynet_node`
+## Nodes feature class: `hwynet_node`
 Node variables are listed in Table 2. Values for all of these variables are generated automatically either by ArcGIS itself or through the MHN's "Incorporate Edits" tool.
 
 ### Table 2. `hwynet_node` field names and descriptions
@@ -54,22 +54,22 @@ Node variables are listed in Table 2. Values for all of these variables are gene
 | POINT_Y | ArcGIS-generated y-coordinate, in NAD 1927 StatePlane Illinois East (feet). |
 | subzone17 | Subzone number from CMAP's 2017 subzone system. |
 | zone17 | Zone number from CMAP's 2017 zone system. |
-| capzone17 | 2017 Capacity zone code:<br>- 1 = Chicago Central Business District (2017 subzones 1-52)<br>- 2 = Remainder of Chicago Central Area (2017 subzones 53-84)<br>- 3 = Remainder of City of Chicago (2017 subzones 85-983 & 3896-3904)<br>- 4 = Inner ring suburbs where Chicago street grid is generally maintained<br>- 5 = Remainder of Illinois portion of the Chicago Urbanized Area<br>- 6 = Indiana portion of the Chicago Urbanized Area<br>- 7 = Other Urbanized Areas and Urban Clusters within the CMAP Metropolitan Planning Area plus other Urbanized Areas in northeastern Illinois<br>- 8 = Other Urbanized Areas and Urban Clusters in northwestern Indiana<br>- 9 = Remainder of CMAP Metropolitan Planning Area<br>- 10 = Remainder of Lake County, IN (rural)<br>- 11 = External area<br>- 99 = Points of Entry – not defined in the Capacity Zone system |
+| capzone17 | 2017 Capacity zone code:<br>- `1` = Chicago Central Business District (2017 subzones 1-52)<br>- `2` = Remainder of Chicago Central Area (2017 subzones 53-84)<br>- `3` = Remainder of City of Chicago (2017 subzones 85-983 & 3896-3904)<br>- `4` = Inner ring suburbs where Chicago street grid is generally maintained<br>- `5` = Remainder of Illinois portion of the Chicago Urbanized Area<br>- `6` = Indiana portion of the Chicago Urbanized Area<br>- `7` = Other Urbanized Areas and Urban Clusters within the CMAP Metropolitan Planning Area plus other Urbanized Areas in northeastern Illinois<br>- `8` = Other Urbanized Areas and Urban Clusters in northwestern Indiana<br>- `9` = Remainder of CMAP Metropolitan Planning Area<br>- `10` = Remainder of Lake County, IN (rural)<br>- `11` = External area<br>- `99` = Points of Entry – not defined in the Capacity Zone system |
 
-## Highway Projects (`hwyproj` and `hwyproj_coding`)
+## Highway projects feature class: `hwyproj` and `hwyproj_coding`
 Information on highway projects is stored in a route feature class (`hwyproj`) and a related coding table (`hwyproj_coding`). The Transportation Improvement Program (TIP) identification numbers and completion years of highway projects are stored in `hwyproj_coding`, as shown in Table 3, below. See `docs/tool-usage.md` for more information about the process of adding this information to the MHN.
 
 ### Table 3. `hwyproj` field names and descriptions
 | Geodatabase Field | Description |
 |---|---|
-| TIPID | TIP project identification number (not hyphenated, no leading 0's). |
+| TIPID 🔑 | TIP project identification number (not hyphenated, no leading 0's). May contain "pseudo-ids" for phased projects, see `Notes` field below. |
 | COMPLETION_YEAR | Project completion year from TIP. `9999` = not used. |
 | MCP_ID | Major Capital Project identification number for MCP evaluation (2014). |
 | RSP_ID | Regionally Significant Project identification for RSP evaluation (2017). |
-| RCP_ID | Regional Capital Project identification number for RSP evaluation (2025). |
-| NOTES | Additional information to explain multi-phase and split projects. | 
+| RCP_ID | Regional Capital Project identification for RCP evaluation (2025). |
+| Notes | Contains project names and additional information about interrelated and/or phased projects, such as TIP IDs or historical information. |
 
-Actual link attributes associated with individual TIP projects are stored in the `hwyproj_coding` table(Table 4, below). As with the `hwynet_arc` attribute table, variables ending in "1" apply to the "from-to" direction of the link. 
+Actual link attributes associated with individual TIP projects are stored in the `hwyproj_coding` table (Table 4, below). As with the `hwynet_arc` attribute table, variables ending in "1" apply to the "from-to" direction of the link. 
 
 During network processing, `hwynet_arc` attributes are updated with the `hwyproj_coding` attributes to represent conditions _after the project is implemented_. Only the attributes changing due to project implementation need to be coded in the `hwyproj_coding` table.
 
@@ -86,7 +86,7 @@ Four action codes control link processing:
 | Geodatabase Field | Description |
 |---|---|
 | TIPID | TIP project identification number (not hyphenated, no leading 0's). |
-| ACTION_CODE | CMAP action code:<br>- 1 = modify<br>- 2 = replace<br>- 3 = delete<br>- 4 = add |
+| ACTION_CODE | CMAP action code:<br> &emsp; `1` = modify<br> &emsp; `2` = replace<br> &emsp; `3` = delete<br> &emsp; `4` = add |
 | NEW_DIRECTIONS | New directions flag. |
 | NEW_TYPE1 & 2 | New facility type code. |
 | NEW_AMPM1 & 2 | New time period restrictions. |
@@ -97,10 +97,10 @@ Four action codes control link processing:
 | ADD_SIGIC | Add signal interconnect to link (1 = add). |
 | ADD_CLTL | Add/remove continuous left turn lane (1 = add; -1 = remove). *Not actively coded.* |
 | ADD_RRGRADECROSS | Add/remove at-grade railroad crossing (1 = add; -1 = remove). *Not actively coded.* |
-| NEW_TOLLDOLLARS | New toll amount (dollars). If link type is 7, this will be a fixed-cost toll; for other link types, it will be a per-mile rate. |
-| NEW_MODES | New modes permitted. (If truck restrictions need to be applied, set `MODES=2` and set appropriate `TRUCKRES` values in the link attribute table. This cannot currently be done through highway project coding.) |
-| TOD | Highway time-of-day code indicating specific time periods when changes are applied. Default of blank or `0` means changes applied to all periods. Code is text string of affected time periods:<br>- 1 = 8p–6a (overnight)<br>- 2 = 6a–7a<br>- 3 = 7a–9a (AM peak)<br>- 4 = 9a–10a<br>- 5 = 10a–2p (midday)<br>- 6 = 2p–4p<br>- 7 = 4p–6p (PM peak)<br>- 8 = 6p–8p |
-| ABB | Unique arc ID, of the form "*ANODE*-*BNODE*-*BASELINK*". *Calculated automatically by the Import Highway Projects tool.* |
+| NEW_TOLLDOLLARS | New toll amount (dollars). If link `TYPE` == `7`, this will be a fixed-cost toll; for other link types, it will be a per-mile rate. |
+| NEW_MODES | New modes permitted. (If truck restrictions need to be applied, set `MODES` == `2` and set appropriate `TRUCKRES` values in the link attribute table. This cannot currently be done through highway project coding.) |
+| TOD | Highway time-of-day code indicating specific time periods when changes are applied. Default of blank or `0` means changes applied to all periods. Code is text string of affected time periods:<br>- `1` = 8p–6a (overnight)<br>- `2` = 6a–7a<br>- `3` = 7a–9a (AM peak)<br>- `4` = 9a–10a<br>- `5` = 10a–2p (midday)<br>- `6` = 2p–4p<br>- `7` = 4p–6p (PM peak)<br>- `8` = 6p–8p |
+| ABB | Unique link ID, of the form "`ANODE`-`BNODE`-`BASELINK`". *Calculated automatically by the Import Highway Projects tool.* |
 | REP_ANODE & BNODE | CMAP nodes of link providing attributes, *only* for `ACTION_CODE = 2`. |
 
 ## GTFS-Derived Bus Runs (`bus_base`, `bus_base_itin`, `bus_current`, and `bus_current_itin`)
@@ -115,12 +115,13 @@ Bus coding is stored in two feature classes and two related tables:
 ### Table 5. `bus_base` and `bus_current` field names and descriptions
 | Geodatabase Field | Description |
 |---|---|
-| **TRANSIT_LINE** | CMAP unique bus run ID. (Mode + 5-digit number, starting at `00000` for base, `50000` for current, `99000` for future). |
-| **DESCRIPTION** | Real-world description of bus route (format: "*ROUTE_ID* *LONGNAME*: *DIRECTION* TO *TERMINAL*"). *Emme truncates to 20 characters.* |
+| **TRANSIT_LINE** 🔑 | CMAP unique bus run ID. (Mode + 5-digit number, starting at `00000` for base, `50000` for current, `99000` for future). |
+| **DESCRIPTION** | Real-world description of bus route (format: "`ROUTE_ID` `LONGNAME`: `DIRECTION` "TO" `TERMINAL`"). *Emme truncates to 20 characters.* |
 | **MODE** | Bus mode code:<br>- `B` = CTA regular service<br>- `E` = CTA express service<br>- `P` = Pace regular service<br>- `Q` = Pace express service<br>- `L` = Pace local service |
 | **VEHICLE_TYPE** | Bus vehicle type code (based on `MODE`):<br>- `25` = mode B, short 30ft<br>- `26` = mode B, standard 40ft<br>- `27` = mode B, articulated 60ft<br>- `28` = mode P<br>- `29` = mode Q<br>- `30` = mode L<br>- `31` = mode E, short 30ft<br>- `32` = mode E, standard 40ft<br>- `33` = mode E, articulated 60ft |
 | **HEADWAY** | Bus headway (minutes). |
 | **SPEED** | Average speed (mph); not used in CMAP modeling, but required by Emme (cannot be `0`). |
+| | |
 | ROUTE_ID | Actual CTA/Pace route number. |
 | LONGNAME | CTA/Pace route name. |
 | DIRECTION | Cardinal direction of travel (`NORTH`/`SOUTH`/`EAST`/`WEST`). |
@@ -157,12 +158,12 @@ Skeleton links in the MHN represent future roadway improvements. When these impr
 ## Future Bus Routes (`bus_future` and `bus_future_itin`)
 Future bus routes are stored in a format very similar to that of base/current-year bus runs. However, there are some small differences due to the fact that future bus coding is imported from a hand-coded spreadsheet rather than automatically processed GTFS feeds. 
 
-The header coding contains all of the **bold font** fields in Table 5, as well as some additional fields described in Table 7 (below). See `docs/tool-usage.md` for details about adding this information to the MHN.
+The header coding contains all of the **bold font** fields in Table 5, as well as some additional fields described in Table 7 (below). See the [coding spreadsheets section](how-to.md#using-the-highway-and-transit-coding-spreadsheets) of how-to.md file for details about adding this information to the MHN using project coding spreadsheets.
 
 ### Table 7. `bus_future` field names and descriptions
 | Geodatabase Field | Description |
 |---|---|
-| TRANSIT_LINE | CMAP unique bus run ID. (Mode + 5-digit number, starting at `00000` for base, `50000` for current, `99000` for future). |
+| TRANSIT_LINE 🔑 | CMAP unique bus run ID. (Mode + 5-digit number, starting at `00000` for base, `50000` for current, `99000` for future). |
 | DESCRIPTION | Real-world description of bus route (format: "*ROUTE_ID* *LONGNAME*: *DIRECTION* TO *TERMINAL*"). *Emme truncates to 20 characters.* |
 | MODE | Bus mode code:<br>- `B` = CTA regular service<br>- `E` = CTA express service<br>- `P` = Pace regular service<br>- `Q` = Pace express service<br>- `L` = Pace local service |
 | VEHICLE_TYPE | Bus vehicle type code (based on `MODE`):<br>- `25` = mode B, short 30ft<br>- `26` = mode B, standard 40ft<br>- `27` = mode B, articulated 60ft<br>- `28` = mode P<br>- `29` = mode Q<br>- `30` = mode L<br>- `31` = mode E, short 30ft<br>- `32` = mode E, standard 40ft<br>- `33` = mode E, articulated 60ft |

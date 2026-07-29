@@ -36,6 +36,7 @@ generate_transit_files.py
 |--- gtfs_reformat_feed.sas
 |--- gtfs_collapse_routes.py
 |--- generate_transit_files_2.sas
+|--- shortest_path.py
 |--- generate_transit_files_3.sas
 ```
 ### Parameters
@@ -55,15 +56,22 @@ Before transit files are generated, all bus runs from the `bus_base` or `bus_cur
 
 The program `gtfs_reformat_feed.sas` is called (via `sasrun.bat`) to reformat the time-of-day-specific bus itinerary data. The program subsequently calls `gtfs_collapse_routes.py` to determine, based on reformatted itinerary data, which runs are similar enough to combine into a single "representative run." When the SAS program resumes, it chooses these "representative runs" for each set that is to be combined and calculates their average headways.
 
-For each included time-of-day period, the program `generate_transit_files_2.sas` is called (via `sasrun.bat`) to analyze the highway project coding to determine the appropriate highway links in the scenario that the buses should run on. It also creates bus-to-bus transfer links (coded as mode `b`) and three bus stop files (CTA stops, Pace stops, and all stops), which are used later to create additional types of auxiliary links. All but one of the final Emme transaction bus files are created by this program. The list file (`generate_transit_files_2_x00.lst`, in the `output/transit` folder) *must be reviewed* after the programs complete to ensure no coding errors were encountered. (These errors will not prevent the program from running.) This SAS program looks for the following coding issues: 
-    - itinerary segment directional issues
-    - itinerary gaps
-    - too many layovers (more than 2) coded in an itinerary
+For each included time-of-day period, the program `generate_transit_files_2.sas` is called (via `sasrun.bat`) to analyze the highway project coding to determine the appropriate highway links in the scenario that the buses should run on. If bus itinerary gaps are identified, the script runs `shortest_path.py` to fill gaps, and fails if unable to do so. 
+
+`generate_transit_files_2.sas` also creates bus-to-bus transfer links (coded as mode `b`) and three bus stop files (CTA stops, Pace stops, and all stops), which are used later to create additional types of auxiliary links. 
+
+All but one of the final Emme transaction bus files are created by this program. 
+
+The list file (`generate_transit_files_2_x00.lst`, in the `output/transit` folder) *must be reviewed* after the programs complete to ensure no coding errors were encountered. (These errors will not prevent the program from running.) The following coding issues are logged in the list file: 
+- itinerary segment directional issues
+- itinerary gaps
+- too many layovers (more than 2) coded in an itinerary
+
 Files of CTA rail and Metra stops are greated from MRN transaction files for auxiliary link processing.
 
-The distances between sets of bus stops, rail stops, and zone centroids are calculated, and, after `generate_transit_files_3.sas`, the final Emme transit transaction file is written.
+The distances between sets of bus stops, rail stops, and zone centroids are calculated, and, after `generate_transit_files_3.sas`, the final Emme transit transaction files are written.
 
-Once all transaction files have been generated for a given scenario, the highway and rail linkshape files (greated by the "Generate Highway Files" tool and MRN processing, respectively) are merged together into a single file ("linkshape_x00.in). This file is placed under the "linkshape" folder in the same root directory as the highway and transit files. It can be imported into Emme to display true network geometry instead of straight lines. 
+Once all transaction files have been generated for a given scenario, the highway and rail linkshape files (greated by the "Generate Highway Files" tool and MRN processing, respectively) are merged together into a single file ("linkshape_x00.in"). This file is placed under the "linkshape" folder in the same root directory as the highway and transit files. It can be imported into Emme to display true network geometry instead of straight lines. 
 
 ## Import Future Bus Routes
 ```
