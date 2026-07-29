@@ -169,10 +169,11 @@ The header coding contains all of the **bold font** fields in Table 5, as well a
 | VEHICLE_TYPE | Bus vehicle type code (based on `MODE`):<br>- `25` = mode B, short 30ft<br>- `26` = mode B, standard 40ft<br>- `27` = mode B, articulated 60ft<br>- `28` = mode P<br>- `29` = mode Q<br>- `30` = mode L<br>- `31` = mode E, short 30ft<br>- `32` = mode E, standard 40ft<br>- `33` = mode E, articulated 60ft |
 | HEADWAY | Bus headway (minutes). |
 | SPEED | Average speed (mph); not used in CMAP modeling, but required by Emme (cannot be `0`). |
-| SCENARIO | Scenarios bus line will be used in. Must include *all* scenarios that will contain route. May *not* be blank. |
+| SCENARIO | Scenarios bus line will be used in. Must include *all* scenarios that will contain route. May *not* be blank. *(NOTE: Deprecated, will be removed from schema in future update (2026-06-11).)* |
 | REPLACE | Identifier of the existing bus route coding that will be replaced by the future project (format: "*MODE*-*ROUTE_ID*"). Separate multiple routes with colons, e.g. "B-111:B-112". Replacement will only occur in the time periods identified in the `TOD` field. |
 | REROUTE | Identifier of the existing bus route coding that will be rerouted by the future project (format: "*MODE*-*ROUTE_ID*"). Separate multiple routes with colons, e.g. "E-2:E-6:E-26:E-J14". Replacement will only occur in the time periods identified in the `TOD` field. |
 | TOD | Transit time-of-day code indicating specific time periods when new coding will be implemented. Default of blank or `0` means changes applied to all periods. Code is text string of affected time periods:<br>- `1` = 6p–6a (overnight)<br>- `2` = 6a–9a (AM peak)<br>- `3` = 9a–4p (midday)<br>- `4` = 4p–6p (PM peak) |
+| COMPLETION_YEAR | Year in which the bus line will be open to public. *(NOTE: Replaces "SCENARIO" above, still need "DECOMMISSION_YEAR" column to fully replace all former functionality (2026-06-11).)* |
 | NOTES | TIP ID number and possibly other descriptive information, separated from TIP ID by a colon. 30 character total limit. |
 
 The `bus_future_itin` table is also similar to its base/current counterpart. Table 8 shows the field names and descriptions for `bus_future_itin`.
